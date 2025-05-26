@@ -1,0 +1,2 @@
+# RSG
+Real Simple Games
