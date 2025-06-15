@@ -1,0 +1,79 @@
+using Godot;
+
+namespace RSG.UI;
+
+using HintContainers = (BoxContainer Rows, BoxContainer Columns);
+
+public static class NonogramExstensions
+{
+}
+
+public abstract partial class NonogramDisplay : Container
+{
+	public const string BlockText = "X", FillText = "O", EmptyText = " ";
+
+	public Dictionary<Vector2I, Button> Buttons { get; } = [];
+	public Dictionary<Vector2I, RichTextLabel> Hints { get; } = [];
+
+	public virtual GridContainer Tiles { get; } = new() { Name = "Tiles", Columns = 2 };
+	public virtual ColorRect Background { get; } = new() { Name = "Background" };
+	public virtual Control Spacer { get; } = new() { Name = "Spacer" };
+
+	public HintContainers HintContainers { get; } = (
+		new VBoxContainer { Name = "RowHints" }
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize),
+		new HBoxContainer { Name = "ColumnHints" }
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
+	);
+	public GridContainer Main { get; } = new GridContainer { Name = "MainContainer", Columns = 2 }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public override void _Ready()
+	{
+		Name = nameof(NonogramDisplay);
+
+		this.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		Tiles.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		Spacer.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		Background.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
+			.CustomMinimumSize = Size;
+
+		this.Add(
+			Background,
+			Main.Add(Spacer, HintContainers.Columns, HintContainers.Rows, Tiles)
+		);
+
+		PlaceButtons(Tiles.Columns);
+	}
+
+	public abstract void OnTilePressed(Vector2I position, Button button);
+	public abstract void UpdateSettings();
+	public virtual void PlaceButtons(int length)
+	{
+		ClearTiles();
+
+		foreach (Vector2I position in (Vector2I.One * length).AsRange())
+		{
+			var button = Buttons[position] = new Button { Name = $"Button {position}", Text = EmptyText }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+				.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+			Tiles.AddChild(button);
+			button.Pressed += () => OnTilePressed(position, button);
+		}
+	}
+
+	private void ClearTiles()
+	{
+		foreach (var (position, tile) in Buttons)
+		{
+			Tiles.RemoveChild(tile);
+			Buttons.Remove(position);
+			tile.QueueFree();
+		}
+	}
+}

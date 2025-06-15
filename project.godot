@@ -12,8 +12,16 @@ config_version=5
 
 config/name="RSGames"
 run/main_scene="res://Core.tscn"
-config/features=PackedStringArray("4.4", "GL Compatibility")
+config/features=PackedStringArray("4.4", "C#", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+Core="*res://Core.cs"
+
+[display]
+
+window/size/always_on_top=true
 
 [dotnet]
 
