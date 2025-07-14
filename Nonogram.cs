@@ -2,147 +2,127 @@ using Godot;
 
 namespace RSG;
 
-using static UI.NonogramDisplay;
-using UI;
+using static UI.Nonogram.Display;
+using UI.Nonogram;
 
-public partial class Nonogram : Container
+public partial class Nonogram : VBoxContainer
 {
-	public enum Type { Game, Painter }
-
-	public DisplayConfig Config { get; init; } = new(10, 1, 50);
-	public PuzzleData CurrentData
+	public partial class LoadMenu : PopupMenu
 	{
-		get; set
+		public OptionButton Puzzles { get; } = new OptionButton()
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public Button Load { get; } = new() { Name = "Load", Text = "Load" };
+		public override void _Ready() => this.Add(Puzzles, Load);
+	}
+	public partial class ToolBarContainer : HBoxContainer
+	{
+		public Button OpenLoader { get; } = new() { Name = "OpenLoad", Text = "Load" };
+		public Button Reset { get; } = new() { Name = "ResetTiles", Text = "Reset Tiles" };
+		public override void _Ready() => this.Add(OpenLoader, Reset);
+	}
+	public sealed class PaintToolBar : ToolBar
+	{
+		public Button SaveAs { get; } = new() { Name = "Save", Text = "Save As" };
+		public Button SaveAsCode { get; } = new() { Name = "SaveCode", Text = "As Code" };
+		public LineEdit NameInput { get; } = new LineEdit
 		{
-			PainterDisplay.WriteToLabels(value);
-			GameDisplay.WriteToLabels(value);
-			field = value;
+			Name = "NameInput",
+			TooltipText = "New Puzzle"
 		}
-	}
-	public required ColourPack Colours { get; init => GameDisplay.Colours = PainterDisplay.Colours = field = value; }
-
-	public GameContainer GameDisplay => field ??= new(nonogram: this) { Name = "Game" };
-	public PaintContainer PainterDisplay => field ??= new(nonogram: this) { Name = "Painter" };
-	public TabContainer DisplayTabs { get; } = new TabContainer
-	{
-		TabsVisible = true
-	}
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-	public Nonogram() { CurrentData = new(Config); }
-
-	public override void _Ready()
-	{
-		CurrentData = new(Config);
-
-		this.Add(DisplayTabs.Add(GameDisplay, PainterDisplay))
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-		DisplayTabs.TabChanged += index =>
+		public override void AddTools() => Container.Add(SaveAs, NameInput, SaveAsCode);
+		public override void RemoveTools() => Container.Remove(SaveAs, NameInput, SaveAsCode);
+	}
+	public sealed class GameToolBar : ToolBar
+	{
+		public Button CheckProgress { get; } = new() { Name = "CheckProgress", Text = "Check" };
+		public RichTextLabel ProgressReport { get; } = new RichTextLabel
 		{
-			if (DisplayTabs.GetCurrentTabControl() is not NonogramDisplay display) { return; }
-			display.WriteToLabels(CurrentData);
-		};
+			Name = "ProgressReport",
+			SizeFlagsStretchRatio = 0.05f
+		}
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+
+		public override void AddTools() => Container.Add(CheckProgress, ProgressReport);
+		public override void RemoveTools() => Container.Remove(CheckProgress, ProgressReport);
 	}
 
-	public readonly record struct DisplayConfig(int Length, int Scale, int Margin) : IConfig;
-	public sealed record PuzzleData : IData
+	public sealed partial class PaintContainer : DataDisplay<PuzzleData>
 	{
-		public IImmutableDictionary<Vector2I, bool> TileStates => _tiles.ToImmutableDictionary();
-		private readonly Dictionary<Vector2I, bool> _tiles = [];
-		public PuzzleData(IConfig config)
-		{
-			foreach (Vector2I position in (Vector2I.One * config.Length).AsRange())
-			{
-				_tiles[position] = false;
-			}
-		}
-		public void Change(Vector2I position, bool clicked)
-		{
-			_tiles[position] = clicked;
-		}
-
-		public Dictionary<HintPosition, List<int>> Hints()
-		{
-			Dictionary<HintPosition, List<int>> hints = [];
-
-			foreach ((Vector2I position, bool check) in _tiles)
-			{
-				(HintPosition rowPos, HintPosition columnPos) = HintPosition.ToPosition(position);
-
-				if (!hints.TryGetValue(rowPos, out var row)) { hints[rowPos] = row = []; }
-				if (!hints.TryGetValue(columnPos, out var column)) { hints[columnPos] = column = []; }
-
-				if (check)
-				{
-					switch (column.Count)
-					{
-						case not 0 when column[^1] >= 1: ++column[^1]; break;
-						default: column.Add(1); break;
-					}
-					switch (row.Count)
-					{
-						case not 0 when row[^1] >= 1: ++row[^1]; break;
-						default: row.Add(1); break;
-					}
-				}
-				else
-				{
-					column.Add(0);
-					row.Add(0);
-				}
-			}
-			foreach ((HintPosition position, List<int> hintsNumber) in hints)
-			{
-				hints[position] = [.. hintsNumber.Where(i => i is not 0)];
-			}
-
-			return hints;
-		}
-	}
-	public sealed partial class PaintContainer(Nonogram nonogram) : NonogramDisplay
-	{
-		public override IConfig Config => nonogram.Config;
+		public required GameContainer Game { get; init; }
 		public override void OnTilePressed(Button button, Vector2I position)
 		{
 			base.OnTilePressed(button, position);
-			nonogram.CurrentData.Change(position, clicked: button.Text is FillText);
-			WriteToLabels(nonogram.CurrentData);
+			UpdateHintsAt(position);
+			Game.UpdateHintsAt(position);
+			GD.Print(CodeSaver.Encode(Puzzle));
+		}
+		public override void Reset()
+		{
+			base.Reset();
+			foreach (var (_, label) in Labels) { label.Text = EmptyHint; }
 		}
 	}
-	public sealed partial class GameContainer(Nonogram nonogram) : NonogramDisplay
-	{
-		public override IConfig Config => nonogram.Config;
+	public sealed partial class GameContainer : DataDisplay<PuzzleData>;
 
-		public Button CheckProgress { get; } = new() { Name = "CheckProgress", Text = "Check" };
-		public RichTextLabel ProgressReport { get; } = new RichTextLabel { Name = "ProgressReport", SizeFlagsStretchRatio = 0.05f }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public HBoxContainer ToolBar { get; } = new HBoxContainer { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public VBoxContainer ToolBarContainer { get; } = new VBoxContainer { Name = "ToolbarContainer" }
+	public static PuzzleData.SaveCode CodeSaver { get; } = new();
+	public static PuzzleData.PuzzleSaver JsonSaver { get; } = new();
+
+	public PuzzleData Puzzle { get; set => JsonSaver.Name = (Painter.Puzzle = Game.Puzzle = field = value).Name; } = new();
+	public PaintContainer Painter => field ??= new() { Name = "Painter", Game = Game };
+	public GameContainer Game { get; } = new() { Name = "Game" };
+
+	public LoadMenu LoadingMenu { get; } = new() { Name = "LoadMenu" };
+	public TabContainer Displays { get; } = new TabContainer { Name = "Tabs", TabsVisible = true }
+	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public ToolBarContainer ToolBar { get; } = new ToolBarContainer { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f }
+	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = new(0, 0, 0) }
+	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+
+	public GameToolBar GamesToolBar => field ??= new() { Container = ToolBar };
+	public PaintToolBar PaintersToolBar => field ??= new() { Container = ToolBar };
+
+	public override void _Ready()
+	{
+		this.Add(ToolBar, Displays.Add(Game, Painter))
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-		public override void _Ready()
-		{
-			base._Ready();
-			CheckProgress.Pressed += () =>
-			{
-				ProgressReport.Text = IsCorrect(nonogram.CurrentData) ? "Correct" : "Wrong";
-			};
-		}
+		Painter.PuzzleSize = Game.PuzzleSize = 10;
 
-		protected override void AddChildren()
+		ToolBar.Reset.Pressed += () =>
 		{
-			this.Add(
-				Background,
-				ToolBarContainer.Add(
-					ToolBar.Add(CheckProgress, ProgressReport),
-					Main.Add(Spacer, Columns, Rows, Tiles)
-				)
-			);
-		}
+			if (Displays.GetCurrentTabControl() is not Display display) return;
+			display.Reset();
+			if (display is PaintContainer) Puzzle.Reset();
+		};
+		LoadingMenu.Load.Pressed += () =>
+		{
+			bool hasName = LoadingMenu.Puzzles.GetItemCount() == 0 && LoadingMenu.Puzzles.Selected == -1;
+			JsonSaver.Name = hasName ? LoadingMenu.Puzzles.GetItemText(LoadingMenu.Puzzles.Selected) : "";
+			JsonSaver.Load().Switch(puzzle => Puzzle = puzzle, _ => { });
+		};
+		LoadingMenu.Puzzles.ItemSelected += index =>
+		{
+			JsonSaver.Name = LoadingMenu.Puzzles.GetItemText((int)index);
+			JsonSaver.Load().Switch(puzzle => Puzzle = puzzle, _ => { });
+		};
+		PaintersToolBar.NameInput.TextChanged += value => JsonSaver.Name = Puzzle.Name = value;
+		PaintersToolBar.SaveAs.Pressed += () => JsonSaver.Save(Painter.Puzzle);
+		GamesToolBar.CheckProgress.Pressed += () => GamesToolBar.ProgressReport.Text = Puzzle.Matches(Game)
+			? "Correct"
+			: "Wrong";
+		Game.VisibilityChanged += ChangeToolBar(GamesToolBar, Game);
+		Painter.VisibilityChanged += ChangeToolBar(PaintersToolBar, Painter);
+
+		static Action ChangeToolBar(ToolBar tools, Container parent) => () =>
+		{
+			if (parent.IsVisibleInTree()) tools.AddTools(); else tools.RemoveTools();
+		};
 	}
 }

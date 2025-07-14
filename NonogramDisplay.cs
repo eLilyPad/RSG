@@ -1,34 +1,206 @@
 using Godot;
 
-namespace RSG.UI;
+using static Godot.Control;
 
-public abstract partial class NonogramDisplay : Container
+namespace RSG.UI.Nonogram;
+
+using static Display;
+
+public static class DisplayExtensions
 {
-	public readonly record struct HintPosition(Side Side, int Index)
+	private const string BlockText = "X", FillText = "O", EmptyText = " ";
+
+	public static string Text(this PenMode mode) => mode switch
 	{
-		public static (HintPosition Row, HintPosition Column) ToPosition(Vector2I position) => (
-			new(Side.Row, position.X),
-			new(Side.Column, position.Y)
+		PenMode.Block => BlockText,
+		PenMode.Fill => FillText,
+		_ => EmptyText
+	};
+	public static string FillButton(this PenMode mode, string current)
+	{
+		return mode switch
+		{
+			PenMode.Block => current is EmptyText or FillText ? BlockText : EmptyText,
+			PenMode.Fill => current is EmptyText ? FillText : EmptyText,
+			_ => current
+		};
+	}
+}
+
+public abstract class ToolBar
+{
+	public required Container Container { get; init; }
+	public abstract void AddTools();
+	public abstract void RemoveTools();
+}
+
+public sealed class LabelHints(Display display) : Dictionary<LabelHints.Position, RichTextLabel>
+{
+	public readonly record struct Position(Side Side, int Index)
+	{
+		public string AsFormat() => Side switch { Side.Column => "\n", Side.Row => "\t", _ => "" };
+		public int GetIndex(Vector2I position) => Side switch { Side.Column => position.Y, Side.Row => position.X, _ => -1 };
+		public string AsFormatAggregate(string current, int i) => current + AsFormat() + i;
+		public bool HasIndex(Vector2I position) => GetIndex(position) == Index;
+		public static IEnumerable<Position> FromIndex(int index) => [new(Side.Row, index), new(Side.Column, index)];
+		public HorizontalAlignment AsHorizontalAlignment() => Side switch
+		{
+			Side.Row => HorizontalAlignment.Right,
+			Side.Column => HorizontalAlignment.Center,
+			_ => HorizontalAlignment.Fill
+		};
+		public VerticalAlignment AsVerticalAlignment() => Side switch
+		{
+			Side.Row => VerticalAlignment.Center,
+			Side.Column => VerticalAlignment.Bottom,
+			_ => VerticalAlignment.Fill
+		};
+	}
+	public int Size
+	{
+		set
+		{
+			IEnumerable<Position> currentPositions = Range(0, count: value)
+				.SelectMany(Position.FromIndex);
+			IEnumerable<Position> excessPositions = Range(0, count: display.Tiles.Columns)
+				.SelectMany(Position.FromIndex)
+				.Except(currentPositions);
+
+			foreach (Position position in currentPositions)
+			{
+				if (!TryGetValue(position, out RichTextLabel? label))
+				{
+					label = CreateAt(position);
+				}
+				label.Text = "0";
+			}
+			foreach (Position position in excessPositions)
+			{
+				if (!TryGetValue(position, out RichTextLabel? label)) { continue; }
+				Remove(position);
+				display.HintsParent(position).RemoveChild(label);
+				label.QueueFree();
+			}
+		}
+	}
+
+	public RichTextLabel CreateAt(Position position)
+	{
+		RichTextLabel label = this[position] = new()
+		{
+			Text = "0",
+			FitContent = true,
+			CustomMinimumSize = new(10, 10),
+			HorizontalAlignment = position.AsHorizontalAlignment(),
+			VerticalAlignment = position.AsVerticalAlignment(),
+		};
+		display.HintsParent(position).AddChild(label);
+		return label
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	}
+}
+public sealed class TileButtons(Display display) : Dictionary<Vector2I, Button>
+{
+	public IImmutableDictionary<Vector2I, bool> TileStates => this.ToImmutableDictionary(
+		pair => pair.Key,
+		pair => pair.Value.Text is FillText
+	);
+	public string Hints(LabelHints.Position position) => this
+		.Where(pair => position.HasIndex(position: pair.Key))
+		.Select(pair => pair.Value.Text is FillText ? 1 : 0)
+		.ToList()
+		.Condense()
+		.Where(i => i > 0)
+		.Aggregate(string.Empty, position.AsFormatAggregate);
+	public Button CreateAt(Vector2I position)
+	{
+		Button button = this[position] = new Button
+		{
+			Name = $"Tile {position}",
+			Text = EmptyText,
+			CustomMinimumSize = new(10, 10)
+		};
+		display.Tiles.AddChild(button);
+		button.Pressed += () => display.OnTilePressed(button, position);
+		return button
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	}
+	public int Size
+	{
+		set
+		{
+			IEnumerable<Vector2I> currentPositions = (Vector2I.One * value).AsRange();
+			IEnumerable<Vector2I> excessPositions = (Vector2I.One * display.Tiles.Columns).AsRange()
+				.Except(currentPositions);
+
+			foreach (Vector2I position in currentPositions)
+			{
+				if (!TryGetValue(position, out Button? button))
+				{
+					button = CreateAt(position);
+				}
+				button.Text = EmptyText;
+				display.UpdateHintsAt(position);
+			}
+			foreach (Vector2I position in excessPositions)
+			{
+				if (!TryGetValue(position, out Button? button)) { continue; }
+				Remove(position);
+				display.Tiles.RemoveChild(button);
+				button.QueueFree();
+			}
+		}
+	}
+}
+public abstract record Data
+{
+	public IImmutableDictionary<Vector2I, bool> TileStates => Tiles.ToImmutableDictionary();
+	public Dictionary<Vector2I, bool> Tiles { private get; init; } = [];
+	public virtual void Change(Vector2I position, bool clicked) => Tiles[position] = clicked;
+	public void UpdateDisplay(Display display)
+	{
+		foreach (var (position, state) in TileStates)
+		{
+			display.UpdateTileState(position, state);
+		}
+	}
+	public bool Matches(Display display)
+	{
+		return display.AllTiles(predicate: pair =>
+			TileStates.TryGetValue(pair.Key, out var filled)
+			&& filled == (pair.Value.Text == PenMode.Fill.Text())
 		);
 	}
-	public const string BlockText = "X", FillText = "O", EmptyText = " ";
-	public enum PenMode { Block, Fill }
-	private static Vector2 TileSize = new(40, 40);
-	public enum Side { Row, Column }
-
-	public abstract IConfig Config { get; }
-	public IColours Colours { set => Background.Color = new(0, 0, 0); }
-	public PenMode CurrentPenMode { get; set; } = PenMode.Fill;
-
-	public GridContainer Tiles => field ??= new GridContainer
+}
+public interface IColours { Color NonogramBackground { get; } }
+public abstract partial class DataDisplay<T> : Display where T : Data, new()
+{
+	public T Puzzle
 	{
-		Name = "Tiles",
-		Columns = Config.Length,
-		CustomMinimumSize = Config.TilesSize
+		get => new() { Tiles = Buttons.TileStates.ToDictionary() };
+		set
+		{
+			foreach ((Vector2I position, Button button) in Buttons)
+			{
+				if (!value.TileStates.TryGetValue(position, out bool state)) { continue; }
+				button.Text = state ? FillText : EmptyText;
+				UpdateHintsAt(position);
+			}
+		}
 	}
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = new(0, 0, 0) }
+}
+public abstract partial class Display : Container
+{
+	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
+	public enum PenMode { Block, Fill, Clear }
+	public enum Side { Row, Column }
+	public PenMode Pen { get; set; } = PenMode.Fill;
+	public int PuzzleSize
+	{
+		get => Tiles.Columns; set => Tiles.Columns = Labels.Size = Buttons.Size = value;
+	}
+	public GridContainer Tiles { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Control Spacer { get; } = new Control { Name = "Spacer" }
@@ -39,111 +211,46 @@ public abstract partial class NonogramDisplay : Container
 	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Rows { get; } = new VBoxContainer { Name = "RowHints" }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	.AnchorsAndOffsetsPreset(preset: LayoutPreset.CenterRight, resizeMode: LayoutPresetMode.KeepSize);
 	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-	protected Dictionary<Vector2I, Button> Buttons { get; } = [];
-	protected Dictionary<HintPosition, RichTextLabel> Labels { get; } = [];
-
+	.AnchorsAndOffsetsPreset(preset: LayoutPreset.CenterBottom, resizeMode: LayoutPresetMode.KeepSize);
+	protected TileButtons Buttons { get; }
+	protected LabelHints Labels { get; }
+	public Display()
+	{
+		Buttons = new(this);
+		Labels = new(this);
+	}
+	public virtual void Reset() => _ = Buttons.Values.Select(button => button.Text = EmptyText);
 	public override void _Ready()
 	{
-		this
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		Background.CustomMinimumSize = Size;
-		AddChildren();
-		foreach (Vector2I position in (Vector2I.One * Config.Length).AsRange())
-		{
-			var button = Buttons[position] = new Button
-			{
-				Name = $"Button {position}",
-				Text = EmptyText,
-				CustomMinimumSize = TileSize
-			}
+		this.Add(Main.Add(Spacer, Columns, Rows, Tiles))
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 			.AnchorsAndOffsetsPreset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-			Tiles.Add(button);
-			button.Pressed += () => OnTilePressed(button, position);
-		}
-		foreach (int i in Range(0, count: Config.Length))
+	}
+	public bool AllTiles(Func<KeyValuePair<Vector2I, Button>, bool> predicate) => Buttons.All(predicate);
+	public void UpdateTileState(Vector2I position, bool state)
+	{
+		if (!Buttons.TryGetValue(position, out var button)) return;
+		button.Text = state ? FillText : EmptyText;
+		UpdateHintsAt(position);
+	}
+	public virtual void OnTilePressed(Button button, Vector2I position) => button.Text = Pen.FillButton(button.Text);
+	public void UpdateHintsAt(params Span<LabelHints.Position> hints)
+	{
+		foreach (var hint in hints) UpdateHintsAt(position: hint);
+	}
+	public void UpdateHintsAt(OneOf<LabelHints.Position, Vector2I> position) => position.Switch(
+		hint =>
 		{
-			Rows.Add(Label(Side: Side.Row));
-			Columns.Add(Label(Side: Side.Column));
-
-			RichTextLabel Label(Side Side) => Labels[new(Side, Index: i)] = new RichTextLabel
-			{
-				Text = "0",
-				FitContent = true,
-				CustomMinimumSize = TileSize
-			}
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		}
-	}
-	public virtual void OnTilePressed(Button button, Vector2I position)
+			if (!Labels.TryGetValue(hint, out var label)) return;
+			label.Text = Buttons.Hints(hint);
+		},
+		vector => UpdateHintsAt(new(Side.Row, vector.X), new(Side.Column, vector.Y))
+	);
+	public Node HintsParent(LabelHints.Position position)
 	{
-		button.Text = CurrentPenMode switch
-		{
-			PenMode.Block when button.Text is EmptyText or FillText => BlockText,
-			PenMode.Block => EmptyText,
-			PenMode.Fill when button.Text is EmptyText => FillText,
-			PenMode.Fill when button.Text is FillText => EmptyText,
-			_ => button.Text
-		};
-	}
-	public void WriteToLabels(IData data)
-	{
-		foreach (var (position, hint) in data.Hints())
-		{
-			if (!Labels.TryGetValue(position, out RichTextLabel? label)) { continue; }
-			string format = position.Side switch
-			{
-				Side.Column => "\n",
-				Side.Row => "\t",
-				_ => ""
-			};
-			label.Text = hint.Aggregate("", (current, i) => current + format + i);
-		}
-	}
-	public bool IsCorrect(IData data)
-	{
-		foreach ((Vector2I position, Button button) in Buttons)
-		{
-			if (!data.TileStates.TryGetValue(position, out var tileState))
-			{
-				return false;
-			}
-			if (tileState == button.Text is not FillText)
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-	protected virtual void AddChildren()
-	{
-		this.Add(
-			Background,
-			Main.Add(Spacer, Columns, Rows, Tiles)
-		);
-	}
-
-	public interface IColours { Color NonogramBackground { get; } }
-	public interface IData
-	{
-		IImmutableDictionary<Vector2I, bool> TileStates { get; }
-		void Change(Vector2I position, bool clicked);
-		Dictionary<HintPosition, List<int>> Hints();
-	}
-	public interface IConfig
-	{
-		int Margin { get; }
-		int Length { get; }
-		int Scale { get; }
-
-		Vector2I Size => Vector2I.One * Length;
-		Vector2I TilesSize => Size * Scale;
-		Vector2I BackgroundSize => Size * (Scale + 5);
+		return position.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
 	}
 }

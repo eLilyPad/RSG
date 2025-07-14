@@ -1,0 +1,19 @@
+{
+  "Name": "",
+  "Tiles": [
+	{
+	  "Value": true,
+	  "Position": [
+		0,
+		0
+	  ]
+	},
+	{
+	  "Value": true,
+	  "Position": [
+		1,
+		1
+	  ]
+	}
+  ]
+}
