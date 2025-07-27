@@ -12,7 +12,7 @@ public sealed partial class Core : Node
 
 	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
 	public MainMenu Menu => field ??= new MainMenu { Colours = Colours, Visible = false };
-	public Nonogram Nonogram => field ??= new() { Name = "Nonogram" };
+	public NonogramContainer Nonogram => field ??= new() { Name = "Nonogram" };
 	public override void _Ready()
 	{
 		Name = nameof(Core);

@@ -7,7 +7,7 @@ namespace RSG;
 
 using UI.Nonogram;
 
-public sealed record PuzzleData : Data
+public sealed record PuzzleData() : Data
 {
 	public sealed class Converter : JsonConverter<PuzzleData>
 	{
@@ -52,27 +52,6 @@ public sealed record PuzzleData : Data
 			writer.WriteEndObject();
 		}
 	}
-	public sealed class SaveCode : ShareableCode<PuzzleData>
-	{
-		private const string SizeBarrier = "-", BlankToken = "_", FillToken = "x";
-
-		public override PuzzleData Decode(string value)
-		{
-			return new();
-		}
-
-		public override string Encode(PuzzleData value)
-		{
-			string code = "";
-			code += SizeBarrier + Mathf.Sqrt(value.TileStates.Count) + SizeBarrier;
-
-			foreach ((Vector2I _, bool state) in value.TileStates)
-			{
-				code += state ? FillToken : BlankToken;
-			}
-			return code;
-		}
-	}
 	public sealed class PuzzleSaver : Saver<PuzzleData>
 	{
 		private static JsonSerializerOptions Options { get; } = new() { WriteIndented = true, Converters = { new Converter() } };
@@ -107,14 +86,61 @@ public sealed record PuzzleData : Data
 			}
 		}
 	}
+	public sealed class Codifier : ShareableCode<PuzzleData>
+	{
+		private const char SizeBarrier = '-', BlankToken = '_', FillToken = 'x';
+		public override PuzzleData Decode(string value)
+		{
+			int firstBarrier = value.IndexOf(SizeBarrier),
+				secondBarrier = value.IndexOf(SizeBarrier, firstBarrier + 1),
+				barrierSize = secondBarrier - firstBarrier - SizeBarrier;
 
+			string[] s = value.Split(SizeBarrier);
+
+			int width = int.TryParse(s[0], result: out width) ? width : 5;
+			Dictionary<Vector2I, bool> tiles = (Vector2I.One * width).GridRange().ToDictionary(
+				keySelector: position => position,
+				elementSelector: _ => false
+			);
+			PuzzleData puzzleData = new() { Tiles = tiles };
+
+			foreach (var (index, (position, tile)) in tiles.Index())
+			{
+				string states = s[1];
+				bool hasState = index < states.Length;
+				puzzleData.Change(
+					position: new(index % width, index / width),
+					clicked: hasState && states[index] is FillToken
+				);
+			}
+			return puzzleData;
+		}
+		public override string Encode(PuzzleData value)
+		{
+			string code = "";
+			code += Mathf.Sqrt(value.TileStates.Count) + SizeBarrier;
+			foreach ((Vector2I position, bool state) in value.TileStates)
+			{
+				GD.Print($"State: {position}");
+				code += state ? FillToken : BlankToken;
+			}
+			return code;
+		}
+	}
+
+	public static PuzzleData Empty { get; } = new(DefaultSize) { Name = "Empty", };
+	public static string Code { get; } =
+	$"{DefaultSize}-_____________________________________________________________________x______________________________";
+	public const int DefaultSize = 10;
 	private const string RootPath = "res://", FileType = ".json";
 	public string Name { get; set; } = "Puzzle";
-	public void Reset()
+	public PuzzleData(int size) : this()
 	{
-		foreach (var (position, _) in TileStates)
-		{
-			Change(position, clicked: false);
-		}
+		Tiles = (Vector2I.One * size).GridRange().ToDictionary(keySelector: position => position, elementSelector: _ => false);
+	}
+	public override string ToString()
+	{
+		string tiles = string.Join(", ", TileStates.Select(pair => $"{pair.Key}: {pair.Value}"));
+		return $"{Name} ({TileStates.Count} tiles : {tiles})";
 	}
 }

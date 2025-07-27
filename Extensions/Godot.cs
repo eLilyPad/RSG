@@ -4,6 +4,33 @@ namespace RSG.Extensions;
 
 public static class GDX
 {
+	public static void Refill<TKey, TValue>(
+		this Dictionary<TKey, TValue> nodes,
+		IEnumerable<TKey> values,
+		Func<TKey, TValue> create,
+		Func<TKey, Node> parent,
+		Action<TKey>? reset = null
+	)
+	where TValue : Node
+	where TKey : notnull
+	{
+		foreach (var position in values)
+		{
+			if (!nodes.ContainsKey(position))
+			{
+				var node = nodes[position] = create(position);
+				parent(position).AddChild(node);
+			}
+			reset?.Invoke(position);
+		}
+		foreach (var position in nodes.Keys.Except(values))
+		{
+			if (!nodes.TryGetValue(position, out var node)) { continue; }
+			nodes.Remove(position);
+			parent(position).RemoveChild(node);
+			node.QueueFree();
+		}
+	}
 	public static T LoadOrCreateResource<T>(this string path) where T : Resource, new()
 	{
 		var resource = GD.Load<T>(path);
@@ -15,7 +42,7 @@ public static class GDX
 		return resource;
 	}
 
-	public static IEnumerable<Vector2I> AsRange(this Vector2I size, Vector2I? start = null)
+	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? start = null)
 	{
 		for (int x = start?.X ?? 0; x < size.X; x++)
 		{

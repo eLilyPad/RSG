@@ -30,6 +30,11 @@ public static class UIX
 		else control.Ready += Set;
 		return control;
 
-		void Set() => control.SetAnchorsAndOffsetsPreset(preset: preset, resizeMode: resizeMode, margin: margin);
+		void Set() => control.SetAnchorsAndOffsetsPreset(preset, resizeMode, margin);
+	}
+	public static OneOf<string, NotFound> GetSelectedItem(this OptionButton options)
+	{
+		if (options.GetItemCount() == 0 && options.Selected == -1) return new NotFound();
+		return options.GetItemText(options.Selected);
 	}
 }
