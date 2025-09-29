@@ -1,8 +1,6 @@
-[gd_resource type="Resource" load_steps=2 format=3 uid="uid://c1oimfhkhr2j6"]
+[gd_resource type="Resource" load_steps=2 format=3]
 
-[ext_resource type="Script" uid="uid://djv14ijxvskou" path="res://ColourPack.cs" id="1_0qwke"]
+[ext_resource type="Script" path="res://ColourPack.cs" id="1_5e87o"]
 
 [resource]
-script = ExtResource("1_0qwke")
-MainMenuBackground = Color(0.197175, 0.0376259, 0.0109658, 1)
-NonogramBackground = Color(0.101038, 0.207464, 0.179915, 1)
+script = ExtResource("1_5e87o")
