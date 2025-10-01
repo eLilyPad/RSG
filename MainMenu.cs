@@ -2,6 +2,7 @@ using Godot;
 
 namespace RSG.UI;
 
+
 public static class AudioExtensions
 {
 	public static float Volume(this Audio.Buses bus, double? value = null)

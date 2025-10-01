@@ -3,14 +3,14 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using Godot;
 
-namespace RSG;
+namespace RSG.Nonogram;
 
 using UI.Nonogram;
 using static PuzzleData;
 
 public sealed class PuzzleManager
 {
-	private const string RootPath = "res://", FileType = ".json";
+	private const string RootPath = "res://", FileType = ".json", SavePath = "Saves";
 
 	public static PuzzleData? CurrentPuzzle
 	{
@@ -18,38 +18,50 @@ public sealed class PuzzleManager
 		set
 		{
 			if (value is null) { return; }
-			AddPuzzle(value);
+			Instance.Puzzles[value.Name] = value;
 			Instance.Current = value.Name;
 		}
 	}
 
 	private static PuzzleManager Instance => field ??= new();
 
-	public static void LoadCurrent(Display display)
+	public static OneOf<Code.ConversionError, PuzzleData, Savable, Exception, NotFound> Load(
+		OneOf<string, PuzzleData, Savable>? value = null
+	)
 	{
-		try
+		if (value is not OneOf<string, PuzzleData, Savable> puzzle)
 		{
-			string json = File.ReadAllText(LoadingPath(Instance.Current));
-			GD.Print(json);
-			if (Deserialize<Savable>(json, options: Converter.Options) is not Savable save)
+			try
 			{
-				GD.Print("Unable to find puzzle");
-				return;
+				string json = File.ReadAllText(SavedPuzzlesPath(Instance.Current));
+				if (Deserialize<Savable>(json, options: Converter.Options) is not Savable save) { return new NotFound(); }
+				return save;
 			}
-			GD.Print("loading puzzle");
-			display.Load(save.Expected, save.Current);
+			catch (Exception error)
+			{
+				return error;
+			}
 		}
-		catch (Exception error)
-		{
-			GD.Print(error);
-		}
-	}
-	public static void SaveCurrent(Display display)
-	{
-		if (CurrentPuzzle is PuzzleData puzzle)
-		{
-			Save(new Savable(display, puzzle));
-		}
+		return puzzle.Match(
+			code =>
+			{
+				return Code.Encode(code)
+					.Match<OneOf<Code.ConversionError, PuzzleData, Savable, Exception, NotFound>>(
+						error => error,
+						code => code.Decode()
+					);
+			},
+			puzzle =>
+			{
+				Instance.Puzzles[puzzle.Name] = puzzle;
+				return puzzle;
+			},
+			save =>
+			{
+				Instance.Puzzles[save.Expected.Name] = save.Expected;
+				return save;
+			}
+		);
 	}
 	public static void Save(OneOf<PuzzleData, Display.Data.Empty, Savable> puzzle)
 	{
@@ -57,58 +69,25 @@ public sealed class PuzzleManager
 		static void Empty(Display.Data.Empty empty) => Puzzle(new(empty));
 		static void Savable(Savable save)
 		{
-			string path = LoadingPath(save.Expected.Name);
+			string path = SavedPuzzlesPath(save.Expected.Name);
 			Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
 			File.WriteAllText(path, contents: Serialize(save, Converter.Options));
-			AddPuzzle(save.Expected);
+			Instance.Puzzles[save.Expected.Name] = save.Expected;
 		}
 		static void Puzzle(PuzzleData data)
 		{
-			string path = LoadingPath(data.Name);
+			string path = SavedPuzzlesPath(data.Name);
 			Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
 			File.WriteAllText(path, contents: Serialize(data, Converter.Options));
 			Instance.Puzzles[data.Name] = data;
 		}
 	}
-	public static void LoadFromCode(string code, RichTextLabel validationLabel, Display display)
+
+	private static string SavedPuzzlesPath(string name)
 	{
-		Code.Encode(code).Switch(LoadingError, ValidCode);
-		void LoadingError(Code.ConversionError error) => validationLabel.Text = error.Message;
-		void ValidCode(Code code)
-		{
-			PuzzleData data = code.Decode();
-			Instance.Puzzles[data.Name] = data;
-			validationLabel.Text = $"valid code: {data.Name}, of size: {data.Size}";
-			display.Load(data);
-		}
-	}
-	public static void AddPuzzle(PuzzleData data)
-	{
-		Instance.Puzzles[data.Name] = data;
-	}
-	public static void AddPuzzles(IEnumerable<PuzzleData> data, Display display, NonogramContainer.Menu menu)
-	{
-		menu.PuzzleLoader.AddPuzzles(data, display);
-	}
-	public static PuzzleData? Load(string name)
-	{
-		if (Instance.Puzzles.TryGetValue(name, out PuzzleData? puzzle))
-		{
-			return puzzle;
-		}
-		try
-		{
-			string json = File.ReadAllText(LoadingPath(name));
-			puzzle = Deserialize<PuzzleData>(json, options: Converter.Options);
-		}
-		catch (Exception) { }
-		return puzzle;
+		return ProjectSettings.GlobalizePath(RootPath + "/" + SavePath + "/" + name + FileType);
 	}
 
-	private static string LoadingPath(string name)
-	{
-		return ProjectSettings.GlobalizePath(RootPath + name + FileType);
-	}
 	public Dictionary<string, PuzzleData> Puzzles { private get; init; } = new()
 	{
 		[Display.Data.DefaultName] = new()
@@ -162,6 +141,28 @@ public sealed record PuzzleData : Display.Data
 				[int x, int y] => new Vector2I(x, y),
 				_ => Vector2I.Zero
 			};
+		}
+	}
+	public sealed class SavableConverter : JsonConverter<Savable>
+	{
+		public const string CurrentProp = "Current", ExpectedProp = "Expected";
+
+		public override Savable? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		{
+			JsonElement root = JsonDocument.ParseValue(ref reader).RootElement;
+			if (!root.TryGetProperty(ExpectedProp, out JsonElement expectedJson)) { return null; }
+			if (!root.TryGetProperty(CurrentProp, out JsonElement currentJson)) { return null; }
+			return Savable.Create(expectedJson, currentJson);
+
+		}
+		public override void Write(Utf8JsonWriter writer, Savable value, JsonSerializerOptions options)
+		{
+			writer.WriteStartObject();
+			writer.WritePropertyName(ExpectedProp);
+			Serialize(writer, value.Expected, Converter.Options);
+			writer.WritePropertyName(CurrentProp);
+			Serialize(writer, value.Current, Converter.Options);
+			writer.WriteEndObject();
 		}
 	}
 	public readonly record struct Code
@@ -261,21 +262,12 @@ public sealed record PuzzleData : Display.Data
 		}
 		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
-	public sealed class SavableConverter : JsonConverter<Savable>
+
+	public sealed class Savable
 	{
-		public const string CurrentProp = "Current", ExpectedProp = "Expected";
-
-		public override Savable? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		public static Savable Create(JsonElement expected, JsonElement current)
 		{
-			JsonElement root = JsonDocument.ParseValue(ref reader).RootElement;
-			if (!root.TryGetProperty(ExpectedProp, out JsonElement expectedJson)) { return null; }
-			if (!root.TryGetProperty(CurrentProp, out JsonElement currentJson)) { return null; }
-			return new()
-			{
-				Expected = Deserialize(expectedJson),
-				Current = Deserialize(currentJson)
-			};
-
+			return new(current: Deserialize(current), expected: Deserialize(expected));
 			static PuzzleData Deserialize(JsonElement property)
 			{
 				try
@@ -290,26 +282,16 @@ public sealed record PuzzleData : Display.Data
 				return new();
 			}
 		}
-		public override void Write(Utf8JsonWriter writer, Savable value, JsonSerializerOptions options)
+		public static OneOf<Savable, NotFound> Create(NonogramContainer.DisplayContainer displays)
 		{
-			writer.WriteStartObject();
-			writer.WritePropertyName(ExpectedProp);
-			Serialize(writer, value.Expected, Converter.Options);
-			writer.WritePropertyName(CurrentProp);
-			Serialize(writer, value.Current, Converter.Options);
-			writer.WriteEndObject();
+			if (PuzzleManager.CurrentPuzzle is not PuzzleData puzzle) { return new NotFound(); }
+			return new Savable(displays.CurrentTabDisplay, expected: puzzle);
 		}
-	}
-	public sealed class Savable
-	{
-		public PuzzleData Current { get; init; } = new();
-		public PuzzleData Expected { get; init; } = new();
+		public PuzzleData Current { get; } = new();
+		public PuzzleData Expected { get; } = new();
 		public Savable() { }
-		public Savable(Display display, PuzzleData data)
-		{
-			Current = new(display);
-			Expected = data;
-		}
+		public Savable(Display display, PuzzleData expected) => (Current, Expected) = (new PuzzleData(display), expected);
+		public Savable(PuzzleData current, PuzzleData expected) => (Current, Expected) = (current, expected);
 	}
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }

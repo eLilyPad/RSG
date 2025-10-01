@@ -2,7 +2,6 @@ using Godot;
 
 namespace RSG;
 
-using System.Security;
 using UI;
 using UI.Nonogram;
 

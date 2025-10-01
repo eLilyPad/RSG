@@ -1,4 +1,5 @@
 using Godot;
+using RSG.Nonogram;
 
 namespace RSG.UI.Nonogram;
 
@@ -31,20 +32,22 @@ public sealed partial class NonogramContainer : Container
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-		LoadCurrent(Displays.CurrentTabDisplay);
-
-		ToolsBar.CodeLoader.Input.TextSubmitted += text => LoadFromCode(
-			code: text,
-			validationLabel: ToolsBar.CodeLoader.Validation,
-			display: Displays.CurrentTabDisplay
+		//LoadCurrent(Displays.CurrentTabDisplay);
+		Load().Switch(
+			error => GD.Print(error.Message),
+			Displays.CurrentTabDisplay.Load,
+			save => Displays.CurrentTabDisplay.Load(save.Expected, save.Current),
+			exception => GD.Print(exception),
+			notFound => GD.Print("Current puzzle not found")
 		);
+		ToolsBar.CodeLoader.Input.TextSubmitted += CodeSubmitted;
 		ToolsBar.PuzzleLoaderPopup.AboutToPopup += () => ToolsBar.PuzzleLoader.AddPuzzles(
 			data: PuzzleData.Pack.Procedural().Puzzles,
 			display: Displays.CurrentTabDisplay
 		);
 		ToolsBar.Saver.SetItems(
 			clear: true,
-			("Save Puzzle", Key.None, () => SaveCurrent(Displays.CurrentTabDisplay))
+			("Save Puzzle", Key.None, SavePuzzlePressed)
 		);
 		ToolsBar.Loader.SetItems(
 			false,
@@ -70,6 +73,23 @@ public sealed partial class NonogramContainer : Container
 					break;
 			}
 		};
+		void SavePuzzlePressed()
+		{
+			PuzzleData.Savable.Create(Displays).Switch(
+				save => Save(save),
+				notFound => GD.Print("No current puzzle found")
+			);
+		}
+		void CodeSubmitted(string value)
+		{
+			Load(value).Switch(
+				error => ToolsBar.CodeLoader.Validation.Text = error.Message,
+				Displays.CurrentTabDisplay.Load,
+				save => Displays.CurrentTabDisplay.Load(save.Expected, save.Current),
+				exception => GD.Print(exception),
+				notFound => GD.Print("Not Found")
+			);
+		}
 	}
 
 	public sealed partial class DisplayContainer : TabContainer
@@ -141,19 +161,16 @@ public sealed partial class NonogramContainer : Container
 				Clear();
 				foreach (PuzzleData puzzle in data)
 				{
-					AddPuzzle(puzzle);
-					Button loader = new()
-					{
-						Text = puzzle.Name
-					};
-					loader.Pressed += LoadPuzzle;
-					Puzzles.Add(loader);
-					this.Add(loader);
+					Button button = new() { Text = puzzle.Name };
+					button.Pressed += LoadPuzzle;
+
 					void LoadPuzzle()
 					{
 						CurrentPuzzle = puzzle;
 						display.Load(puzzle);
 					}
+					Puzzles.Add(button);
+					this.Add(button);
 				}
 			}
 			public void Clear()
