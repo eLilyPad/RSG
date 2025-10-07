@@ -55,12 +55,9 @@ public static class GDX
 		return resource;
 	}
 
-	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? start = null)
+	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
 	{
-		return size.GridRange(start ?? Vector2I.Zero);
-	}
-	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I start)
-	{
+		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
 		for (int x = start.X; x < size.X; x++)
 		{
 			for (int y = start.Y; y < size.Y; y++)
@@ -78,7 +75,8 @@ public static class GDX
 	{
 		foreach (Node node in children)
 		{
-			if (!parent.HasChild(node)) { continue; }
+			//if (!parent.HasChild(node)) { continue; }
+			if (node.IsAncestorOf(parent)) { continue; }
 			parent.RemoveChild(node);
 			if (free) node.QueueFree();
 		}
@@ -119,6 +117,27 @@ public static class GDX
 	}
 	public static bool HasChild<T>(this T parent, Node child) where T : Node
 	{
-		return child.IsInsideTree() && parent.HasNode(child.GetPath());
+		return GodotObject.IsInstanceValid(child)
+			&& child.IsInsideTree()
+			&& parent.HasNode(child.GetPath());
+	}
+	public static bool TryParse(this string? value, out Vector2I result)
+	{
+		result = Vector2I.Zero;
+		if (string.IsNullOrEmpty(value)) { return false; }
+		foreach ((int index, string part) in value.Trim('(', ')').Split(',').Index())
+		{
+			if (!int.TryParse(part, out int number))
+			{
+				GD.PrintErr($"Error parsing int from string part: {part}");
+				return false;
+			}
+			switch (index)
+			{
+				case 0: result.X = number; break;
+				case 1: result.Y = number; break;
+			}
+		}
+		return true;
 	}
 }

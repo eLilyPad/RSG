@@ -3,7 +3,7 @@ using Godot;
 namespace RSG;
 
 using UI;
-using UI.Nonogram;
+using Nonogram;
 
 public interface IHaveCore { Core Core { get; init; } }
 
@@ -18,6 +18,11 @@ public sealed partial class Core : Node
 	{
 		Name = nameof(Core);
 		this.Add(Nonogram, Menu);
+
+		foreach (var puzzle in PuzzleManager.GetSavedPuzzles())
+		{
+			//GD.Print($"Found saved puzzle: {puzzle.Expected.Name} of size {puzzle.Expected.Size}");
+		}
 	}
 	public override void _Input(InputEvent input)
 	{
@@ -28,4 +33,10 @@ public sealed partial class Core : Node
 				break;
 		}
 	}
+}
+
+public sealed partial class Popup<T>() : Popup where T : Control, new()
+{
+	public T Control { get; init; } = new();
+	public override void _Ready() => this.Add(Control);
 }

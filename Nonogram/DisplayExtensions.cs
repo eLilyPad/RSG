@@ -1,5 +1,4 @@
 using Godot;
-using RSG.UI.Nonogram;
 
 namespace RSG.Nonogram;
 
@@ -7,9 +6,7 @@ using static Display;
 
 public static class DisplayExtensions
 {
-	public static string AsText(
-		this PenMode mode
-	) => mode switch
+	public static string AsText(this PenMode mode) => mode switch
 	{
 		PenMode.Block => BlockText,
 		PenMode.Fill => FillText,
@@ -21,10 +18,7 @@ public static class DisplayExtensions
 		PenMode.Fill => current is EmptyText ? FillText : EmptyText,
 		_ => current
 	};
-	public static int IndexFrom(
-		this Side side,
-		Vector2I position
-	) => side switch
+	public static int IndexFrom(this Side side, Vector2I position) => side switch
 	{
 		Side.Column => position.Y,
 		Side.Row => position.X,

@@ -1,7 +1,8 @@
+using System.Text.Json;
 using Godot;
 using RSG.Nonogram;
 
-namespace RSG.UI.Nonogram;
+namespace RSG.Nonogram;
 
 public abstract partial class Display : Container
 {
@@ -33,10 +34,44 @@ public abstract partial class Display : Container
 	}
 	public abstract record Data
 	{
-		public readonly record struct Empty(int Size)
+		public readonly record struct Empty(int Size);
+		public static class PropertyNames
 		{
-			//public static implicit operator int(Empty empty) => empty.Size;
+			public const string Tiles = "Tiles", Name = "Name", Position = "Position", Value = "Value";
 		}
+		public static string ReadName(JsonElement root)
+		{
+			if (!root.TryGetProperty(PropertyNames.Name, out JsonElement nameProp))
+			{
+				return DefaultName;
+			}
+			return nameProp.GetString() ?? DefaultName;
+		}
+		public static Dictionary<Vector2I, bool> ReadTiles(JsonElement tilesProp)
+		{
+			Dictionary<Vector2I, bool> tiles = [];
+			foreach (JsonElement element in tilesProp.EnumerateArray())
+			{
+				if (!element.TryGetProperty(PropertyNames.Position, out JsonElement positionProp)
+					|| !positionProp.GetString().TryParse(out Vector2I position)
+				)
+				{
+					GD.PrintErr($"Error parsing position in JSON: {element}");
+					continue;
+				}
+				if (!element.TryGetProperty(PropertyNames.Value, out JsonElement valueProp))
+				{
+					GD.PrintErr($"Error parsing value in JSON: {element}");
+					continue;
+				}
+				tiles[position] = valueProp.GetBoolean();
+			}
+			return tiles;
+		}
+		public static IImmutableDictionary<Vector2I, bool> AsStates(Display display) => display.Tiles.ToImmutableDictionary(
+			keySelector: pair => pair.Key,
+			elementSelector: pair => pair.Value.Text is FillText
+		);
 		private static bool Matches(Button tile, bool state)
 		{
 			return (tile.Text is FillText && state) || (tile.Text is EmptyText && !state);
@@ -46,7 +81,9 @@ public abstract partial class Display : Container
 		public string Name { get; set; } = DefaultName;
 		public IImmutableDictionary<Vector2I, bool> States => Tiles.ToImmutableDictionary();
 		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(key => HintPosition.Convert(key));
-		public Dictionary<Vector2I, bool> Tiles { protected get; init; } = [];
+		public Dictionary<Vector2I, bool> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
+			.GridRange()
+			.ToDictionary(elementSelector: _ => false);
 		public int Size => (int)Mathf.Sqrt(Tiles.Count);
 		public Data(int size = DefaultSize)
 		{
@@ -56,6 +93,14 @@ public abstract partial class Display : Container
 		{
 			Tiles = display.Tiles.ToDictionary(elementSelector: pair => pair.Value.Text is FillText);
 		}
+		public abstract void Load(Display display);
+
+		//public virtual void Load(Display display)
+		//{
+		//	display.ChangePuzzleSize(Size);
+		//	display.Tiles.SetText(StateAsText, States.Keys);
+		//	display.Hints.SetText(display.Tiles.CalculateHints, HintPositions);
+		//}
 		public string StateAsText(Vector2I position) => States.GetValueOrDefault(position) ? FillText : EmptyText;
 		public bool Matches(Display display, Vector2I position)
 		{
@@ -112,33 +157,36 @@ public abstract partial class Display : Container
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
-	public virtual void Load(Data data)
-	{
-		ChangePuzzleSize(data.Size);
-		Tiles.SetText(getText: data.StateAsText, keys: data.States.Keys);
-		Hints.SetText(getText: Tiles.CalculateHints, keys: data.HintPositions);
-	}
-	public virtual void Load(Data expected, Data current)
-	{
-		Load(expected);
-		Tiles.SetText(getText: current.StateAsText, keys: expected.States.Keys);
-	}
+	//public abstract void Load(Data data);
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		Button button = Tiles[position];
 		button.Text = Pen.FillButton(button.Text);
 	}
-
-	protected virtual void WriteToHint(Vector2I position) => Hints.SetText(asText: Tiles.CalculateHints, position);
-	protected virtual void ResetTile(Button button) => button.Text = EmptyText;
-	protected virtual void ResetHint(RichTextLabel hint) => hint.Text = EmptyHint;
-
-	private void ChangePuzzleSize(int size)
+	public string CalculateHintAt(HintPosition position) => Tiles.CalculateHints(position);
+	public void ChangePuzzleSize(int size)
 	{
+		if (size < 1)
+		{
+			GD.PrintErr($"size: ({size}) < 1: replacing with default size {Data.DefaultSize}");
+			size = Data.DefaultSize;
+		}
 		IEnumerable<HintPosition> values = HintPosition.AsRange(TilesGrid.Columns = size);
 		Hints.Refill(values, create: CreateHint, parent: HintsParent, reset: (Action<RichTextLabel>)ResetHint);
 		Tiles.RefillGrid(size, create: CreateTile, parent: TilesGrid, reset: (Action<Button>)ResetTile);
 	}
+	public void WriteToHints(IEnumerable<HintPosition> positions)
+	{
+		Hints.SetText(CalculateHintAt, positions);
+	}
+	public void WriteToTiles(IEnumerable<Vector2I> positions, Func<Vector2I, string> getText)
+	{
+		Tiles.SetText(getText, positions);
+	}
+	protected virtual void WriteToHint(Vector2I position) => Hints.SetText(asText: CalculateHintAt, position);
+	protected virtual void ResetTile(Button button) => button.Text = EmptyText;
+	protected virtual void ResetHint(RichTextLabel hint) => hint.Text = EmptyHint;
+
 	private Button CreateTile(Vector2I position)
 	{
 		Button button = new()
