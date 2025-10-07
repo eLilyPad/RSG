@@ -1,15 +1,13 @@
-<Project Sdk="Godot.NET.Sdk/4.5.0">
+<Project Sdk="Godot.NET.Sdk/4.4.1">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>preview</LangVersion>
-    <DOTNET_ROLL_FORWARD_TO_PRERELEASE>1</DOTNET_ROLL_FORWARD_TO_PRERELEASE>
-    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <ImplicitUsings>true</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>RSG</RootNamespace>
   </PropertyGroup>
-   <ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="OneOf" Version="3.0.271" />

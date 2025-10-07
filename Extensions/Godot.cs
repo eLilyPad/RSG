@@ -4,33 +4,46 @@ namespace RSG.Extensions;
 
 public static class GDX
 {
+	public static void RefillGrid<TValue>(
+		this IDictionary<Vector2I, TValue> nodes,
+		int size,
+		Func<Vector2I, TValue> create,
+		OneOf<Node, Func<Vector2I, Node>> parent,
+		OneOf<Action<Vector2I>, Action<TValue>> reset
+	)
+	where TValue : Node
+	{
+		nodes.Refill(values: (Vector2I.One * size).GridRange(), create, parent, reset);
+	}
 	public static void Refill<TKey, TValue>(
-		this Dictionary<TKey, TValue> nodes,
+		this IDictionary<TKey, TValue> nodes,
 		IEnumerable<TKey> values,
 		Func<TKey, TValue> create,
-		Func<TKey, Node> parent,
-		Action<TKey>? reset = null
+		OneOf<Node, Func<TKey, Node>> parent,
+		OneOf<Action<TKey>, Action<TValue>> reset
 	)
 	where TValue : Node
 	where TKey : notnull
 	{
 		foreach (var position in values)
 		{
-			if (!nodes.ContainsKey(position))
+			if (!nodes.TryGetValue(position, out TValue? node))
 			{
-				var node = nodes[position] = create(position);
-				parent(position).AddChild(node);
+				node = nodes[position] = create(position);
+				Parent(position).AddChild(node);
 			}
-			reset?.Invoke(position);
+			reset.Switch(position.PassOn(), node.PassOn());
 		}
 		foreach (var position in nodes.Keys.Except(values))
 		{
 			if (!nodes.TryGetValue(position, out var node)) { continue; }
 			nodes.Remove(position);
-			parent(position).RemoveChild(node);
+			Parent(position).RemoveChild(node);
 			node.QueueFree();
 		}
+		Node Parent(TKey position) => parent.Match(node => node, getParent => getParent(position));
 	}
+
 	public static T LoadOrCreateResource<T>(this string path) where T : Resource, new()
 	{
 		var resource = GD.Load<T>(path);
@@ -42,11 +55,12 @@ public static class GDX
 		return resource;
 	}
 
-	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? start = null)
+	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
 	{
-		for (int x = start?.X ?? 0; x < size.X; x++)
+		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
+		for (int x = start.X; x < size.X; x++)
 		{
-			for (int y = start?.Y ?? 0; y < size.Y; y++)
+			for (int y = start.Y; y < size.Y; y++)
 			{
 				yield return new Vector2I(x, y);
 			}
@@ -54,19 +68,24 @@ public static class GDX
 	}
 	public static T Add<T>(this T parent, params Span<Node> children) where T : Node
 	{
-		foreach (Node node in children)
-		{
-			parent.AddChild(node);
-		}
+		foreach (Node node in children) { parent.AddChild(node); }
 		return parent;
 	}
-	public static T Remove<T>(this T parent, params Span<Node> children) where T : Node
+	public static T Remove<T>(this T parent, bool free = false, params Span<Node> children) where T : Node
 	{
 		foreach (Node node in children)
 		{
-			if (!node.IsInsideTree() || !parent.HasNode(node.GetPath())) { continue; }
+			//if (!parent.HasChild(node)) { continue; }
+			if (node.IsAncestorOf(parent)) { continue; }
 			parent.RemoveChild(node);
+			if (free) node.QueueFree();
 		}
+		return parent;
+	}
+	public static T AddOrRemove<T>(this T parent, bool add, bool free = false, params Span<Node> children) where T : Node
+	{
+		if (add) parent.Add(children);
+		else parent.Remove(free, children);
 		return parent;
 	}
 	public static void FreeAll<TKey, TNode>(this Dictionary<TKey, TNode> nodes, Node? parent = null)
@@ -75,7 +94,7 @@ public static class GDX
 	{
 		foreach (var (key, node) in nodes)
 		{
-			if (parent is not null && parent.HasNode(node.GetPath()))
+			if (parent is not null && parent.HasChild(node))
 			{
 				parent.RemoveChild(node);
 			}
@@ -83,19 +102,42 @@ public static class GDX
 			node.QueueFree();
 		}
 	}
-	public static bool TryHide(this Node node)
+	public static T ReplaceChild<T>(this T parent, Node old, Node replacement, bool free = false) where T : Node
 	{
-		switch (node)
+		if (parent.HasChild(old))
 		{
-			case Node2D container when container.IsInsideTree() && container.Visible:
-				container.Hide();
-				return true;
-			case Window window when window.IsInsideTree() && window.Visible:
-				window.Hide();
-				return true;
-			default: return false;
+			parent.RemoveChild(old);
 		}
+		if (free)
+		{
+			old.QueueFree();
+		}
+		parent.Add(replacement);
+		return parent;
 	}
-
-
+	public static bool HasChild<T>(this T parent, Node child) where T : Node
+	{
+		return GodotObject.IsInstanceValid(child)
+			&& child.IsInsideTree()
+			&& parent.HasNode(child.GetPath());
+	}
+	public static bool TryParse(this string? value, out Vector2I result)
+	{
+		result = Vector2I.Zero;
+		if (string.IsNullOrEmpty(value)) { return false; }
+		foreach ((int index, string part) in value.Trim('(', ')').Split(',').Index())
+		{
+			if (!int.TryParse(part, out int number))
+			{
+				GD.PrintErr($"Error parsing int from string part: {part}");
+				return false;
+			}
+			switch (index)
+			{
+				case 0: result.X = number; break;
+				case 1: result.Y = number; break;
+			}
+		}
+		return true;
+	}
 }

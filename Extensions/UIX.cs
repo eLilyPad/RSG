@@ -5,11 +5,35 @@ namespace RSG.Extensions;
 
 public static class UIX
 {
-	public static T SizeFlags<T>(
-		this T control,
-		SizeFlags horizontal,
-		SizeFlags vertical
-	) where T : Control
+	public static Dictionary<TKey, TValue> SetText<TKey, TValue>(
+		this Dictionary<TKey, TValue> labels,
+		Func<TKey, string> getText,
+		IEnumerable<TKey> keys
+	)
+	where TKey : notnull
+	where TValue : Control
+	{
+		foreach (var key in keys)
+		{
+			if (!labels.TryGetValue(key, out var label)) { return labels; }
+			string text = getText(key);
+			switch (label)
+			{
+				case RichTextLabel rich:
+					rich.Text = text;
+					break;
+				case Label lbl:
+					lbl.Text = text;
+					break;
+				case Button button:
+					button.Text = text;
+					break;
+				default: break;
+			}
+		}
+		return labels;
+	}
+	public static T SizeFlags<T>(this T control, SizeFlags horizontal, SizeFlags vertical) where T : Control
 	{
 		(control.SizeFlagsHorizontal, control.SizeFlagsVertical) = (horizontal, vertical);
 		return control;
@@ -19,7 +43,7 @@ public static class UIX
 		node.OffsetTop = node.OffsetBottom = node.OffsetLeft = node.OffsetRight = margin;
 		return node;
 	}
-	public static T AnchorsAndOffsetsPreset<T>(
+	public static T Preset<T>(
 		this T control,
 		LayoutPreset preset,
 		LayoutPresetMode resizeMode,
@@ -36,5 +60,50 @@ public static class UIX
 	{
 		if (options.GetItemCount() == 0 && options.Selected == -1) return new NotFound();
 		return options.GetItemText(options.Selected);
+	}
+	public static void ClearItems(this PopupMenu menu)
+	{
+		for (int i = menu.GetItemCount() - 1; i >= 0; i--)
+		{
+			menu.RemoveItem(i);
+		}
+	}
+
+	public static PopupMenu SetItems(
+		this PopupMenu menu,
+		bool clear,
+		params IEnumerable<(string label, OneOf<Key, Texture2D, (Texture2D icon, Key binding)> args, Action pressed)> values
+	)
+	{
+		int id = 0;
+		if (clear) menu.ClearItems();
+		foreach (var (label, args, pressed) in values)
+		{
+			switch (args.Value)
+			{
+				case Key key:
+					menu.AddItem(label, id, accel: key);
+					break;
+				case Texture2D texture:
+					menu.AddIconItem(texture, label, id);
+					break;
+				case (Texture2D texture, Key key):
+					menu.AddIconItem(texture, label, id, accel: key);
+					break;
+				default:
+					menu.AddItem(label, id);
+					break;
+			}
+		}
+		menu.IdPressed += id =>
+		{
+			int index = (int)id;
+			if (!(values.ElementAtOrDefault(index) is var (label, args, pressed))) { return; }
+			pressed();
+		};
+
+		++id;
+		return menu;
+
 	}
 }
