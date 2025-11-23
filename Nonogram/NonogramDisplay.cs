@@ -84,7 +84,7 @@ public abstract partial class Display : Container
 		public Dictionary<Vector2I, bool> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 			.GridRange()
 			.ToDictionary(elementSelector: _ => false);
-		public int Size => (int)Mathf.Sqrt(Tiles.Count);
+		public virtual int Size => (int)Mathf.Sqrt(Tiles.Count);
 		public Data(int size = DefaultSize)
 		{
 			Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: _ => false);
@@ -93,14 +93,6 @@ public abstract partial class Display : Container
 		{
 			Tiles = display.Tiles.ToDictionary(elementSelector: pair => pair.Value.Text is FillText);
 		}
-		public abstract void Load(Display display);
-
-		//public virtual void Load(Display display)
-		//{
-		//	display.ChangePuzzleSize(Size);
-		//	display.Tiles.SetText(StateAsText, States.Keys);
-		//	display.Hints.SetText(display.Tiles.CalculateHints, HintPositions);
-		//}
 		public string StateAsText(Vector2I position) => States.GetValueOrDefault(position) ? FillText : EmptyText;
 		public bool Matches(Display display, Vector2I position)
 		{
@@ -157,7 +149,7 @@ public abstract partial class Display : Container
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
-	//public abstract void Load(Data data);
+	public abstract void Load(Data data);
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		Button button = Tiles[position];
@@ -175,15 +167,6 @@ public abstract partial class Display : Container
 		Hints.Refill(values, create: CreateHint, parent: HintsParent, reset: (Action<RichTextLabel>)ResetHint);
 		Tiles.RefillGrid(size, create: CreateTile, parent: TilesGrid, reset: (Action<Button>)ResetTile);
 	}
-	public void WriteToHints(IEnumerable<HintPosition> positions)
-	{
-		Hints.SetText(CalculateHintAt, positions);
-	}
-	public void WriteToTiles(IEnumerable<Vector2I> positions, Func<Vector2I, string> getText)
-	{
-		Tiles.SetText(getText, positions);
-	}
-	protected virtual void WriteToHint(Vector2I position) => Hints.SetText(asText: CalculateHintAt, position);
 	protected virtual void ResetTile(Button button) => button.Text = EmptyText;
 	protected virtual void ResetHint(RichTextLabel hint) => hint.Text = EmptyHint;
 

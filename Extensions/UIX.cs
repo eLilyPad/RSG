@@ -8,12 +8,12 @@ public static class UIX
 	public static Dictionary<TKey, TValue> SetText<TKey, TValue>(
 		this Dictionary<TKey, TValue> labels,
 		Func<TKey, string> getText,
-		IEnumerable<TKey> keys
+		IEnumerable<TKey>? keys = null
 	)
 	where TKey : notnull
 	where TValue : Control
 	{
-		foreach (var key in keys)
+		foreach (var key in keys ?? labels.Keys)
 		{
 			if (!labels.TryGetValue(key, out var label)) { return labels; }
 			string text = getText(key);

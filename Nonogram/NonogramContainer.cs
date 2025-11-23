@@ -20,7 +20,9 @@ public sealed partial class NonogramContainer : Container
 	{
 		get => field ??= new DisplayContainer(
 			menu: ToolsBar,
-			new GameDisplay() { Status = Status }, new PaintDisplay()
+			new GameDisplay { Status = Status },
+			new PaintDisplay { },
+			new ExpectedDisplay { }
 		);
 	}
 
@@ -32,7 +34,7 @@ public sealed partial class NonogramContainer : Container
 
 		Display.Data startPuzzle = PuzzleData.Pack.Procedural().Puzzles.First();
 		Load(startPuzzle).Switch(
-			data => data.Load(Displays.CurrentTabDisplay),
+			Displays.CurrentTabDisplay.Load,
 			error => GD.Print(error.Message),
 			notFound => GD.Print("Current puzzle not found")
 		);
@@ -43,7 +45,7 @@ public sealed partial class NonogramContainer : Container
 			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
 		);
 		ToolsBar.CodeLoader.Control.Input.TextSubmitted += value => Load(value).Switch(
-			data => data.Load(Displays.CurrentTabDisplay),
+			Displays.CurrentTabDisplay.Load,
 			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
 			notFound => GD.Print("Not Found")
 		);
@@ -102,14 +104,14 @@ public sealed partial class NonogramContainer : Container
 			Assert(condition: displays.Count != 0, message: Errors.Construction.NoDisplayGiven);
 
 			Name = $"{typeof(Display)} Tabs";
-			TabsVisible = false;
+			TabsVisible = true;
 
 			foreach (Display display in displays)
 			{
 				Tabs.Add(display);
 				AddChild(display);
 				if (Current.Puzzle is null) { continue; }
-				Current.Puzzle.Load(display);
+				display.Load(Current.Puzzle);
 			}
 
 			TabChanged += OnTabChanged;
@@ -118,6 +120,7 @@ public sealed partial class NonogramContainer : Container
 			void OnTabChanged(long index)
 			{
 				Display current = Current.Display = CurrentTabDisplay;
+				current.Load(Current.Puzzle);
 				foreach (Display other in displays.Except([current]))
 				{
 					if (other == current
@@ -154,9 +157,22 @@ public sealed partial class NonogramContainer : Container
 			CustomMinimumSize = new(200, 0),
 			Text = PuzzleIncomplete
 		}.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		public override void _Ready() => this
-		.Add(CompletionLabel)
-		;
+		public override void _Ready() => this.Add(CompletionLabel);
+	}
+	public sealed partial class ExpectedDisplay : Display
+	{
+		public ExpectedDisplay()
+		{
+			Name = "Expected";
+		}
+		public override void OnTilePressed(Vector2I position) { }
+		public override void Reset() { }
+		public override void Load(Data data)
+		{
+			ChangePuzzleSize(data.Size);
+			Tiles.SetText(data.StateAsText);
+			Hints.SetText(CalculateHintAt, data.HintPositions);
+		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
@@ -169,6 +185,15 @@ public sealed partial class NonogramContainer : Container
 				clear: false,
 				("Reset", Key.None, Reset)
 			);
+		}
+		public override void Load(Data data)
+		{
+			ChangePuzzleSize(data.Size);
+			Tiles.SetText(
+				getText: data is SaveData save ? save.StateAsText : data.StateAsText
+			);
+			Hints.SetText(CalculateHintAt, data.HintPositions);
+			Reset();
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
@@ -204,10 +229,17 @@ public sealed partial class NonogramContainer : Container
 				("Reset", Key.None, Reset)
 			);
 		}
+		public override void Load(Data data)
+		{
+			ChangePuzzleSize(data.Size);
+			Tiles.SetText(data.StateAsText);
+			Hints.SetText(CalculateHintAt, data.HintPositions);
+		}
+
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
-			WriteToHint(position);
+			Hints.SetText(asText: CalculateHintAt, position);
 		}
 		public override void Reset()
 		{

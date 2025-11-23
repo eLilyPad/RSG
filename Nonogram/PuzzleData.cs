@@ -26,7 +26,7 @@ public sealed class PuzzleManager
 				{
 					return;
 				}
-				value.Load(Display);
+				Display.Load(value);
 			}
 		}
 		public Display? Display { get; set; } = null;
@@ -202,28 +202,11 @@ public sealed record SaveData : Display.Data
 	}
 
 	public PuzzleData Expected { get; init; } = new();
+	public override int Size => Expected.Size;
 
 	public SaveData() { }
 	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
 	public SaveData(PuzzleData expected, Display display) : base(display) => Expected = expected;
-
-	public override void Load(Display display)
-	{
-		display.ChangePuzzleSize(Expected.Size);
-		display.WriteToTiles(
-			positions: States.Keys,
-			getText: position => Expected.States.GetValueOrDefault(position)
-				? Display.FillText
-				: Display.EmptyText
-		);
-		display.WriteToHints(HintPositions);
-		display.WriteToTiles(
-			positions: States.Keys,
-			getText: position => States.GetValueOrDefault(position)
-				? Display.FillText
-				: Display.EmptyText
-		);
-	}
 }
 public sealed record PuzzleData : Display.Data
 {
@@ -369,14 +352,6 @@ public sealed record PuzzleData : Display.Data
 	public PuzzleData(Display display) : base(display) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 
-	public override void Load(Display display)
-	{
-		GD.Print($"Loading PuzzleData into {display}");
-		display.ChangePuzzleSize(Size);
-		display.WriteToTiles(States.Keys, StateAsText);
-		display.WriteToHints(HintPositions);
-		display.Reset();
-	}
 	public override string ToString()
 	{
 		string tiles = string.Join(", ", Tiles.Select(pair => $"{pair.Key}: {pair.Value}"));
