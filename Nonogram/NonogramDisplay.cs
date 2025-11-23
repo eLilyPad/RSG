@@ -172,14 +172,25 @@ public abstract partial class Display : Container
 
 	private Button CreateTile(Vector2I position)
 	{
+		const MouseButton pressedMouseButton = MouseButton.Left;
 		Button button = new()
 		{
 			Name = $"Tile {position}",
 			Text = EmptyText,
 			CustomMinimumSize = Vector2.One * TileSize
 		};
-		button.Pressed += () => OnTilePressed(position);
+		button.MouseEntered += MouseEntered;
+		button.ButtonDown += ButtonDown;
+
 		return button;
+
+		void ButtonDown() => OnTilePressed(position);
+		void MouseEntered()
+		{
+			bool pressed = Input.IsMouseButtonPressed(pressedMouseButton);
+			if (!pressed) { return; }
+			OnTilePressed(position);
+		}
 	}
 	private RichTextLabel CreateHint(HintPosition position)
 	{
