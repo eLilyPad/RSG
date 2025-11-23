@@ -32,7 +32,7 @@ public sealed partial class NonogramContainer : Container
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-		Display.Data startPuzzle = PuzzleData.Pack.Procedural().Puzzles.First();
+		Display.Data startPuzzle = Current.Puzzle = PuzzleData.Pack.Procedural().Puzzles.First();
 		Load(startPuzzle).Switch(
 			Displays.CurrentTabDisplay.Load,
 			error => GD.Print(error.Message),
