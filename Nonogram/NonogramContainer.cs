@@ -1,5 +1,4 @@
 using Godot;
-using RSG.Nonogram;
 
 namespace RSG.Nonogram;
 
@@ -174,6 +173,7 @@ public sealed partial class NonogramContainer : Container
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
+			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
 			if (Current.Puzzle is null)
 			{
 				GD.PushWarning("No Puzzle Selected unable to check if completed");
@@ -185,6 +185,7 @@ public sealed partial class NonogramContainer : Container
 				return;
 			}
 			Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
+
 		}
 		public override void Reset()
 		{
