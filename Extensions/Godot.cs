@@ -55,12 +55,16 @@ public static class GDX
 		return resource;
 	}
 
+	public static int Squared(this Vector2I value)
+	{
+		return value.X * value.X + value.Y * value.Y;
+	}
 	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
 	{
 		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
-		for (int x = start.X; x < size.X; x++)
+		for (int y = start.Y; y < size.Y; y++)
 		{
-			for (int y = start.Y; y < size.Y; y++)
+			for (int x = start.X; x < size.X; x++)
 			{
 				yield return new Vector2I(x, y);
 			}

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Godot;
-using RSG.Nonogram;
 
 namespace RSG.Nonogram;
 
@@ -77,14 +76,16 @@ public abstract partial class Display : Container
 			return (tile.Text is FillText && state) || (tile.Text is EmptyText && !state);
 		}
 		public const string DefaultName = "Puzzle";
-		public const int DefaultSize = 10;
+		public const int DefaultSize = 15;
 		public string Name { get; set; } = DefaultName;
 		public IImmutableDictionary<Vector2I, bool> States => Tiles.ToImmutableDictionary();
-		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(key => HintPosition.Convert(key));
+		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
+			key => HintPosition.Convert(key)
+		);
 		public Dictionary<Vector2I, bool> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 			.GridRange()
 			.ToDictionary(elementSelector: _ => false);
-		public int Size => (int)Mathf.Sqrt(Tiles.Count);
+		public virtual int Size => (int)Mathf.Sqrt(Tiles.Count);
 		public Data(int size = DefaultSize)
 		{
 			Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: _ => false);
@@ -93,14 +94,6 @@ public abstract partial class Display : Container
 		{
 			Tiles = display.Tiles.ToDictionary(elementSelector: pair => pair.Value.Text is FillText);
 		}
-		public abstract void Load(Display display);
-
-		//public virtual void Load(Display display)
-		//{
-		//	display.ChangePuzzleSize(Size);
-		//	display.Tiles.SetText(StateAsText, States.Keys);
-		//	display.Hints.SetText(display.Tiles.CalculateHints, HintPositions);
-		//}
 		public string StateAsText(Vector2I position) => States.GetValueOrDefault(position) ? FillText : EmptyText;
 		public bool Matches(Display display, Vector2I position)
 		{
@@ -124,6 +117,7 @@ public abstract partial class Display : Container
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const int TileSize = 31;
+	// [Bug] ^^ if this changes the tile becomes a rectangle, with the height being larger than the width
 	public enum PenMode { Block, Fill, Clear }
 	public enum Side { Row, Column }
 	public PenMode Pen { get; set; } = PenMode.Fill;
@@ -157,7 +151,7 @@ public abstract partial class Display : Container
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
-	//public abstract void Load(Data data);
+	public abstract void Load(Data data);
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		Button button = Tiles[position];
@@ -175,28 +169,30 @@ public abstract partial class Display : Container
 		Hints.Refill(values, create: CreateHint, parent: HintsParent, reset: (Action<RichTextLabel>)ResetHint);
 		Tiles.RefillGrid(size, create: CreateTile, parent: TilesGrid, reset: (Action<Button>)ResetTile);
 	}
-	public void WriteToHints(IEnumerable<HintPosition> positions)
-	{
-		Hints.SetText(CalculateHintAt, positions);
-	}
-	public void WriteToTiles(IEnumerable<Vector2I> positions, Func<Vector2I, string> getText)
-	{
-		Tiles.SetText(getText, positions);
-	}
-	protected virtual void WriteToHint(Vector2I position) => Hints.SetText(asText: CalculateHintAt, position);
 	protected virtual void ResetTile(Button button) => button.Text = EmptyText;
 	protected virtual void ResetHint(RichTextLabel hint) => hint.Text = EmptyHint;
 
 	private Button CreateTile(Vector2I position)
 	{
+		const MouseButton pressedMouseButton = MouseButton.Left;
 		Button button = new()
 		{
-			Name = $"Tile {position}",
+			Name = $"Tile (X: {position.X}, Y: {position.Y})",
 			Text = EmptyText,
 			CustomMinimumSize = Vector2.One * TileSize
 		};
-		button.Pressed += () => OnTilePressed(position);
+		button.MouseEntered += MouseEntered;
+		button.ButtonDown += ButtonDown;
+
 		return button;
+
+		void ButtonDown() => OnTilePressed(position);
+		void MouseEntered()
+		{
+			bool pressed = Input.IsMouseButtonPressed(pressedMouseButton);
+			if (!pressed) { return; }
+			OnTilePressed(position);
+		}
 	}
 	private RichTextLabel CreateHint(HintPosition position)
 	{
