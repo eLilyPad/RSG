@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Godot;
-using RSG.Nonogram;
 
 namespace RSG.Nonogram;
 
@@ -77,10 +76,12 @@ public abstract partial class Display : Container
 			return (tile.Text is FillText && state) || (tile.Text is EmptyText && !state);
 		}
 		public const string DefaultName = "Puzzle";
-		public const int DefaultSize = 10;
+		public const int DefaultSize = 15;
 		public string Name { get; set; } = DefaultName;
 		public IImmutableDictionary<Vector2I, bool> States => Tiles.ToImmutableDictionary();
-		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(key => HintPosition.Convert(key));
+		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
+			key => HintPosition.Convert(key)
+		);
 		public Dictionary<Vector2I, bool> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 			.GridRange()
 			.ToDictionary(elementSelector: _ => false);
@@ -116,6 +117,7 @@ public abstract partial class Display : Container
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const int TileSize = 31;
+	// [Bug] ^^ if this changes the tile becomes a rectangle, with the height being larger than the width
 	public enum PenMode { Block, Fill, Clear }
 	public enum Side { Row, Column }
 	public PenMode Pen { get; set; } = PenMode.Fill;
@@ -175,7 +177,7 @@ public abstract partial class Display : Container
 		const MouseButton pressedMouseButton = MouseButton.Left;
 		Button button = new()
 		{
-			Name = $"Tile {position}",
+			Name = $"Tile (X: {position.X}, Y: {position.Y})",
 			Text = EmptyText,
 			CustomMinimumSize = Vector2.One * TileSize
 		};
