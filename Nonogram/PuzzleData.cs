@@ -321,19 +321,74 @@ public sealed record PuzzleData : Display.Data
 	{
 		public static Pack Procedural()
 		{
+			Vector2I size = Vector2I.One * DefaultSize;
 			return new()
 			{
 				Name = "Procedural",
 				Puzzles = [
 					new()
 					{
+						Name = "Smiley Face",
+						Tiles = size.GridRange().ToDictionary(elementSelector: SmileyEmoji)
+					},
+					new()
+					{
+						Name = "Grid",
+						Tiles = size.GridRange().ToDictionary(elementSelector: RemainderThreeIsZero)
+					},
+					new()
+					{
+						Name = "Lower Left Border",
+						Tiles = size.GridRange().ToDictionary(elementSelector: LowerLeftBorder)
+					},
+					new()
+					{
 						Name = "Border",
-						Tiles = (Vector2I.One * DefaultSize).GridRange().ToDictionary(elementSelector: BorderSelector)
+						Tiles = size.GridRange().ToDictionary(elementSelector: BorderSelector)
 					},
 
 				]
 			};
+			static bool SmileyEmoji(Vector2I position)
+			{
+				const int
+				lineThickness = 1,
+				radius = DefaultSize / 2,
+				mouthSize = radius / 2,
+				eyeHeight = radius - 2;
+				Vector2I
+				center = new(radius, radius),
+				rightEyeCenter = new(radius + radius / 2, eyeHeight),
+				leftEyeCenter = new(radius - radius / 2, eyeHeight);
 
+				return IsPixelInCircleOutline(position, center, radius, thickness: lineThickness)
+					|| IsEye()
+					|| IsMouth();
+
+				bool IsEye() => IsPixelInCircle(position, center: leftEyeCenter, 1)
+				|| IsPixelInCircle(position, center: rightEyeCenter, 1);
+				bool IsMouth() => IsPixelInCircleOutline(position, center, radius: mouthSize, thickness: lineThickness)
+				&& position.Y > center.Y;
+			}
+			static bool IsPixelInCircleOutline(in Vector2I position, in Vector2I center, int radius, int thickness)
+			{
+				return IsPixelInCircle(in position, in center, radius)
+				&& !IsPixelInCircle(in position, in center, radius: radius - thickness);
+
+			}
+			static bool IsPixelInCircle(in Vector2I position, in Vector2I center, int radius)
+			{
+				return radius * radius >= (position - center).Squared();
+			}
+			static bool RemainderThreeIsZero(Vector2I position) => position.X % 3 == 0 || position.Y % 3 == 0;
+			static bool LowerLeftBorder(Vector2I position)
+			{
+				if (BorderSelector(position) && position.X > position.Y)
+				{
+					return true;
+				}
+				return false;
+			}
 			static bool BorderSelector(Vector2I position)
 			{
 				if (isBorder(position.X) || isBorder(position.Y))
