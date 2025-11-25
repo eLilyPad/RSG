@@ -321,82 +321,106 @@ public sealed record PuzzleData : Display.Data
 	{
 		public static Pack Procedural()
 		{
-			Vector2I size = Vector2I.One * DefaultSize;
+			const int size = DefaultSize, radius = size / 2;
+
+			Vector2I puzzleCenter = Vector2I.One * radius;
+
 			return new()
 			{
 				Name = "Procedural",
 				Puzzles = [
-					new()
-					{
-						Name = "Smiley Face",
-						Tiles = size.GridRange().ToDictionary(elementSelector: SmileyEmoji)
-					},
-					new()
-					{
-						Name = "Grid",
-						Tiles = size.GridRange().ToDictionary(elementSelector: RemainderThreeIsZero)
-					},
-					new()
-					{
-						Name = "Lower Left Border",
-						Tiles = size.GridRange().ToDictionary(elementSelector: LowerLeftBorder)
-					},
-					new()
-					{
-						Name = "Border",
-						Tiles = size.GridRange().ToDictionary(elementSelector: BorderSelector)
-					},
-
+					new("Spiral", selector: Spiral, size),
+					new("Noise", selector: Noise, size),
+					new("Heart Emoji", selector: HeartEmoji, size),
+					new("Smiley Face", selector: SmileyEmoji, size),
+					new("Grid", selector: RemainderThreeIsZero, size),
+					new("Border", selector: BorderSelector, size),
 				]
 			};
-			static bool SmileyEmoji(Vector2I position)
+			bool Spiral(Vector2I position)
+			{
+				(int x, int y) = puzzleCenter - position;
+				const int lineThickness = 1, a = 4, b = 1;
+
+				float r = Mathf.Sqrt(x * x + y * y);
+				float theta = Mathf.Atan2(y, x);
+
+				// Spiral equation
+				float expectedR = a + b * theta;
+
+				// Check how close the pixel is to the spiral curve
+				return Mathf.Abs(r - expectedR) <= lineThickness;
+			}
+			static bool Noise(Vector2I position)
+			{
+				(int x, int y) = position;
+				FastNoiseLite noise = new()
+				{
+					NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
+					Frequency = 0.1f,
+					Seed = 1
+				};
+				return noise.GetNoise2D(x, y) > 0;
+			}
+			bool HeartEmoji(Vector2I position)
+			{
+				const int lineThickness = 1;
+
+				return IsBottomTriangle()
+				|| IsTopRightCurve()
+				|| IsTopLeftCurve();
+
+				bool IsTopLeftCurve() => IsPixelInCircleOutline(
+					position,
+					center: puzzleCenter with { X = puzzleCenter.X - radius / 2, Y = puzzleCenter.Y - radius / 4 },
+					radius: radius / 2,
+					thickness: lineThickness
+				) && position.Y < puzzleCenter.Y;
+				bool IsTopRightCurve() => IsPixelInCircleOutline(
+					position,
+					center: puzzleCenter with { X = puzzleCenter.X + radius / 2, Y = puzzleCenter.Y - radius / 4 },
+					radius: radius / 2,
+					thickness: lineThickness
+				) && position.Y < puzzleCenter.Y;
+				bool IsBottomTriangle() => IsInsideDiamond(center: puzzleCenter - position, radius: radius - 2)
+				&& !IsInsideDiamond(center: puzzleCenter - position, radius: radius - 3)
+				&& position.Y > puzzleCenter.Y - 1;
+			}
+			bool SmileyEmoji(Vector2I position)
 			{
 				const int
 				lineThickness = 1,
-				radius = DefaultSize / 2,
+				eyeSize = 1,
 				mouthSize = radius / 2,
 				eyeHeight = radius - 2;
 				Vector2I
-				center = new(radius, radius),
 				rightEyeCenter = new(radius + radius / 2, eyeHeight),
 				leftEyeCenter = new(radius - radius / 2, eyeHeight);
 
-				return IsPixelInCircleOutline(position, center, radius, thickness: lineThickness)
+				return IsPixelInCircleOutline(position, puzzleCenter, radius, thickness: lineThickness)
 					|| IsEye()
 					|| IsMouth();
 
-				bool IsEye() => IsPixelInCircle(position, center: leftEyeCenter, 1)
-				|| IsPixelInCircle(position, center: rightEyeCenter, 1);
-				bool IsMouth() => IsPixelInCircleOutline(position, center, radius: mouthSize, thickness: lineThickness)
-				&& position.Y > center.Y;
+				bool IsEye() => IsPixelInCircle(position, center: leftEyeCenter, radius: eyeSize)
+				|| IsPixelInCircle(position, center: rightEyeCenter, radius: eyeSize);
+				bool IsMouth() => IsPixelInCircleOutline(position, puzzleCenter, radius: mouthSize, thickness: lineThickness)
+				&& position.Y > puzzleCenter.Y;
 			}
-			static bool IsPixelInCircleOutline(in Vector2I position, in Vector2I center, int radius, int thickness)
-			{
-				return IsPixelInCircle(in position, in center, radius)
-				&& !IsPixelInCircle(in position, in center, radius: radius - thickness);
 
-			}
-			static bool IsPixelInCircle(in Vector2I position, in Vector2I center, int radius)
-			{
-				return radius * radius >= (position - center).Squared();
-			}
 			static bool RemainderThreeIsZero(Vector2I position) => position.X % 3 == 0 || position.Y % 3 == 0;
-			static bool LowerLeftBorder(Vector2I position)
-			{
-				if (BorderSelector(position) && position.X > position.Y)
-				{
-					return true;
-				}
-				return false;
-			}
 			static bool BorderSelector(Vector2I position)
 			{
-				if (isBorder(position.X) || isBorder(position.Y))
-				{
-					return true;
-				}
-				return false;
-				static bool isBorder(int value) => value is DefaultSize - 1 or DefaultSize - 2 or 0 or 1;
+				return isBorder(position.X) || isBorder(position.Y);
+				static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
+			}
+
+			static bool IsInsideDiamond(Vector2I center, int radius) => Mathf.Abs(center.X) + Mathf.Abs(center.Y) <= radius;
+			static bool IsPixelInCircleOutline(Vector2I position, Vector2I center, int radius, int thickness) =>
+				IsPixelInCircle(position, center, radius)
+				&& !IsPixelInCircle(position, center, radius: radius - thickness);
+			static bool IsPixelInCircle(Vector2I position, Vector2I center, int radius)
+			{
+				return radius * radius >= (position - center).Squared();
 			}
 		}
 		public string Name { get; init; } = "Pack";
@@ -405,6 +429,11 @@ public sealed record PuzzleData : Display.Data
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }
 	public PuzzleData(Display display) : base(display) { }
+	public PuzzleData(string name, Func<Vector2I, bool> selector, int size)
+	{
+		Name = name;
+		Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: selector);
+	}
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 
 	public override string ToString()
