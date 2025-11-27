@@ -6,8 +6,41 @@ using Godot;
 namespace RSG.Nonogram;
 
 using static PuzzleData;
+using static PuzzleBuilder;
 
 using LoadResult = OneOf<Display.Data, PuzzleData.Code.ConversionError, NotFound>;
+
+public static class PuzzleBuilder
+{
+	public enum Shape { Circle, Diamond }
+
+	public static bool IsOverNoiseThreshold(this Vector2I position, float threshold)
+	{
+		(int x, int y) = position;
+		FastNoiseLite noise = new()
+		{
+			NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
+			Frequency = 0.1f,
+			Seed = 1
+		};
+		return noise.GetNoise2D(x, y) > threshold;
+	}
+	public static bool IsIn(this Vector2I position, Vector2I center, int radius, Shape shape, int thickness = 0)
+	{
+		Vector2I offset = center - position;
+		return shape switch
+		{
+			Shape.Circle when thickness > 0 => InCircle(radius) && !InCircle(radius - thickness),
+			Shape.Circle => InCircle(radius),
+			Shape.Diamond when thickness > 0 => InDiamond(radius) && !InDiamond(radius - thickness),
+			Shape.Diamond => InDiamond(radius),
+			_ => false
+		};
+
+		bool InCircle(int size) => size * size >= offset.Squared();
+		bool InDiamond(int size) => Mathf.Abs(offset.X) + Mathf.Abs(offset.Y) <= size;
+	}
+}
 
 public sealed class PuzzleManager
 {
@@ -329,14 +362,15 @@ public sealed record PuzzleData : Display.Data
 			{
 				Name = "Procedural",
 				Puzzles = [
+					new("Heart Emoji", selector: HeartEmoji, size),
 					new("Spiral", selector: Spiral, size),
 					new("Noise", selector: Noise, size),
-					new("Heart Emoji", selector: HeartEmoji, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
 					new("Grid", selector: RemainderThreeIsZero, size),
 					new("Border", selector: BorderSelector, size),
 				]
 			};
+
 			bool Spiral(Vector2I position)
 			{
 				(int x, int y) = puzzleCenter - position;
@@ -351,40 +385,22 @@ public sealed record PuzzleData : Display.Data
 				// Check how close the pixel is to the spiral curve
 				return Mathf.Abs(r - expectedR) <= lineThickness;
 			}
-			static bool Noise(Vector2I position)
-			{
-				(int x, int y) = position;
-				FastNoiseLite noise = new()
-				{
-					NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
-					Frequency = 0.1f,
-					Seed = 1
-				};
-				return noise.GetNoise2D(x, y) > 0;
-			}
 			bool HeartEmoji(Vector2I position)
 			{
-				const int lineThickness = 1;
+				const int lineThickness = 1, curveRadius = radius / 2, size = radius - 2;
+				int curveHeight = puzzleCenter.Y - radius / 4;
+				Vector2I
+				leftCurveCenter = puzzleCenter with { X = puzzleCenter.X - curveRadius, Y = curveHeight },
+				rightCurveCenter = puzzleCenter with { X = puzzleCenter.X + curveRadius, Y = curveHeight };
 
 				return IsBottomTriangle()
-				|| IsTopRightCurve()
-				|| IsTopLeftCurve();
+					|| IsInCurve(center: rightCurveCenter)
+					|| IsInCurve(center: leftCurveCenter);
 
-				bool IsTopLeftCurve() => IsPixelInCircleOutline(
-					position,
-					center: puzzleCenter with { X = puzzleCenter.X - radius / 2, Y = puzzleCenter.Y - radius / 4 },
-					radius: radius / 2,
-					thickness: lineThickness
-				) && position.Y < puzzleCenter.Y;
-				bool IsTopRightCurve() => IsPixelInCircleOutline(
-					position,
-					center: puzzleCenter with { X = puzzleCenter.X + radius / 2, Y = puzzleCenter.Y - radius / 4 },
-					radius: radius / 2,
-					thickness: lineThickness
-				) && position.Y < puzzleCenter.Y;
-				bool IsBottomTriangle() => IsInsideDiamond(center: puzzleCenter - position, radius: radius - 2)
-				&& !IsInsideDiamond(center: puzzleCenter - position, radius: radius - 3)
-				&& position.Y > puzzleCenter.Y - 1;
+				bool IsInCurve(Vector2I center) => position.Y < puzzleCenter.Y
+					&& position.IsIn(center, radius: curveRadius, shape: Shape.Circle, thickness: lineThickness);
+				bool IsBottomTriangle() => position.Y > puzzleCenter.Y - 1
+					&& position.IsIn(center: puzzleCenter, radius: size, shape: Shape.Diamond, thickness: lineThickness);
 			}
 			bool SmileyEmoji(Vector2I position)
 			{
@@ -397,30 +413,22 @@ public sealed record PuzzleData : Display.Data
 				rightEyeCenter = new(radius + radius / 2, eyeHeight),
 				leftEyeCenter = new(radius - radius / 2, eyeHeight);
 
-				return IsPixelInCircleOutline(position, puzzleCenter, radius, thickness: lineThickness)
-					|| IsEye()
+				return position.IsIn(puzzleCenter, radius, Shape.Circle, thickness: lineThickness)
+					|| IsEye(center: leftEyeCenter)
+					|| IsEye(center: rightEyeCenter)
 					|| IsMouth();
 
-				bool IsEye() => IsPixelInCircle(position, center: leftEyeCenter, radius: eyeSize)
-				|| IsPixelInCircle(position, center: rightEyeCenter, radius: eyeSize);
-				bool IsMouth() => IsPixelInCircleOutline(position, puzzleCenter, radius: mouthSize, thickness: lineThickness)
-				&& position.Y > puzzleCenter.Y;
+				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
+				bool IsMouth() => position.IsIn(puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
+					&& position.Y > puzzleCenter.Y;
 			}
 
+			static bool Noise(Vector2I position) => position.IsOverNoiseThreshold(threshold: 0);
 			static bool RemainderThreeIsZero(Vector2I position) => position.X % 3 == 0 || position.Y % 3 == 0;
 			static bool BorderSelector(Vector2I position)
 			{
 				return isBorder(position.X) || isBorder(position.Y);
 				static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
-			}
-
-			static bool IsInsideDiamond(Vector2I center, int radius) => Mathf.Abs(center.X) + Mathf.Abs(center.Y) <= radius;
-			static bool IsPixelInCircleOutline(Vector2I position, Vector2I center, int radius, int thickness) =>
-				IsPixelInCircle(position, center, radius)
-				&& !IsPixelInCircle(position, center, radius: radius - thickness);
-			static bool IsPixelInCircle(Vector2I position, Vector2I center, int radius)
-			{
-				return radius * radius >= (position - center).Squared();
 			}
 		}
 		public string Name { get; init; } = "Pack";
