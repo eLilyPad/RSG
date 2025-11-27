@@ -2,35 +2,6 @@ using Godot;
 
 namespace RSG.UI;
 
-public sealed partial class Video : Resource
-{
-	public sealed partial class Container : VBoxContainer
-	{
-		public OptionButton WindowButtons { get; } = new() { Name = "Full Screen Toggle" };
-		public RichTextLabel WindowsLabel { get; } = new() { Text = "Window Mode : " };
-		public HBoxContainer Margin { get; } = new();
-		public override void _Ready()
-		{
-			Name = "VideoContainer";
-			this.Add(Margin.Add(WindowsLabel, WindowButtons));
-		}
-	}
-}
-public sealed partial class Input : Resource
-{
-	public sealed partial class Container : ScrollContainer
-	{
-		public Button ResetButton { get; } = new() { Text = "Reset" };
-		public VBoxContainer InputsContainer { get; } = new();
-		public HBoxContainer Margin { get; } = new HBoxContainer()
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 10);
-		public override void _Ready()
-		{
-			Name = "InputContainer";
-			this.Add(Margin.Add(ResetButton, InputsContainer));
-		}
-	}
-}
 
 public sealed partial class MainMenu : Container
 {
@@ -39,25 +10,23 @@ public sealed partial class MainMenu : Container
 	public ColorRect Background { get; } = new ColorRect { Name = nameof(Background) }
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
 	.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-	public SettingsContainer Settings { get; } = new();
-	public MainButtons Buttons
-	{
-		get
-		{
-			if (field is not null) return field;
-			MainButtons buttons = new();
-			buttons.Play.Pressed += () => Visible = !Visible;
-			buttons.Settings.Pressed += Settings.Show;
-			buttons.Quit.Pressed += () => GetTree().Quit();
-			return buttons;
-		}
-	}
+	public SettingsContainer Settings { get; } = new SettingsContainer { Name = "Settings", Visible = false }
+	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons) }
+	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
+	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public override void _Ready()
 	{
 		Name = nameof(MainMenu);
 		this.Add(Background, Buttons, Settings)
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+		Buttons.Play.Pressed += () => Visible = !Visible;
+		Buttons.Settings.Pressed += Settings.Show;
+		Buttons.Quit.Pressed += () => GetTree().Quit();
+
+		Settings.VisibilityChanged += () => Buttons.Visible = !Settings.Visible;
 	}
 	public void Step()
 	{
@@ -76,28 +45,35 @@ public sealed partial class MainMenu : Container
 	}
 	public sealed partial class SettingsContainer : TabContainer
 	{
-		public Audio.Container Audio { get; } = new();
-		public Video.Container Video { get; } = new() { Name = "Video" };
-		public Input.Container Input { get; } = new() { Name = "Input" };
+		public const int Margin = 50;
+		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
+		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
+		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
 
-		public override void _Ready()
-		{
-			Visible = false;
-			this.Add(Audio, Video, Input)
-				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		}
+		public SettingsContainer() => this.Add(Audio, Video, Input);
+	}
+	public sealed partial class AudioContainer : ScrollContainer
+	{
+		public Audio.VolumeSlider Master { get; } = new Audio.VolumeSlider(bus: Audio.Buses.Master)
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
+		public Audio.VolumeSlider SoundEffects { get; } = new Audio.VolumeSlider(bus: Audio.Buses.SoundEffects)
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
+		public Audio.VolumeSlider Music { get; } = new Audio.VolumeSlider(bus: Audio.Buses.Music)
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
+		public BoxContainer Margin { get; } = new BoxContainer { Vertical = false }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		public override void _Ready() => this.Add(
+			Margin.Add(Master, SoundEffects, Music)
+		);
 	}
 	public sealed partial class MainButtons : VBoxContainer
 	{
 		public Button Play { get; } = new() { Name = nameof(Play), Text = nameof(Play) };
 		public Button Settings { get; } = new() { Name = nameof(Settings), Text = nameof(Settings) };
 		public Button Quit { get; } = new() { Name = nameof(Quit), Text = nameof(Quit) };
-		public MainButtons()
-		{
-			Name = nameof(MainButtons);
-			this.Add(Play, Settings, Quit)
-				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-		}
+		public MainButtons() => this.Add(Play, Settings, Quit);
 	}
 }

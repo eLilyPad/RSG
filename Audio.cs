@@ -10,6 +10,7 @@ public static class AudioExtensions
 	{
 		public const string
 		MainLoop = "Main Loop is not SceneTree",
+		RootNotReady = "SceneTree's root is not ready",
 		PlayerNotFound = "Player has not been found",
 		PlayerNotReady = "Player is not ready";
 	}
@@ -22,6 +23,10 @@ public static class AudioExtensions
 			if (Engine.GetMainLoop() is not SceneTree tree)
 			{
 				return new Error<string>(value: Errors.MainLoop);
+			}
+			if (!tree.Root.IsNodeReady())
+			{
+				return new Error<string>(value: Errors.RootNotReady);
 			}
 			if (!Players.TryGetValue(bus, out AudioStreamPlayer? player))
 			{
@@ -52,6 +57,7 @@ public static class AudioExtensions
 		void HandleError(Error<string> error) => GD.PushWarning("Unable to play sound: " + error.Value);
 		void Play(AudioStreamPlayer player)
 		{
+			if (!player.IsNodeReady()) return;
 			if (player.Playing) player.Stop();
 			player.Stream = stream;
 			player.Play();
@@ -71,7 +77,15 @@ public static class AudioExtensions
 	{
 		Buses.Music => "Music",
 		Buses.SoundEffects => "Sound Effects",
-		_ => "Master"
+		Buses.Master => "Master",
+		_ => throw new Exception("Bus enum value has no assigned name.")
+	};
+	public static AudioStream GetVolumeClickedAudio(this Buses bus) => bus switch
+	{
+		Buses.Music => NonogramSounds.TileClicked,
+		Buses.SoundEffects => NonogramSounds.TileClicked,
+		Buses.Master => NonogramSounds.TileClicked,
+		_ => throw new Exception("Bus enum value has no assigned audio stream.")
 	};
 
 	private static StreamPlayers Players { get; } = new();
@@ -85,54 +99,51 @@ public sealed partial class Audio : Resource
 		public VolumeSlider Master { get; } = new VolumeSlider(bus: Buses.Master);
 		public VolumeSlider SoundEffects { get; } = new VolumeSlider(bus: Buses.SoundEffects);
 		public VolumeSlider Music { get; } = new VolumeSlider(bus: Buses.Music);
-		public HBoxContainer Margin { get; } = new HBoxContainer()
-		.Preset(LayoutPreset.TopRight, LayoutPresetMode.KeepSize, 30);
+		public VBoxContainer Margin { get; } = new VBoxContainer()
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.TopRight, resizeMode: LayoutPresetMode.KeepSize, 30);
 		public override void _Ready()
 		{
 			Name = "AudioContainer";
 			this.Add(Margin.Add(Master, SoundEffects, Music));
 		}
 	}
-	public sealed partial class VolumeSlider : BoxContainer
+	public sealed partial class VolumeSlider : HBoxContainer
 	{
-		public RichTextLabel VolumeLabel { get; } = new() { CustomMinimumSize = new Vector2(x: 60, y: 0) };
-		public RichTextLabel NameLabel { get; } = new() { CustomMinimumSize = new Vector2(x: 60, y: 0) };
-		public VBoxContainer Margin { get; } = new VBoxContainer()
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 10);
-		public AspectRatioContainer Window { get; } = new()
-		{
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
-			SizeFlagsStretchRatio = 0.2f,
-			StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
-			AlignmentHorizontal = AspectRatioContainer.AlignmentMode.End,
-			AlignmentVertical = AspectRatioContainer.AlignmentMode.Begin
-		};
+		public RichTextLabel VolumeLabel { get; } = new RichTextLabel { FitContent = true }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		public RichTextLabel NameLabel { get; } = new RichTextLabel { FitContent = true }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		public BoxContainer Margin { get; } = new HBoxContainer()
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 		public HSlider Slider { get; } = new()
 		{
-			MaxValue = 2,
+			MaxValue = 1,
 			MinValue = 0,
 			Step = 0.01,
+			Value = 0.4,
 			Editable = true,
 			Scrollable = true,
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 		};
-		private Buses Bus
+		public VolumeSlider(Buses bus)
 		{
-			init
+			Name = (NameLabel.Text = bus.GetName()) + " - Volume Slider";
+			ChangeVolume(volume: bus.Volume());
+
+			this.Add(
+				Margin.Add(NameLabel, Slider, VolumeLabel)
+			);
+
+			Slider.ValueChanged += ChangeVolume;
+
+			void ChangeVolume(double volume)
 			{
-				Name = $"{NameLabel.Text = value.GetName()} - Volume Slider";
-				Slider.ValueChanged += volume =>
-				{
-					VolumeLabel.Text = $"{Mathf.Floor((value.Volume(value: (float)volume)) * 100)}%";
-				};
-				Slider.Value = value.Volume();
+				bus.Play(bus.GetVolumeClickedAudio());
+				Slider.Value = volume;
+				VolumeLabel.Text = $"{Mathf.Floor((bus.Volume(value: volume)) * 100)}%";
 			}
 		}
-
-		public VolumeSlider(Buses bus) => Bus = bus;
-		public override void _Ready() => this.Add(
-			Window.Add(Margin.Add(NameLabel, Slider, VolumeLabel))
-		);
 	}
 
 	public const string
