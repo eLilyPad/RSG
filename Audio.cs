@@ -96,9 +96,9 @@ public sealed partial class Audio : Resource
 	public enum Buses { Master = 0, Music = 1, SoundEffects = 2 }
 	public sealed partial class Container : ScrollContainer
 	{
-		public VolumeSlider Master { get; } = new VolumeSlider(bus: Buses.Master);
-		public VolumeSlider SoundEffects { get; } = new VolumeSlider(bus: Buses.SoundEffects);
-		public VolumeSlider Music { get; } = new VolumeSlider(bus: Buses.Music);
+		public Labelled<VolumeSlider> Master { get; } = CreateVolumeControl(bus: Buses.Master);
+		public Labelled<VolumeSlider> SoundEffects { get; } = CreateVolumeControl(bus: Buses.SoundEffects);
+		public Labelled<VolumeSlider> Music { get; } = CreateVolumeControl(bus: Buses.Music);
 		public VBoxContainer Margin { get; } = new VBoxContainer()
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.TopRight, resizeMode: LayoutPresetMode.KeepSize, 30);
@@ -106,14 +106,28 @@ public sealed partial class Audio : Resource
 		{
 			this.Add(Margin.Add(Master, SoundEffects, Music));
 		}
+
+		private static Labelled<VolumeSlider> CreateVolumeControl(Buses bus)
+		{
+			string busName = bus.GetName();
+			Labelled<VolumeSlider> volumeSlider = new()
+			{
+				Name = busName + " Container",
+				Label = new RichTextLabel { Name = "Label", FitContent = true, Text = busName + " Volume : ", }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill),
+				Value = new VolumeSlider { Name = busName + " - Volume Slider" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill)
+			};
+			volumeSlider.Value.Slider.ValueChanged += ChangeVolume;
+			ChangeVolume(bus.Volume());
+			return volumeSlider;
+
+			void ChangeVolume(double value) => volumeSlider.Value.SetVolume(value, bus);
+		}
 	}
 	public sealed partial class VolumeSlider : HBoxContainer
 	{
 		public RichTextLabel VolumeLabel { get; } = new RichTextLabel { FitContent = true }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public RichTextLabel NameLabel { get; } = new RichTextLabel { FitContent = true }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public BoxContainer Margin { get; } = new HBoxContainer()
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 		public HSlider Slider { get; } = new()
 		{
@@ -125,23 +139,13 @@ public sealed partial class Audio : Resource
 			Scrollable = true,
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 		};
-		public VolumeSlider(Buses bus)
+
+		public override void _Ready() => this.Add(Slider, VolumeLabel);
+		public void SetVolume(double value, Buses bus)
 		{
-			Name = (NameLabel.Text = bus.GetName()) + " - Volume Slider";
-			ChangeVolume(volume: bus.Volume());
-
-			this.Add(
-				Margin.Add(NameLabel, Slider, VolumeLabel)
-			);
-
-			Slider.ValueChanged += ChangeVolume;
-
-			void ChangeVolume(double volume)
-			{
-				bus.Play(bus.GetVolumeClickedAudio());
-				Slider.Value = volume;
-				VolumeLabel.Text = $"{Mathf.Floor((bus.Volume(value: volume)) * 100)}%";
-			}
+			bus.Play(bus.GetVolumeClickedAudio());
+			Slider.Value = bus.Volume(value);
+			VolumeLabel.Text = $"{Mathf.Floor(value * 100)}%";
 		}
 	}
 
