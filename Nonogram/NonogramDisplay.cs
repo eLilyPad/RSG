@@ -198,6 +198,7 @@ public abstract partial class Display : Container
 	{
 		return new RichTextLabel
 		{
+			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
 			Text = EmptyHint,
 			FitContent = true,
 			CustomMinimumSize = Vector2.One * TileSize,
