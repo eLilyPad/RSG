@@ -55,20 +55,6 @@ public sealed partial class MainMenu : Container
 
 		public SettingsContainer() => this.Add(Audio, Video, Input);
 	}
-	public sealed partial class AudioContainer : ScrollContainer
-	{
-		public Audio.VolumeSlider Master { get; } = new Audio.VolumeSlider(bus: Audio.Buses.Master)
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
-		public Audio.VolumeSlider SoundEffects { get; } = new Audio.VolumeSlider(bus: Audio.Buses.SoundEffects)
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
-		public Audio.VolumeSlider Music { get; } = new Audio.VolumeSlider(bus: Audio.Buses.Music)
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
-		public BoxContainer Margin { get; } = new BoxContainer { Vertical = false }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public override void _Ready() => this.Add(
-			Margin.Add(Master, SoundEffects, Music)
-		);
-	}
 	public sealed partial class MainButtons : VBoxContainer
 	{
 		public Button Play { get; } = new() { Name = nameof(Play), Text = nameof(Play) };

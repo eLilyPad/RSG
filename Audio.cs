@@ -104,7 +104,6 @@ public sealed partial class Audio : Resource
 		.Preset(preset: LayoutPreset.TopRight, resizeMode: LayoutPresetMode.KeepSize, 30);
 		public override void _Ready()
 		{
-			Name = "AudioContainer";
 			this.Add(Margin.Add(Master, SoundEffects, Music));
 		}
 	}
