@@ -7,13 +7,12 @@ public sealed partial class Input : Resource
 	public sealed partial class Container : ScrollContainer
 	{
 		public KeyBindsContainer InputsContainer { get; } = new KeyBindsContainer { Name = "KeyBindsContainer" };
-		public VBoxContainer MainContainer { get; } = new VBoxContainer() { Name = "Container" }
+		public VBoxContainer MainContainer { get; } = new VBoxContainer { Name = "Container" }
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 		public override void _Ready()
 		{
 			this.Add(MainContainer.Add(InputsContainer));
 		}
-
 		public sealed partial class KeyBindsContainer : VBoxContainer
 		{
 			public Button ResetButton { get; } = new() { Name = "Reset Button", Text = "Reset" };
