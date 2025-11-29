@@ -11,7 +11,7 @@ public sealed partial class MainMenu : Container
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
 	.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 	public SettingsContainer Settings { get; } = new SettingsContainer { Name = "Settings", Visible = false }
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 100);
 	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons) }
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
