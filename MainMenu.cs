@@ -45,7 +45,7 @@ public sealed partial class MainMenu : Container
 	}
 	public sealed partial class SettingsContainer : TabContainer
 	{
-		public const int Margin = 50;
+		public const int Margin = 0;
 		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
 		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
 		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
