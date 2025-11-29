@@ -35,8 +35,3 @@ public sealed partial class Core : Node
 	}
 }
 
-public sealed partial class Popup<T>() : Popup where T : Control, new()
-{
-	public T Control { get; init; } = new();
-	public override void _Ready() => this.Add(Control);
-}

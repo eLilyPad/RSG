@@ -3,6 +3,18 @@ using static Godot.Control;
 
 namespace RSG.Extensions;
 
+public sealed partial class Popup<T>() : Popup where T : Control, new()
+{
+	public T Control { get; init; } = new();
+	public override void _Ready() => this.Add(Control);
+}
+public sealed partial class Labelled<T> : BoxContainer where T : Control
+{
+	public required RichTextLabel Label { get; init; }
+	public required T Value { get; init; }
+	public override void _Ready() => this.Add(Label, Value);
+}
+
 public static class UIX
 {
 	public static Dictionary<TKey, TValue> SetText<TKey, TValue>(
