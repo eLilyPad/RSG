@@ -20,27 +20,34 @@ public sealed partial class Video : Resource
 {
 	public sealed partial class Container : VBoxContainer
 	{
-		public OptionButton WindowButtons { get; } = new() { Name = "Window Mode Options" };
-		public RichTextLabel WindowsLabel { get; } = new() { Text = "Window Mode : " };
-		public HBoxContainer Margin { get; } = new();
+		public Labelled<OptionButton> VideoMode { get; } = new Labelled<OptionButton>
+		{
+			Name = "Video Mode Container",
+			Value = new() { Name = "Video Mode Options" },
+			Label = new RichTextLabel { Name = "Label", Text = "Video Mode : ", FitContent = true }
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
+		}
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin);
+		public HBoxContainer Margin { get; } = new HBoxContainer { Name = "Margin Container" }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 		public override void _Ready()
 		{
-			this.Add(Margin.Add(WindowsLabel, WindowButtons));
+			this.Add(Margin.Add(VideoMode));
 
 			foreach (WindowMode mode in Enum.GetValues<WindowMode>())
 			{
-				WindowButtons.AddItem(mode.ToString(), (int)mode);
+				VideoMode.Value.AddItem(mode.ToString(), (int)mode);
 			}
-			WindowButtons.SetItemDisabled((int)WindowMode.Minimized, true);
-			WindowButtons.ItemSelected += ItemSelected;
+			VideoMode.Value.SetItemDisabled((int)WindowMode.Minimized, true);
+			VideoMode.Value.ItemSelected += ItemSelected;
 
 		}
 		public override void _Process(double delta)
 		{
-			if (!WindowButtons.Visible) return;
+			if (!VideoMode.Value.Visible) return;
 			int mode = (int)WindowGetMode();
-			bool selectedMatches = WindowButtons.Selected is not -1 && mode != WindowButtons.Selected;
-			if (!selectedMatches) WindowButtons.Selected = mode;
+			bool selectedMatches = VideoMode.Value.Selected is not -1 && mode != VideoMode.Value.Selected;
+			if (!selectedMatches) VideoMode.Value.Selected = mode;
 		}
 
 		private void ItemSelected(long id) => WindowSetMode(id.AsMode());
