@@ -19,6 +19,10 @@ public sealed partial class Core : Node
 		Name = nameof(Core);
 		this.Add(Nonogram, Menu);
 
+		Input.Bind((Key.Escape, Menu.Step, "Toggle Main Menu"));
+
+		Menu.Settings.Input.InputsContainer.RefreshBindings();
+
 		foreach (var puzzle in PuzzleManager.GetSavedPuzzles())
 		{
 			//GD.Print($"Found saved puzzle: {puzzle.Expected.Name} of size {puzzle.Expected.Size}");
@@ -26,12 +30,7 @@ public sealed partial class Core : Node
 	}
 	public override void _Input(InputEvent input)
 	{
-		switch (input)
-		{
-			case InputEventKey { Keycode: Key.Escape, Echo: false, Pressed: true }:
-				Menu.Step();
-				break;
-		}
+		Input.RunEvent(input);
 	}
 }
 
