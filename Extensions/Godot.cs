@@ -62,9 +62,9 @@ public static class GDX
 	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
 	{
 		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
-		for (int y = start.Y; y < size.Y; y++)
+		for (int x = start.X; x < size.X; x++)
 		{
-			for (int x = start.X; x < size.X; x++)
+			for (int y = start.Y; y < size.Y; y++)
 			{
 				yield return new Vector2I(x, y);
 			}
