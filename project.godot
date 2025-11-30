@@ -21,7 +21,8 @@ Core="*res://Core.cs"
 
 [display]
 
-window/size/always_on_top=true
+window/size/mode=2
+window/size/resizable=false
 
 [dotnet]
 
