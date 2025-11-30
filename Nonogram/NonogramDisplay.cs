@@ -118,6 +118,7 @@ public abstract partial class Display : AspectRatioContainer
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const int TileSize = 31;
 	// [Bug] ^^ if this changes the tile becomes a rectangle, with the height being larger than the width
+	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 	public enum PenMode { Block, Fill, Clear }
 	public enum Side { Row, Column }
 	public PenMode Pen { get; set; } = PenMode.Fill;
@@ -155,6 +156,11 @@ public abstract partial class Display : AspectRatioContainer
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		Button button = Tiles[position];
+		Pen = Input.IsMouseButtonPressed(BlockButton)
+			? PenMode.Block
+			: Input.IsMouseButtonPressed(FillButton)
+			? PenMode.Fill
+			: PenMode.Clear;
 		button.Text = Pen.FillButton(button.Text);
 	}
 	public string CalculateHintAt(HintPosition position) => Tiles.CalculateHints(position);
@@ -174,23 +180,31 @@ public abstract partial class Display : AspectRatioContainer
 
 	private Button CreateTile(Vector2I position)
 	{
-		const MouseButton pressedMouseButton = MouseButton.Left;
 		Button button = new()
 		{
 			Name = $"Tile (X: {position.X}, Y: {position.Y})",
 			Text = EmptyText,
-			CustomMinimumSize = Vector2.One * TileSize
+			CustomMinimumSize = Vector2.One * TileSize,
+			ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
 		};
 		button.MouseEntered += MouseEntered;
 		button.ButtonDown += ButtonDown;
 
 		return button;
 
-		void ButtonDown() => OnTilePressed(position);
+		void ButtonDown()
+		{
+			if (Input.IsMouseButtonPressed(BlockButton))
+			{
+				GD.Print("Block button pressed");
+			}
+			OnTilePressed(position);
+		}
 		void MouseEntered()
 		{
-			bool pressed = Input.IsMouseButtonPressed(pressedMouseButton);
-			if (!pressed) { return; }
+			bool fill = Input.IsMouseButtonPressed(FillButton);
+			bool block = Input.IsMouseButtonPressed(BlockButton);
+			if (!fill && !block) { return; }
 			OnTilePressed(position);
 		}
 	}

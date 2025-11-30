@@ -16,6 +16,7 @@ public static class DisplayExtensions
 	{
 		PenMode.Block => current is EmptyText or FillText ? BlockText : EmptyText,
 		PenMode.Fill => current is EmptyText ? FillText : EmptyText,
+		PenMode.Clear when current is not EmptyText => EmptyText,
 		_ => current
 	};
 	public static int IndexFrom(this Side side, Vector2I position) => side switch
