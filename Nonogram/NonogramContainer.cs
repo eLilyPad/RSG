@@ -86,6 +86,7 @@ public sealed partial class NonogramContainer : Container
 			);
 		}
 	}
+
 	public interface IHaveTools { PopupMenu Tools { get; } }
 
 	public sealed partial class DisplayContainer : TabContainer
