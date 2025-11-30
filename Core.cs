@@ -1,4 +1,5 @@
 using Godot;
+using static Godot.Control;
 
 namespace RSG;
 
@@ -11,26 +12,67 @@ public sealed partial class Core : Node
 {
 	public const string ColourPackPath = "res://Data/DefaultColours.tres";
 
-	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
+	public AspectRatioContainer Container { get; } = new AspectRatioContainer
+	{
+		Name = "Container",
+		Ratio = 16f / 9f,
+		StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
+	}
+	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public LoadingScreenContainer LoadingScreen { get; } = new LoadingScreenContainer { Name = "Loading Screen", }
+	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public NonogramContainer Nonogram { get; } = new() { Name = "Nonogram" };
+
 	public MainMenu Menu => field ??= new() { Colours = Colours };
-	public NonogramContainer Nonogram => field ??= new() { Name = "Nonogram" };
+	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
+
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		this.Add(Nonogram, Menu);
+		this.Add(Container.Add(Nonogram, Menu, LoadingScreen));
 
 		Input.Bind((Key.Escape, Menu.Step, "Toggle Main Menu"));
 
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
-
-		foreach (var puzzle in PuzzleManager.GetSavedPuzzles())
-		{
-			//GD.Print($"Found saved puzzle: {puzzle.Expected.Name} of size {puzzle.Expected.Size}");
-		}
+		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 	}
 	public override void _Input(InputEvent input)
 	{
+		if (input.IsPressed() && LoadingScreen.Visible)
+		{
+			LoadingScreen.Hide();
+			return;
+		}
+
 		Input.RunEvent(input);
+	}
+	public override void _Process(double delta)
+	{
+		//Vector2I scale = Vector2I.One * (GetTree().Root.Size.LengthSquared() / 4_000);
+		//Nonogram.Displays.CurrentTabDisplay.Scale = Vector2I.One * (scale / 4);
+		//GD.Print("Scale: ", scale);
+	}
+
+	public sealed partial class LoadingScreenContainer : PanelContainer
+	{
+		public ColorRect Background { get; } = new ColorRect
+		{
+			Name = "Background",
+			Color = Colors.Aquamarine,
+		}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public RichTextLabel LoadingText { get; } = new RichTextLabel
+		{
+			Name = "Loading Text",
+			BbcodeEnabled = true,
+			Text = "[color=black][font_size=60] Press Anything To Continue...",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			FitContent = true,
+		}.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
+		public override void _Ready()
+		{
+			this.Add(Background, LoadingText);
+		}
 	}
 }
 
