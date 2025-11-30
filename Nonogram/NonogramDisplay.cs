@@ -3,7 +3,7 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-public abstract partial class Display : Container
+public abstract partial class Display : AspectRatioContainer
 {
 	public readonly record struct TilePosition(Vector2I Position)
 	{

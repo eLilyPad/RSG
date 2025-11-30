@@ -1,6 +1,7 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=2 format=3 uid="uid://cbd8unusrw6je"]
 
-[ext_resource type="Script" path="res://ColourPack.cs" id="1_5e87o"]
+[ext_resource type="Script" uid="uid://djv14ijxvskou" path="res://ColourPack.cs" id="1_5e87o"]
 
 [resource]
 script = ExtResource("1_5e87o")
+MainMenuBackground = Color(0.62, 0.48215336, 0.26040003, 1)

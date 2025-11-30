@@ -58,7 +58,7 @@ public static class UIX
 	public static T Preset<T>(
 		this T control,
 		LayoutPreset preset,
-		LayoutPresetMode resizeMode,
+		LayoutPresetMode resizeMode = LayoutPresetMode.Minsize,
 		int margin = 0
 	) where T : Control
 	{
