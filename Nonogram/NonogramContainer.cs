@@ -40,15 +40,8 @@ public sealed partial class NonogramContainer : Container
 		);
 		ToolsBar.AddPuzzles(PuzzleData.Pack.Procedural());
 		ToolsBar.PuzzleLoader.Size = ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
-		ToolsBar.CodeLoader.Control.Input.TextChanged += text => PuzzleData.Code.Encode(text).Switch(
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
-		);
-		ToolsBar.CodeLoader.Control.Input.TextSubmitted += value => Load(value).Switch(
-			Displays.CurrentTabDisplay.Load,
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			notFound => GD.Print("Not Found")
-		);
+		ToolsBar.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
+		ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
 		ToolsBar.PuzzleLoader.AboutToPopup += ToolsBar.LoadSavedPuzzles;
 		ToolsBar.Saver.SetItems(
 			clear: true,
@@ -60,7 +53,11 @@ public sealed partial class NonogramContainer : Container
 			("Load From Code", Key.None, () => ToolsBar.CodeLoader.PopupCentered())
 		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
 		);
-		ChildEnteredTree += node =>
+
+		ChildEnteredTree += OnChildEnteringTree;
+		ChildExitingTree += OnChildExitingTree;
+
+		void OnChildEnteringTree(Node node)
 		{
 			switch (node)
 			{
@@ -68,8 +65,8 @@ public sealed partial class NonogramContainer : Container
 					Status.CompletionLabel.Visible = true;
 					break;
 			}
-		};
-		ChildExitingTree += node =>
+		}
+		void OnChildExitingTree(Node node)
 		{
 			switch (node)
 			{
@@ -77,7 +74,16 @@ public sealed partial class NonogramContainer : Container
 					Status.CompletionLabel.Visible = false;
 					break;
 			}
-		};
+		}
+		void OnCodeSubmitted(string value) => Load(value).Switch(
+			Displays.CurrentTabDisplay.Load,
+			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
+			notFound => GD.Print("Not Found")
+		);
+		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
+			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
+			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
+		);
 		void SavePuzzlePressed()
 		{
 			SaveData.Create(Displays).Switch(
