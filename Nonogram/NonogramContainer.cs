@@ -59,6 +59,11 @@ public sealed partial class NonogramContainer : Container
 
 		void OnChildEnteringTree(Node node)
 		{
+			if (Displays.HasChild(node) && node is not Display)
+			{
+				GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
+				Displays.RemoveChild(node);
+			}
 			switch (node)
 			{
 				case GameDisplay display:
@@ -144,14 +149,6 @@ public sealed partial class NonogramContainer : Container
 		{
 			this.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-			ChildEnteredTree += node =>
-			{
-				if (node is not Display)
-				{
-					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					RemoveChild(node);
-				}
-			};
 		}
 	}
 	public sealed partial class StatusBar : HBoxContainer
