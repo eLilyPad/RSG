@@ -174,8 +174,12 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			Tiles.SetText(data.StateAsText);
-			Hints.SetText(CalculateHintAt, data.HintPositions);
+			WriteToTiles(data);
+			foreach (HintPosition position in data.HintPositions)
+			{
+				if (!Hints.TryGetValue(position, out Hint? hint)) { continue; }
+				hint.Text = CalculateHintAt(position);
+			}
 		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
@@ -193,10 +197,8 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			Tiles.SetText(
-				getText: data is SaveData save ? save.StateAsText : data.StateAsText
-			);
-			Hints.SetText(CalculateHintAt, data.HintPositions);
+			WriteToTiles(data);
+			WriteToHints(data.HintPositions);
 			Reset();
 		}
 		public override void OnTilePressed(Vector2I position)
@@ -218,7 +220,7 @@ public sealed partial class NonogramContainer : Container
 		}
 		public override void Reset()
 		{
-			foreach (Button button in Tiles.Values) ResetTile(button);
+			foreach (Tile button in Tiles.Values) ResetTile(button);
 		}
 	}
 	public sealed partial class PaintDisplay : Display, IHaveTools
@@ -236,19 +238,18 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			Tiles.SetText(data.StateAsText);
-			Hints.SetText(CalculateHintAt, data.HintPositions);
+			WriteToTiles(data);
+			WriteToHints(positions: data.HintPositions);
 		}
-
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
-			Hints.SetText(asText: CalculateHintAt, position);
+			WriteToHints(positions: HintPosition.Convert(position));
 		}
 		public override void Reset()
 		{
-			foreach (Button button in Tiles.Values) ResetTile(button);
-			foreach (RichTextLabel label in Hints.Values) ResetHint(label);
+			foreach (Tile button in Tiles.Values) ResetTile(button);
+			foreach (Hint label in Hints.Values) ResetHint(label);
 		}
 	}
 

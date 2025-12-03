@@ -12,24 +12,45 @@ public abstract partial class Display : AspectRatioContainer
 	}
 	public readonly record struct HintPosition(Side Side, int Index)
 	{
-		public static implicit operator HorizontalAlignment(HintPosition position) => position.Side switch
-		{
-			Side.Row => HorizontalAlignment.Right,
-			Side.Column => HorizontalAlignment.Center,
-			_ => HorizontalAlignment.Fill
-		};
-		public static implicit operator VerticalAlignment(HintPosition position) => position.Side switch
-		{
-			Side.Row => VerticalAlignment.Center,
-			Side.Column => VerticalAlignment.Bottom,
-			_ => VerticalAlignment.Fill
-		};
 		public static IEnumerable<HintPosition> AsRange(int length, int start = 0) => Range(start, count: length)
 			.SelectMany(i => Convert(i));
 		public static IEnumerable<HintPosition> Convert(OneOf<Vector2I, int> value) => [
 			new(Side.Row, value.Match(position => position.X, index => index)),
 			new(Side.Column, value.Match(position => position.Y, index => index))
 		];
+
+		public readonly string AsFormat()
+		{
+			return Side switch
+			{
+				Side.Column => "\n",
+				Side.Row => "\t",
+				_ => ""
+			};
+		}
+		public readonly int IndexFrom(Vector2I position)
+		{
+			return Side switch
+			{
+				Side.Column => position.Y,
+				Side.Row => position.X,
+				_ => -1
+			};
+		}
+		public readonly (HorizontalAlignment, VerticalAlignment) Alignment() => (
+			Side switch
+			{
+				Side.Row => HorizontalAlignment.Right,
+				Side.Column => HorizontalAlignment.Center,
+				_ => HorizontalAlignment.Fill
+			},
+			Side switch
+			{
+				Side.Row => VerticalAlignment.Center,
+				Side.Column => VerticalAlignment.Bottom,
+				_ => VerticalAlignment.Fill
+			}
+		);
 	}
 	public abstract record Data
 	{
@@ -69,12 +90,9 @@ public abstract partial class Display : AspectRatioContainer
 		}
 		public static IImmutableDictionary<Vector2I, bool> AsStates(Display display) => display.Tiles.ToImmutableDictionary(
 			keySelector: pair => pair.Key,
-			elementSelector: pair => pair.Value.Text is FillText
+			elementSelector: pair => pair.Value.Button.Text is FillText
 		);
-		private static bool Matches(Button tile, bool state)
-		{
-			return (tile.Text is FillText && state) || (tile.Text is EmptyText && !state);
-		}
+
 		public const string DefaultName = "Puzzle";
 		public const int DefaultSize = 15;
 		public string Name { get; set; } = DefaultName;
@@ -92,14 +110,14 @@ public abstract partial class Display : AspectRatioContainer
 		}
 		public Data(Display display)
 		{
-			Tiles = display.Tiles.ToDictionary(elementSelector: pair => pair.Value.Text is FillText);
+			Tiles = display.Tiles.ToDictionary(elementSelector: pair => pair.Value.Button.Text is FillText);
 		}
 		public string StateAsText(Vector2I position) => States.GetValueOrDefault(position) ? FillText : EmptyText;
 		public bool Matches(Display display, Vector2I position)
 		{
 			if (!States.TryGetValue(position, out bool state)
-				|| !display.Tiles.TryGetValue(position, out Button? tile)
-				|| !Matches(tile, state)
+				|| !display.Tiles.TryGetValue(position, out Tile? tile)
+				|| !tile.Button.Matches(state)
 			) return false;
 			return true;
 		}
@@ -107,8 +125,8 @@ public abstract partial class Display : AspectRatioContainer
 		{
 			foreach ((Vector2I position, bool state) in States)
 			{
-				if (!display.Tiles.TryGetValue(position, out Button? tile)
-					|| !Matches(tile, state)
+				if (!display.Tiles.TryGetValue(position, out Tile? tile)
+					|| !tile.Button.Matches(state)
 				) return false;
 			}
 			return true;
@@ -141,8 +159,8 @@ public abstract partial class Display : AspectRatioContainer
 	protected MarginContainer Margin { get; } = new MarginContainer { Name = "Margin" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 20);
 
-	protected Dictionary<Vector2I, Button> Tiles { get; } = [];
-	protected Dictionary<HintPosition, RichTextLabel> Hints { get; } = [];
+	protected Dictionary<Vector2I, Tile> Tiles { get; } = [];
+	protected Dictionary<HintPosition, Hint> Hints { get; } = [];
 
 	private Func<HintPosition, Node> HintsParent => pos => pos.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
 
@@ -155,15 +173,40 @@ public abstract partial class Display : AspectRatioContainer
 	public abstract void Load(Data data);
 	public virtual void OnTilePressed(Vector2I position)
 	{
-		Button button = Tiles[position];
+		if (!Tiles.TryGetValue(position, out Tile? button)) return;
 		Pen = Input.IsMouseButtonPressed(BlockButton)
 			? PenMode.Block
 			: Input.IsMouseButtonPressed(FillButton)
 			? PenMode.Fill
 			: PenMode.Clear;
-		button.Text = Pen.FillButton(button.Text);
+		button.Button.Text = Pen switch
+		{
+			PenMode.Block => button.Button.Text is EmptyText or FillText ? BlockText : EmptyText,
+			PenMode.Fill => button.Button.Text is EmptyText ? FillText : EmptyText,
+			PenMode.Clear when button.Button.Text is not EmptyText => EmptyText,
+			_ => button.Button.Text
+		};
 	}
 	public string CalculateHintAt(HintPosition position) => Tiles.CalculateHints(position);
+	public void WriteToHints(IEnumerable<HintPosition> positions)
+	{
+		foreach (HintPosition position in positions)
+		{
+			if (!Hints.TryGetValue(position, out Hint? hint)) { continue; }
+			hint.Text = CalculateHintAt(position);
+		}
+	}
+	public void WriteToTiles(Data data)
+	{
+		foreach ((Vector2I position, Tile tile) in Tiles)
+		{
+			tile.Button.Text = data switch
+			{
+				SaveData save => save.StateAsText(position),
+				_ => data.StateAsText(position)
+			};
+		}
+	}
 	public void ChangePuzzleSize(int size)
 	{
 		if (size < 1)
@@ -172,52 +215,60 @@ public abstract partial class Display : AspectRatioContainer
 			size = Data.DefaultSize;
 		}
 		IEnumerable<HintPosition> values = HintPosition.AsRange(TilesGrid.Columns = size);
-		Hints.Refill(values, create: CreateHint, parent: HintsParent, reset: (Action<RichTextLabel>)ResetHint);
-		Tiles.RefillGrid(size, create: CreateTile, parent: TilesGrid, reset: (Action<Button>)ResetTile);
-	}
-	protected virtual void ResetTile(Button button) => button.Text = EmptyText;
-	protected virtual void ResetHint(RichTextLabel hint) => hint.Text = EmptyHint;
+		Hints.Refill(values, create: CreateHint, parent: HintsParent, reset: (Action<Hint>)ResetHint);
+		Tiles.RefillGrid(size, create: CreateTile, parent: TilesGrid, reset: (Action<Tile>)ResetTile);
 
-	private Button CreateTile(Vector2I position)
-	{
-		Button button = new()
+		Hint CreateHint(HintPosition position) => new(position);
+		Tile CreateTile(Vector2I position)
 		{
-			Name = $"Tile (X: {position.X}, Y: {position.Y})",
-			Text = EmptyText,
-			CustomMinimumSize = Vector2.One * TileSize,
-			ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
-		};
-		button.MouseEntered += MouseEntered;
-		button.ButtonDown += ButtonDown;
+			Tile button = new() { Name = $"Tile (X: {position.X}, Y: {position.Y})" };
+			button.Button.MouseEntered += MouseEntered;
+			button.Button.ButtonDown += ButtonDown;
 
-		return button;
+			return button;
 
-		void ButtonDown()
-		{
-			if (Input.IsMouseButtonPressed(BlockButton))
+			void ButtonDown()
 			{
-				GD.Print("Block button pressed");
+				if (Input.IsMouseButtonPressed(BlockButton))
+				{
+					GD.Print("Block button pressed");
+				}
+				OnTilePressed(position);
 			}
-			OnTilePressed(position);
-		}
-		void MouseEntered()
-		{
-			bool fill = Input.IsMouseButtonPressed(FillButton);
-			bool block = Input.IsMouseButtonPressed(BlockButton);
-			if (!fill && !block) { return; }
-			OnTilePressed(position);
+			void MouseEntered()
+			{
+				bool fill = Input.IsMouseButtonPressed(FillButton);
+				bool block = Input.IsMouseButtonPressed(BlockButton);
+				if (!fill && !block) { return; }
+				OnTilePressed(position);
+			}
 		}
 	}
-	private RichTextLabel CreateHint(HintPosition position)
+	protected virtual void ResetTile(Tile button) => button.Button.Text = EmptyText;
+	protected virtual void ResetHint(Hint hint) => hint.Text = EmptyHint;
+}
+public sealed partial class Hint : RichTextLabel
+{
+	public Hint(Display.HintPosition position)
 	{
-		return new RichTextLabel
-		{
-			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
-			Text = EmptyHint,
-			FitContent = true,
-			CustomMinimumSize = Vector2.One * TileSize,
-			HorizontalAlignment = position,
-			VerticalAlignment = position,
-		};
+		Name = $"Hint (Side: {position.Side}, Index: {position.Index})";
+		Text = Display.EmptyHint;
+		FitContent = true;
+		CustomMinimumSize = Vector2.One * Display.TileSize;
+		(HorizontalAlignment, VerticalAlignment) = position.Alignment();
+	}
+}
+public sealed partial class Tile : AspectRatioContainer
+{
+	public Button Button { get; } = new()
+	{
+		Text = Display.EmptyText,
+		CustomMinimumSize = Vector2.One * Display.TileSize,
+		ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
+	};
+
+	public override void _Ready()
+	{
+		this.Add(Button);
 	}
 }

@@ -17,34 +17,6 @@ public sealed partial class Labelled<T> : BoxContainer where T : Control
 
 public static class UIX
 {
-	public static Dictionary<TKey, TValue> SetText<TKey, TValue>(
-		this Dictionary<TKey, TValue> labels,
-		Func<TKey, string> getText,
-		IEnumerable<TKey>? keys = null
-	)
-	where TKey : notnull
-	where TValue : Control
-	{
-		foreach (var key in keys ?? labels.Keys)
-		{
-			if (!labels.TryGetValue(key, out var label)) { return labels; }
-			string text = getText(key);
-			switch (label)
-			{
-				case RichTextLabel rich:
-					rich.Text = text;
-					break;
-				case Label lbl:
-					lbl.Text = text;
-					break;
-				case Button button:
-					button.Text = text;
-					break;
-				default: break;
-			}
-		}
-		return labels;
-	}
 	public static T SizeFlags<T>(this T control, SizeFlags horizontal, SizeFlags vertical) where T : Control
 	{
 		(control.SizeFlagsHorizontal, control.SizeFlagsVertical) = (horizontal, vertical);
