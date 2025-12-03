@@ -40,15 +40,8 @@ public sealed partial class NonogramContainer : Container
 		);
 		ToolsBar.AddPuzzles(PuzzleData.Pack.Procedural());
 		ToolsBar.PuzzleLoader.Size = ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
-		ToolsBar.CodeLoader.Control.Input.TextChanged += text => PuzzleData.Code.Encode(text).Switch(
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
-		);
-		ToolsBar.CodeLoader.Control.Input.TextSubmitted += value => Load(value).Switch(
-			Displays.CurrentTabDisplay.Load,
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			notFound => GD.Print("Not Found")
-		);
+		ToolsBar.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
+		ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
 		ToolsBar.PuzzleLoader.AboutToPopup += ToolsBar.LoadSavedPuzzles;
 		ToolsBar.Saver.SetItems(
 			clear: true,
@@ -60,16 +53,25 @@ public sealed partial class NonogramContainer : Container
 			("Load From Code", Key.None, () => ToolsBar.CodeLoader.PopupCentered())
 		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
 		);
-		ChildEnteredTree += node =>
+
+		ChildEnteredTree += OnChildEnteringTree;
+		ChildExitingTree += OnChildExitingTree;
+
+		void OnChildEnteringTree(Node node)
 		{
+			if (Displays.HasChild(node) && node is not Display)
+			{
+				GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
+				Displays.RemoveChild(node);
+			}
 			switch (node)
 			{
 				case GameDisplay display:
 					Status.CompletionLabel.Visible = true;
 					break;
 			}
-		};
-		ChildExitingTree += node =>
+		}
+		void OnChildExitingTree(Node node)
 		{
 			switch (node)
 			{
@@ -77,7 +79,16 @@ public sealed partial class NonogramContainer : Container
 					Status.CompletionLabel.Visible = false;
 					break;
 			}
-		};
+		}
+		void OnCodeSubmitted(string value) => Load(value).Switch(
+			Displays.CurrentTabDisplay.Load,
+			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
+			notFound => GD.Print("Not Found")
+		);
+		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
+			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
+			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
+		);
 		void SavePuzzlePressed()
 		{
 			SaveData.Create(Displays).Switch(
@@ -138,14 +149,6 @@ public sealed partial class NonogramContainer : Container
 		{
 			this.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-			ChildEnteredTree += node =>
-			{
-				if (node is not Display)
-				{
-					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					RemoveChild(node);
-				}
-			};
 		}
 	}
 	public sealed partial class StatusBar : HBoxContainer
@@ -171,8 +174,12 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			Tiles.SetText(data.StateAsText);
-			Hints.SetText(CalculateHintAt, data.HintPositions);
+			WriteToTiles(data);
+			foreach (HintPosition position in data.HintPositions)
+			{
+				if (!Hints.TryGetValue(position, out Hint? hint)) { continue; }
+				hint.Text = CalculateHintAt(position);
+			}
 		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
@@ -190,10 +197,8 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			Tiles.SetText(
-				getText: data is SaveData save ? save.StateAsText : data.StateAsText
-			);
-			Hints.SetText(CalculateHintAt, data.HintPositions);
+			WriteToTiles(data);
+			WriteToHints(data.HintPositions);
 			Reset();
 		}
 		public override void OnTilePressed(Vector2I position)
@@ -215,7 +220,7 @@ public sealed partial class NonogramContainer : Container
 		}
 		public override void Reset()
 		{
-			foreach (Button button in Tiles.Values) ResetTile(button);
+			foreach (Tile button in Tiles.Values) ResetTile(button);
 		}
 	}
 	public sealed partial class PaintDisplay : Display, IHaveTools
@@ -233,19 +238,18 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			Tiles.SetText(data.StateAsText);
-			Hints.SetText(CalculateHintAt, data.HintPositions);
+			WriteToTiles(data);
+			WriteToHints(positions: data.HintPositions);
 		}
-
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
-			Hints.SetText(asText: CalculateHintAt, position);
+			WriteToHints(positions: HintPosition.Convert(position));
 		}
 		public override void Reset()
 		{
-			foreach (Button button in Tiles.Values) ResetTile(button);
-			foreach (RichTextLabel label in Hints.Values) ResetHint(label);
+			foreach (Tile button in Tiles.Values) ResetTile(button);
+			foreach (Hint label in Hints.Values) ResetHint(label);
 		}
 	}
 
