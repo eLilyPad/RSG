@@ -70,12 +70,12 @@ public static class GDX
 			}
 		}
 	}
-	public static T Add<T>(this T parent, params Span<Node> children) where T : Node
+	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children) { parent.AddChild(node); }
 		return parent;
 	}
-	public static T Remove<T>(this T parent, bool free = false, params Span<Node> children) where T : Node
+	public static T Remove<T>(this T parent, bool free = false, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children)
 		{
@@ -86,7 +86,7 @@ public static class GDX
 		}
 		return parent;
 	}
-	public static T AddOrRemove<T>(this T parent, bool add, bool free = false, params Span<Node> children) where T : Node
+	public static T AddOrRemove<T>(this T parent, bool add, bool free = false, params IEnumerable<Node> children) where T : Node
 	{
 		if (add) parent.Add(children);
 		else parent.Remove(free, children);
