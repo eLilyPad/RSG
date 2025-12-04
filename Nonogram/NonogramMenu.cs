@@ -25,79 +25,84 @@ public sealed partial class Menu : MenuBar
 
 	public List<Button> Puzzles { private get; init; } = [];
 	public List<Button> SavedPuzzles { private get; init; } = [];
-	public List<PuzzleLoaderContainer.ButtonsContainer> Packs { private get; init; } = [];
+	public List<PuzzleContainer> Packs { private get; init; } = [];
 
-	public override void _Ready() => this
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Add(Loader.Add(PuzzleLoader, CodeLoader), Saver);
-	public void LoadSavedPuzzles()
+	public override void _Ready()
 	{
-		IList<SaveData> puzzles = GetSavedPuzzles();
-		PuzzleLoader.Control.Saved.FillPuzzles(SavedPuzzles, puzzles);
+		this.Add(Loader.Add(PuzzleLoader, CodeLoader), Saver)
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+
+		ChildEnteredTree += OnChildEnteredTree;
+		ChildExitingTree += OnChildExitingTree;
+
+		void OnChildEnteredTree(Node node)
+		{
+			if (node is Button button && PuzzleLoader.Control.Saved.HasChild(button))
+			{
+				Puzzles.Add(button);
+			}
+		}
+		void OnChildExitingTree(Node node)
+		{
+			if (node is Button button && PuzzleLoader.Control.Saved.HasChild(button))
+			{
+				Puzzles.Remove(button);
+			}
+		}
 	}
 	public void AddPuzzles(PuzzleData.Pack pack)
 	{
-		PuzzleLoaderContainer.ButtonsContainer container = new PuzzleLoaderContainer.ButtonsContainer
+		PuzzleContainer container = new PuzzleContainer
 		{
 			Name = "Pack Container",
-			Alignment = AlignmentMode.End,
+			Alignment = AlignmentMode.Begin,
 			Title = new RichTextLabel { Name = "PuzzlePackTitle", Text = pack.Name, FitContent = true },
-			Container = new VBoxContainer { Name = "PuzzlesPackContainer" }
+			Container = new VBoxContainer { Name = "PuzzlesPackContainer", Alignment = AlignmentMode.End }
 		}
-		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-		.FillPuzzles(Puzzles, pack.Puzzles);
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+
+		foreach (var puzzle in pack.Puzzles)
+		{
+			Button button = new() { Text = puzzle.Name };
+			button.Pressed += () => Current.Puzzle = puzzle;
+			container.Container.Add(button);
+		}
+
 		Packs.Add(container);
 		PuzzleLoader.Control.Add(container);
 	}
 	public sealed partial class PuzzleLoaderContainer : VBoxContainer
 	{
-		public ButtonsContainer Saved = new()
+		public PuzzleContainer Saved = new()
 		{
 			Name = "Saves Container",
 			Title = new RichTextLabel { Name = "Save Puzzle Title", Text = "Saved Puzzles", FitContent = true },
 			Container = new VBoxContainer { Name = "Saved Puzzles Container" }
 		};
 		public override void _Ready() => this.Add(Saved);
-		public sealed partial class ButtonsContainer : VBoxContainer
+	}
+	public sealed partial class PuzzleContainer : VBoxContainer
+	{
+		public required RichTextLabel Title
 		{
-			public required RichTextLabel Title
-			{
-				get; init => field = value.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize);
-			}
-			public required VBoxContainer Container
-			{
-				get; init => field = value.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			}
-			public override void _Ready() => this.Add(Title, Container);
-			public ButtonsContainer FillPuzzles(IList<Button> buttons, IEnumerable<SaveData> puzzles)
-			{
-				foreach (Button puzzle in buttons)
-				{
-					if (!IsInstanceValid(puzzle)) { continue; }
-					puzzle.QueueFree();
-				}
-				foreach (SaveData save in puzzles)
-				{
-					Button button = new() { Text = save.Name };
-					button.Pressed += () => Current.Puzzle = save;
-					buttons.Add(button);
-					Container.Add(button);
-				}
-				return this;
-			}
-			public ButtonsContainer FillPuzzles(IList<Button> buttons, IEnumerable<PuzzleData> puzzles)
-			{
-				foreach (Button puzzle in buttons) { this.Remove(free: true, puzzle); }
-				foreach (PuzzleData puzzle in puzzles)
-				{
-					Button button = new() { Text = puzzle.Name };
-					button.Pressed += () => Current.Puzzle = puzzle;
-					buttons.Add(button);
-					Container.Add(button);
-				}
-				return this;
+			get; init => field = value.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize);
+		}
+		public required VBoxContainer Container
+		{
+			get; init => field = value.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		}
 
+		public override void _Ready() => this.Add(Title, Container);
+		public PuzzleContainer Fill<T>(IList<Button> buttons, IEnumerable<T> puzzles) where T : Display.Data
+		{
+			Container.Remove(free: true, buttons);
+			foreach (var puzzle in puzzles)
+			{
+				Button button = new() { Text = puzzle.Name };
+				button.Pressed += () => Current.Puzzle = puzzle;
+				Container.Add(button);
 			}
+			return this;
 		}
 	}
 	public partial class CodeLoaderContainer : VBoxContainer

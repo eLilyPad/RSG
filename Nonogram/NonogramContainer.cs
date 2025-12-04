@@ -6,6 +6,55 @@ using static PuzzleManager;
 
 public sealed partial class NonogramContainer : Container
 {
+	private static Menu InitMenu(Menu menu, DisplayContainer displays)
+	{
+		menu.PuzzleLoader.Size = menu.CodeLoader.Size = menu.GetTree().Root.Size / 2;
+		menu.Saver.SetItems(
+			clear: true,
+			("Save Puzzle", Key.None, SavePuzzlePressed)
+		);
+		menu.Loader.SetItems(
+			false,
+			("Load Puzzle", Key.None, () => menu.PuzzleLoader.PopupCentered()),
+			("Load From Code", Key.None, () => menu.CodeLoader.PopupCentered())
+		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
+		);
+
+		menu.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
+		menu.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
+		menu.PuzzleLoader.AboutToPopup += LoadSavedPuzzles;
+
+		return menu;
+
+		void OnCodeSubmitted(string value) => Load(value).Switch(
+			displays.CurrentTabDisplay.Load,
+			error => menu.CodeLoader.Control.Validation.Text = error.Message,
+			notFound => GD.Print("Not Found")
+		);
+		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
+			error => menu.CodeLoader.Control.Validation.Text = error.Message,
+			code => menu.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
+		);
+		void SavePuzzlePressed()
+		{
+			SaveData.Create(displays).Switch(
+				save => Save(save),
+				notFound => GD.Print("No current puzzle found")
+			);
+		}
+		void LoadSavedPuzzles()
+		{
+			menu.PuzzleLoader.Control.Saved.RemoveChildren(free: true);
+			foreach (SaveData puzzle in GetSavedPuzzles())
+			{
+				Button button = new() { Text = puzzle.Name };
+				button.Pressed += () => Current.Puzzle = puzzle;
+				menu.PuzzleLoader.Control.Saved.Add(button);
+			}
+		}
+
+	}
+
 	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
@@ -40,20 +89,8 @@ public sealed partial class NonogramContainer : Container
 			notFound => GD.Print("Current puzzle not found")
 		);
 		ToolsBar.AddPuzzles(proceduralPuzzles);
-		ToolsBar.PuzzleLoader.Size = ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
-		ToolsBar.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
-		ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
-		ToolsBar.PuzzleLoader.AboutToPopup += ToolsBar.LoadSavedPuzzles;
-		ToolsBar.Saver.SetItems(
-			clear: true,
-			("Save Puzzle", Key.None, SavePuzzlePressed)
-		);
-		ToolsBar.Loader.SetItems(
-			false,
-			("Load Puzzle", Key.None, () => ToolsBar.PuzzleLoader.PopupCentered()),
-			("Load From Code", Key.None, () => ToolsBar.CodeLoader.PopupCentered())
-		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
-		);
+
+		InitMenu(ToolsBar, Displays);
 
 		ChildEnteredTree += OnChildEnteringTree;
 		ChildExitingTree += OnChildExitingTree;
@@ -80,22 +117,6 @@ public sealed partial class NonogramContainer : Container
 					Status.CompletionLabel.Visible = false;
 					break;
 			}
-		}
-		void OnCodeSubmitted(string value) => Load(value).Switch(
-			Displays.CurrentTabDisplay.Load,
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			notFound => GD.Print("Not Found")
-		);
-		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
-		);
-		void SavePuzzlePressed()
-		{
-			SaveData.Create(Displays).Switch(
-				save => Save(save),
-				notFound => GD.Print("No current puzzle found")
-			);
 		}
 	}
 
