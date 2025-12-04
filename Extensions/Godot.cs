@@ -75,6 +75,11 @@ public static class GDX
 		foreach (Node node in children) { parent.AddChild(node); }
 		return parent;
 	}
+	public static T RemoveChildren<T>(this T parent, bool free = false) where T : Node
+	{
+		IEnumerable<Node> children = parent.GetChildren();
+		return parent.Remove(free, children);
+	}
 	public static T Remove<T>(this T parent, bool free = false, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children)
