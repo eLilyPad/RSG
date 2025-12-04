@@ -19,7 +19,7 @@ public sealed partial class Core : Node
 		StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
 	}
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public LoadingScreenContainer LoadingScreen { get; } = new LoadingScreenContainer { Name = "Loading Screen", }
+	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public NonogramContainer Nonogram { get; } = new() { Name = "Nonogram" };
 
@@ -43,17 +43,9 @@ public sealed partial class Core : Node
 			LoadingScreen.Hide();
 			return;
 		}
-
 		Input.RunEvent(input);
 	}
-	public override void _Process(double delta)
-	{
-		//Vector2I scale = Vector2I.One * (GetTree().Root.Size.LengthSquared() / 4_000);
-		//Nonogram.Displays.CurrentTabDisplay.Scale = Vector2I.One * (scale / 4);
-		//GD.Print("Scale: ", scale);
-	}
-
-	public sealed partial class LoadingScreenContainer : PanelContainer
+	public sealed partial class TitleScreenContainer : PanelContainer
 	{
 		public ColorRect Background { get; } = new ColorRect
 		{
