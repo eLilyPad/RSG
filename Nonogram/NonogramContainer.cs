@@ -32,13 +32,14 @@ public sealed partial class NonogramContainer : Container
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-		Display.Data startPuzzle = Current.Puzzle = PuzzleData.Pack.Procedural().Puzzles.First();
+		PuzzleData.Pack proceduralPuzzles = PuzzleData.Pack.Procedural();
+		Display.Data startPuzzle = Current.Puzzle = proceduralPuzzles.Puzzles.First();
 		Load(startPuzzle).Switch(
 			Displays.CurrentTabDisplay.Load,
 			error => GD.Print(error.Message),
 			notFound => GD.Print("Current puzzle not found")
 		);
-		ToolsBar.AddPuzzles(PuzzleData.Pack.Procedural());
+		ToolsBar.AddPuzzles(proceduralPuzzles);
 		ToolsBar.PuzzleLoader.Size = ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
 		ToolsBar.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
 		ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
