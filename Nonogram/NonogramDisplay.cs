@@ -95,7 +95,7 @@ public abstract partial class Display : AspectRatioContainer
 
 		public const string DefaultName = "Puzzle";
 		public const int DefaultSize = 15;
-		public string Name { get; set; } = DefaultName;
+		public virtual string Name { get; set; } = DefaultName;
 		public IImmutableDictionary<Vector2I, bool> States => Tiles.ToImmutableDictionary();
 		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
 			key => HintPosition.Convert(key)
