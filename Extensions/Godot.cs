@@ -128,6 +128,7 @@ public static class GDX
 	{
 		return GodotObject.IsInstanceValid(child)
 			&& child.IsInsideTree()
+			&& parent.IsInsideTree()
 			&& parent.HasNode(child.GetPath());
 	}
 	public static bool TryParse(this string? value, out Vector2I result)
@@ -148,5 +149,28 @@ public static class GDX
 			}
 		}
 		return true;
+	}
+	/// <summary>
+	/// Hides the control if visible, unless there is a control in steps that is visible. 
+	/// The visible step instead will be hidden 
+	/// </summary>
+	/// <param name="node"></param>
+	/// <param name="steps">checks if each step is visible, hides it and exits the method</param>
+	public static void StepBack(this Control node, params Span<Control> steps)
+	{
+		if (!node.Visible)
+		{
+			node.Show();
+			return;
+		}
+		foreach (Control control in steps)
+		{
+			if (control.Visible)
+			{
+				control.Hide();
+				return;
+			}
+		}
+		node.Hide();
 	}
 }
