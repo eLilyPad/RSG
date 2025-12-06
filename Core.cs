@@ -36,6 +36,7 @@ public sealed partial class Core : Node
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
 
 		Menu.Init(Levels, Colours);
+		Nonogram.Init();
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
