@@ -69,6 +69,7 @@ public sealed class PuzzleManager
 	public static CurrentPuzzle Current => field ??= new();
 	private static PuzzleManager Instance => field ??= new();
 
+	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
 	public static IList<SaveData> GetSavedPuzzles()
 	{
 		IList<SaveData> puzzles = [];
@@ -146,6 +147,7 @@ public sealed class PuzzleManager
 		return ProjectSettings.GlobalizePath(path);
 	}
 
+	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];
 	public Dictionary<string, Display.Data> Puzzles { private get; init; } = new()
 	{
 		[Display.Data.DefaultName] = new PuzzleData()
