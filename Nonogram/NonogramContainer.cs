@@ -8,14 +8,14 @@ public sealed partial class NonogramContainer : Container
 {
 	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
 	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = new(.2f, .3f, 0) }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
@@ -23,46 +23,12 @@ public sealed partial class NonogramContainer : Container
 	public override void _Ready()
 	{
 		this.Add(Background, Container.Add(ToolsBar, Displays, Status));
-
-		ChildEnteredTree += OnChildEnteringTree;
-		ChildExitingTree += OnChildExitingTree;
-
-		void OnChildEnteringTree(Node node)
-		{
-			switch (node)
-			{
-				case GameDisplay display:
-					Status.CompletionLabel.Visible = true;
-					break;
-				case Display: break;
-				case Node when Displays.HasChild(node):
-					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					Displays.RemoveChild(node);
-					break;
-			}
-		}
-		void OnChildExitingTree(Node node)
-		{
-			switch (node)
-			{
-				case GameDisplay display:
-					Status.CompletionLabel.Visible = false;
-					break;
-			}
-		}
 	}
 
 	public interface IHaveTools { PopupMenu Tools { get; } }
 
 	public sealed partial class DisplayContainer : TabContainer
 	{
-		private static class Errors
-		{
-			public static class Construction
-			{
-				public const string NoDisplayGiven = "No Displays given, provide at least one display when creating the Container";
-			}
-		}
 		public List<Display> Tabs { internal get; init; } = [];
 		public Display CurrentTabDisplay => GetCurrentTabControl() is not Display display ? Tabs.First() : display;
 	}
@@ -161,6 +127,5 @@ public sealed partial class NonogramContainer : Container
 			foreach (Hint label in Hints.Values) ResetHint(label);
 		}
 	}
-
 }
 public interface IColours { Color NonogramBackground { get; } }
