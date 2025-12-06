@@ -50,26 +50,29 @@ public sealed partial class Menu : MenuBar
 			}
 		}
 	}
-	public void AddPuzzles(PuzzleData.Pack pack)
+	public void AddPuzzles(params IEnumerable<PuzzleData.Pack> packs)
 	{
-		PuzzleContainer container = new PuzzleContainer
+		foreach (PuzzleData.Pack pack in packs)
 		{
-			Name = "Pack Container",
-			Alignment = AlignmentMode.Begin,
-			Title = new RichTextLabel { Name = "PuzzlePackTitle", Text = pack.Name, FitContent = true },
-			Container = new VBoxContainer { Name = "PuzzlesPackContainer", Alignment = AlignmentMode.End }
-		}
-		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			PuzzleContainer container = new PuzzleContainer
+			{
+				Name = "Pack Container",
+				Alignment = AlignmentMode.Begin,
+				Title = new RichTextLabel { Name = "PuzzlePackTitle", Text = pack.Name, FitContent = true },
+				Container = new VBoxContainer { Name = "PuzzlesPackContainer", Alignment = AlignmentMode.End }
+			}
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 
-		foreach (var puzzle in pack.Puzzles)
-		{
-			Button button = new() { Text = puzzle.Name };
-			button.Pressed += () => Current.Puzzle = puzzle;
-			container.Container.Add(button);
-		}
+			foreach (var puzzle in pack.Puzzles)
+			{
+				Button button = new() { Text = puzzle.Name };
+				button.Pressed += () => Current.Puzzle = puzzle;
+				container.Container.Add(button);
+			}
 
-		Packs.Add(container);
-		PuzzleLoader.Control.Add(container);
+			Packs.Add(container);
+			PuzzleLoader.Control.Add(container);
+		}
 	}
 	public sealed partial class PuzzleLoaderContainer : VBoxContainer
 	{
