@@ -82,10 +82,6 @@ public sealed partial class NonogramContainer : Container
 	}
 	public sealed partial class ExpectedDisplay : Display
 	{
-		public ExpectedDisplay()
-		{
-			Name = "Expected";
-		}
 		public override void OnTilePressed(Vector2I position) { }
 		public override void Reset() { }
 		public override void Load(Data data)
@@ -105,7 +101,6 @@ public sealed partial class NonogramContainer : Container
 		public required StatusBar Status { get; init; }
 		public GameDisplay()
 		{
-			Name = "Game";
 			Tools.SetItems(
 				clear: false,
 				("Reset", Key.None, Reset)
@@ -146,7 +141,6 @@ public sealed partial class NonogramContainer : Container
 
 		public PaintDisplay()
 		{
-			Name = "Painter";
 			Tools.SetItems(
 				clear: false,
 				("Reset", Key.None, Reset)
