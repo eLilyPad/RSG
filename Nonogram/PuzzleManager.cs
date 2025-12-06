@@ -79,22 +79,13 @@ public sealed class PuzzleManager
 				code =>
 				{
 					PuzzleData data = code.Decode();
-					Instance.Puzzles[data.Name] = data;
-					return data;
+					return Instance.Puzzles[data.Name] = data;
 				}
 			),
-			data =>
+			data => Instance.Puzzles[data.Name] = data switch
 			{
-				switch (data)
-				{
-					case PuzzleData puzzle:
-						Instance.Puzzles[puzzle.Name] = puzzle;
-						break;
-					case SaveData save:
-						Instance.Puzzles[save.Expected.Name] = save.Expected;
-						break;
-				}
-				return data;
+				SaveData save => save.Expected,
+				_ => data
 			}
 		);
 	}
