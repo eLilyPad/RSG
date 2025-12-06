@@ -16,7 +16,7 @@ public static class CoreInitializer
 
 	public static PuzzleSelectorContainer Init(this PuzzleSelectorContainer container)
 	{
-
+		container.AddPacks(GetPuzzlePacks());
 		return container;
 	}
 	public static MainMenu Init(
