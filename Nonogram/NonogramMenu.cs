@@ -24,7 +24,6 @@ public sealed partial class Menu : MenuBar
 	public PopupMenu Saver { get; } = new PopupMenu { Name = "Save" };
 
 	public List<Button> Puzzles { private get; init; } = [];
-	public List<Button> SavedPuzzles { private get; init; } = [];
 	public List<PuzzleContainer> Packs { private get; init; } = [];
 
 	public override void _Ready()
@@ -37,16 +36,26 @@ public sealed partial class Menu : MenuBar
 
 		void OnChildEnteredTree(Node node)
 		{
-			if (node is Button button && PuzzleLoader.Control.Saved.HasChild(button))
+			switch (node)
 			{
-				Puzzles.Add(button);
+				case Button button when PuzzleLoader.Control.Saved.HasChild(button):
+					Puzzles.Add(button);
+					break;
+				case PuzzleContainer puzzle:
+					Packs.Add(puzzle);
+					break;
 			}
 		}
 		void OnChildExitingTree(Node node)
 		{
-			if (node is Button button && PuzzleLoader.Control.Saved.HasChild(button))
+			switch (node)
 			{
-				Puzzles.Remove(button);
+				case Button button when PuzzleLoader.Control.Saved.HasChild(button):
+					Puzzles.Remove(button);
+					break;
+				case PuzzleContainer puzzle:
+					Packs.Remove(puzzle);
+					break;
 			}
 		}
 	}
@@ -63,7 +72,7 @@ public sealed partial class Menu : MenuBar
 				Container = new VBoxContainer { Name = "PuzzlesPackContainer", Alignment = AlignmentMode.End }
 					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
 			}
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 
 			foreach (var puzzle in pack.Puzzles)
 			{
@@ -72,7 +81,6 @@ public sealed partial class Menu : MenuBar
 				container.Container.Add(button);
 			}
 
-			Packs.Add(container);
 			PuzzleLoader.Control.Add(container);
 		}
 	}
