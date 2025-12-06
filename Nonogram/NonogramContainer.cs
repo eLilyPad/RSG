@@ -131,7 +131,7 @@ public sealed partial class NonogramContainer : Container
 				public const string NoDisplayGiven = "No Displays given, provide at least one display when creating the Container";
 			}
 		}
-		public List<Display> Tabs { private get; init; } = [];
+		public List<Display> Tabs { internal get; init; } = [];
 		public Display CurrentTabDisplay => GetCurrentTabControl() is not Display display ? Tabs.First() : display;
 		public DisplayContainer(Menu menu, params List<Display> displays)
 		{
