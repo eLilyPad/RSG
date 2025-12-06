@@ -6,55 +6,6 @@ using static PuzzleManager;
 
 public sealed partial class NonogramContainer : Container
 {
-	private static Menu InitMenu(Menu menu, DisplayContainer displays)
-	{
-		menu.PuzzleLoader.Size = menu.CodeLoader.Size = menu.GetTree().Root.Size / 2;
-		menu.Saver.SetItems(
-			clear: true,
-			("Save Puzzle", Key.None, SavePuzzlePressed)
-		);
-		menu.Loader.SetItems(
-			false,
-			("Load Puzzle", Key.None, () => menu.PuzzleLoader.PopupCentered()),
-			("Load From Code", Key.None, () => menu.CodeLoader.PopupCentered())
-		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
-		);
-
-		menu.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
-		menu.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
-		menu.PuzzleLoader.AboutToPopup += LoadSavedPuzzles;
-
-		return menu;
-
-		void OnCodeSubmitted(string value) => Load(value).Switch(
-			displays.CurrentTabDisplay.Load,
-			error => menu.CodeLoader.Control.Validation.Text = error.Message,
-			notFound => GD.Print("Not Found")
-		);
-		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
-			error => menu.CodeLoader.Control.Validation.Text = error.Message,
-			code => menu.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
-		);
-		void SavePuzzlePressed()
-		{
-			SaveData.Create(displays).Switch(
-				save => Save(save),
-				notFound => GD.Print("No current puzzle found")
-			);
-		}
-		void LoadSavedPuzzles()
-		{
-			menu.PuzzleLoader.Control.Saved.RemoveChildren(free: true);
-			foreach (SaveData puzzle in GetSavedPuzzles())
-			{
-				Button button = new() { Text = puzzle.Name };
-				button.Pressed += () => Current.Puzzle = puzzle;
-				menu.PuzzleLoader.Control.Saved.Add(button);
-			}
-		}
-
-	}
-
 	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
@@ -65,32 +16,15 @@ public sealed partial class NonogramContainer : Container
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public DisplayContainer Displays
-	{
-		get => field ??= new DisplayContainer(
-			menu: ToolsBar,
-			new GameDisplay { Status = Status },
-			new PaintDisplay { },
-			new ExpectedDisplay { }
-		);
-	}
+	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public override void _Ready()
 	{
 		this.Add(Background, Container.Add(ToolsBar, Displays, Status))
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-		PuzzleData.Pack proceduralPuzzles = PuzzleData.Pack.Procedural();
-		Display.Data startPuzzle = Current.Puzzle = proceduralPuzzles.Puzzles.First();
-		Load(startPuzzle).Switch(
-			Displays.CurrentTabDisplay.Load,
-			error => GD.Print(error.Message),
-			notFound => GD.Print("Current puzzle not found")
-		);
-		ToolsBar.AddPuzzles(proceduralPuzzles);
-
-		InitMenu(ToolsBar, Displays);
 
 		ChildEnteredTree += OnChildEnteringTree;
 		ChildExitingTree += OnChildExitingTree;
@@ -133,45 +67,6 @@ public sealed partial class NonogramContainer : Container
 		}
 		public List<Display> Tabs { internal get; init; } = [];
 		public Display CurrentTabDisplay => GetCurrentTabControl() is not Display display ? Tabs.First() : display;
-		public DisplayContainer(Menu menu, params List<Display> displays)
-		{
-			Assert(condition: displays.Count != 0, message: Errors.Construction.NoDisplayGiven);
-
-			Name = $"{typeof(Display)} Tabs";
-			TabsVisible = true;
-
-			foreach (Display display in displays)
-			{
-				Tabs.Add(display);
-				AddChild(display);
-				if (Current.Puzzle is null) { continue; }
-				display.Load(Current.Puzzle);
-			}
-
-			TabChanged += OnTabChanged;
-			OnTabChanged(CurrentTab);
-
-			void OnTabChanged(long index)
-			{
-				Display current = Current.Display = CurrentTabDisplay;
-				current.Load(Current.Puzzle);
-				foreach (Display other in displays.Except([current]))
-				{
-					if (other == current
-						|| other is not IHaveTools { Tools: PopupMenu otherTools }
-						|| !menu.HasChild(otherTools)
-					) continue;
-					menu.RemoveChild(otherTools);
-				}
-				if (current is not IHaveTools { Tools: PopupMenu currentTools } || menu.HasChild(currentTools)) { return; }
-				menu.AddChild(currentTools);
-			}
-		}
-		public override void _Ready()
-		{
-			this.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		}
 	}
 	public sealed partial class StatusBar : HBoxContainer
 	{
