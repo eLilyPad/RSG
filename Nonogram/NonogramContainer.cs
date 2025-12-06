@@ -8,148 +8,29 @@ public sealed partial class NonogramContainer : Container
 {
 	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
 	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = new(.2f, .3f, 0) }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public DisplayContainer Displays
-	{
-		get => field ??= new DisplayContainer(
-			menu: ToolsBar,
-			new GameDisplay { Status = Status },
-			new PaintDisplay { },
-			new ExpectedDisplay { }
-		);
-	}
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public override void _Ready()
 	{
-		this.Add(Background, Container.Add(ToolsBar, Displays, Status))
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-		Display.Data startPuzzle = Current.Puzzle = PuzzleData.Pack.Procedural().Puzzles.First();
-		Load(startPuzzle).Switch(
-			Displays.CurrentTabDisplay.Load,
-			error => GD.Print(error.Message),
-			notFound => GD.Print("Current puzzle not found")
-		);
-		ToolsBar.AddPuzzles(PuzzleData.Pack.Procedural());
-		ToolsBar.PuzzleLoader.Size = ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
-		ToolsBar.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
-		ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
-		ToolsBar.PuzzleLoader.AboutToPopup += ToolsBar.LoadSavedPuzzles;
-		ToolsBar.Saver.SetItems(
-			clear: true,
-			("Save Puzzle", Key.None, SavePuzzlePressed)
-		);
-		ToolsBar.Loader.SetItems(
-			false,
-			("Load Puzzle", Key.None, () => ToolsBar.PuzzleLoader.PopupCentered()),
-			("Load From Code", Key.None, () => ToolsBar.CodeLoader.PopupCentered())
-		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
-		);
-
-		ChildEnteredTree += OnChildEnteringTree;
-		ChildExitingTree += OnChildExitingTree;
-
-		void OnChildEnteringTree(Node node)
-		{
-			if (Displays.HasChild(node) && node is not Display)
-			{
-				GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-				Displays.RemoveChild(node);
-			}
-			switch (node)
-			{
-				case GameDisplay display:
-					Status.CompletionLabel.Visible = true;
-					break;
-			}
-		}
-		void OnChildExitingTree(Node node)
-		{
-			switch (node)
-			{
-				case GameDisplay display:
-					Status.CompletionLabel.Visible = false;
-					break;
-			}
-		}
-		void OnCodeSubmitted(string value) => Load(value).Switch(
-			Displays.CurrentTabDisplay.Load,
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			notFound => GD.Print("Not Found")
-		);
-		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
-			error => ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			code => ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
-		);
-		void SavePuzzlePressed()
-		{
-			SaveData.Create(Displays).Switch(
-				save => Save(save),
-				notFound => GD.Print("No current puzzle found")
-			);
-		}
+		this.Add(Background, Container.Add(ToolsBar, Displays, Status));
 	}
 
 	public interface IHaveTools { PopupMenu Tools { get; } }
 
 	public sealed partial class DisplayContainer : TabContainer
 	{
-		private static class Errors
-		{
-			public static class Construction
-			{
-				public const string NoDisplayGiven = "No Displays given, provide at least one display when creating the Container";
-			}
-		}
-		public List<Display> Tabs { private get; init; } = [];
+		public List<Display> Tabs { internal get; init; } = [];
 		public Display CurrentTabDisplay => GetCurrentTabControl() is not Display display ? Tabs.First() : display;
-		public DisplayContainer(Menu menu, params List<Display> displays)
-		{
-			Assert(condition: displays.Count != 0, message: Errors.Construction.NoDisplayGiven);
-
-			Name = $"{typeof(Display)} Tabs";
-			TabsVisible = true;
-
-			foreach (Display display in displays)
-			{
-				Tabs.Add(display);
-				AddChild(display);
-				if (Current.Puzzle is null) { continue; }
-				display.Load(Current.Puzzle);
-			}
-
-			TabChanged += OnTabChanged;
-			OnTabChanged(CurrentTab);
-
-			void OnTabChanged(long index)
-			{
-				Display current = Current.Display = CurrentTabDisplay;
-				current.Load(Current.Puzzle);
-				foreach (Display other in displays.Except([current]))
-				{
-					if (other == current
-						|| other is not IHaveTools { Tools: PopupMenu otherTools }
-						|| !menu.HasChild(otherTools)
-					) continue;
-					menu.RemoveChild(otherTools);
-				}
-				if (current is not IHaveTools { Tools: PopupMenu currentTools } || menu.HasChild(currentTools)) { return; }
-				menu.AddChild(currentTools);
-			}
-		}
-		public override void _Ready()
-		{
-			this.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		}
 	}
 	public sealed partial class StatusBar : HBoxContainer
 	{
@@ -165,21 +46,13 @@ public sealed partial class NonogramContainer : Container
 	}
 	public sealed partial class ExpectedDisplay : Display
 	{
-		public ExpectedDisplay()
-		{
-			Name = "Expected";
-		}
 		public override void OnTilePressed(Vector2I position) { }
 		public override void Reset() { }
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			WriteToTiles(data);
-			foreach (HintPosition position in data.HintPositions)
-			{
-				if (!Hints.TryGetValue(position, out Hint? hint)) { continue; }
-				hint.Text = CalculateHintAt(position);
-			}
+			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
+			WriteToHints(data.HintPositions);
 		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
@@ -188,7 +61,6 @@ public sealed partial class NonogramContainer : Container
 		public required StatusBar Status { get; init; }
 		public GameDisplay()
 		{
-			Name = "Game";
 			Tools.SetItems(
 				clear: false,
 				("Reset", Key.None, Reset)
@@ -197,26 +69,15 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			WriteToTiles(data);
+			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
 			WriteToHints(data.HintPositions);
-			Reset();
+			WriteToTiles(data);
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
 			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
-			if (Current.Puzzle is null)
-			{
-				GD.PushWarning("No Puzzle Selected unable to check if completed");
-				return;
-			}
-			if (!Current.Puzzle.Matches(this))
-			{
-				Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
-				return;
-			}
-			Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
-
+			Status.CompletionLabel.Text = Current.IsComplete() ? StatusBar.PuzzleIncomplete : StatusBar.PuzzleComplete;
 		}
 		public override void Reset()
 		{
@@ -229,7 +90,6 @@ public sealed partial class NonogramContainer : Container
 
 		public PaintDisplay()
 		{
-			Name = "Painter";
 			Tools.SetItems(
 				clear: false,
 				("Reset", Key.None, Reset)
@@ -238,7 +98,7 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			WriteToTiles(data);
+			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
 			WriteToHints(positions: data.HintPositions);
 		}
 		public override void OnTilePressed(Vector2I position)
@@ -252,6 +112,5 @@ public sealed partial class NonogramContainer : Container
 			foreach (Hint label in Hints.Values) ResetHint(label);
 		}
 	}
-
 }
 public interface IColours { Color NonogramBackground { get; } }

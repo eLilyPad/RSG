@@ -18,10 +18,13 @@ public sealed partial class Core : Node
 		Ratio = 16f / 9f,
 		StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
 	}
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public LoadingScreenContainer LoadingScreen { get; } = new LoadingScreenContainer { Name = "Loading Screen", }
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public NonogramContainer Nonogram { get; } = new() { Name = "Nonogram" };
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public NonogramContainer Nonogram { get; } = new NonogramContainer { Name = "Nonogram" }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public PuzzleSelector Levels { get; } = new() { Name = "Level Selector", Visible = false };
 
 	public MainMenu Menu => field ??= new() { Colours = Colours };
 	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
@@ -29,12 +32,18 @@ public sealed partial class Core : Node
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		this.Add(Container.Add(Nonogram, Menu, LoadingScreen));
+		this.Add(Container.Add(Nonogram, Menu, Levels, LoadingScreen));
 
-		Input.Bind((Key.Escape, Menu.Step, "Toggle Main Menu"));
-
+		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
+
+		Menu.Init(Levels, Colours);
+		Nonogram.Init();
+		Levels.Init(Menu);
+
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+
+		void StepBack() => Menu.StepBack(Menu.Settings, Levels);
 	}
 	public override void _Input(InputEvent input)
 	{
@@ -43,17 +52,9 @@ public sealed partial class Core : Node
 			LoadingScreen.Hide();
 			return;
 		}
-
 		Input.RunEvent(input);
 	}
-	public override void _Process(double delta)
-	{
-		//Vector2I scale = Vector2I.One * (GetTree().Root.Size.LengthSquared() / 4_000);
-		//Nonogram.Displays.CurrentTabDisplay.Scale = Vector2I.One * (scale / 4);
-		//GD.Print("Scale: ", scale);
-	}
-
-	public sealed partial class LoadingScreenContainer : PanelContainer
+	public sealed partial class TitleScreenContainer : PanelContainer
 	{
 		public ColorRect Background { get; } = new ColorRect
 		{

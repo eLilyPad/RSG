@@ -95,7 +95,7 @@ public abstract partial class Display : AspectRatioContainer
 
 		public const string DefaultName = "Puzzle";
 		public const int DefaultSize = 15;
-		public string Name { get; set; } = DefaultName;
+		public virtual string Name { get; set; } = DefaultName;
 		public IImmutableDictionary<Vector2I, bool> States => Tiles.ToImmutableDictionary();
 		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
 			key => HintPosition.Convert(key)
@@ -119,6 +119,16 @@ public abstract partial class Display : AspectRatioContainer
 				|| !display.Tiles.TryGetValue(position, out Tile? tile)
 				|| !tile.Button.Matches(state)
 			) return false;
+			return true;
+		}
+		public bool Matches(Data data)
+		{
+			foreach ((Vector2I position, bool state) in States)
+			{
+				if (!data.Tiles.TryGetValue(position, out bool tileState)
+					|| tileState != state
+				) return false;
+			}
 			return true;
 		}
 		public bool Matches(Display display)

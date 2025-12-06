@@ -70,12 +70,17 @@ public static class GDX
 			}
 		}
 	}
-	public static T Add<T>(this T parent, params Span<Node> children) where T : Node
+	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children) { parent.AddChild(node); }
 		return parent;
 	}
-	public static T Remove<T>(this T parent, bool free = false, params Span<Node> children) where T : Node
+	public static T RemoveChildren<T>(this T parent, bool free = false) where T : Node
+	{
+		IEnumerable<Node> children = parent.GetChildren();
+		return parent.Remove(free, children);
+	}
+	public static T Remove<T>(this T parent, bool free = false, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children)
 		{
@@ -86,7 +91,7 @@ public static class GDX
 		}
 		return parent;
 	}
-	public static T AddOrRemove<T>(this T parent, bool add, bool free = false, params Span<Node> children) where T : Node
+	public static T AddOrRemove<T>(this T parent, bool add, bool free = false, params IEnumerable<Node> children) where T : Node
 	{
 		if (add) parent.Add(children);
 		else parent.Remove(free, children);
@@ -123,6 +128,7 @@ public static class GDX
 	{
 		return GodotObject.IsInstanceValid(child)
 			&& child.IsInsideTree()
+			&& parent.IsInsideTree()
 			&& parent.HasNode(child.GetPath());
 	}
 	public static bool TryParse(this string? value, out Vector2I result)
@@ -143,5 +149,28 @@ public static class GDX
 			}
 		}
 		return true;
+	}
+	/// <summary>
+	/// Hides the control if visible, unless there is a control in steps that is visible. 
+	/// The visible step instead will be hidden 
+	/// </summary>
+	/// <param name="node"></param>
+	/// <param name="steps">checks if each step is visible, hides it and exits the method</param>
+	public static void StepBack(this Control node, params Span<Control> steps)
+	{
+		if (!node.Visible)
+		{
+			node.Show();
+			return;
+		}
+		foreach (Control control in steps)
+		{
+			if (control.Visible)
+			{
+				control.Hide();
+				return;
+			}
+		}
+		node.Hide();
 	}
 }
