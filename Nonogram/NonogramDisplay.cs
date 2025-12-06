@@ -121,6 +121,16 @@ public abstract partial class Display : AspectRatioContainer
 			) return false;
 			return true;
 		}
+		public bool Matches(Data data)
+		{
+			foreach ((Vector2I position, bool state) in States)
+			{
+				if (!data.Tiles.TryGetValue(position, out bool tileState)
+					|| tileState != state
+				) return false;
+			}
+			return true;
+		}
 		public bool Matches(Display display)
 		{
 			foreach ((Vector2I position, bool state) in States)

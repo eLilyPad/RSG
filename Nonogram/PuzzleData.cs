@@ -126,6 +126,7 @@ public sealed record SaveData : Display.Data
 
 	public PuzzleData Expected { get; init; } = new();
 	public override int Size => Expected.Size;
+	public bool IsComplete => Matches(data: Expected);
 
 	public SaveData() { }
 	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
