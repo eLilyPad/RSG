@@ -58,8 +58,10 @@ public sealed partial class Menu : MenuBar
 			{
 				Name = "Pack Container",
 				Alignment = AlignmentMode.Begin,
-				Title = new RichTextLabel { Name = "PuzzlePackTitle", Text = pack.Name, FitContent = true },
+				Title = new RichTextLabel { Name = "PuzzlePackTitle", Text = pack.Name, FitContent = true }
+					.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize),
 				Container = new VBoxContainer { Name = "PuzzlesPackContainer", Alignment = AlignmentMode.End }
+					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
 			}
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 
@@ -86,27 +88,9 @@ public sealed partial class Menu : MenuBar
 	}
 	public sealed partial class PuzzleContainer : VBoxContainer
 	{
-		public required RichTextLabel Title
-		{
-			get; init => field = value.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize);
-		}
-		public required VBoxContainer Container
-		{
-			get; init => field = value.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		}
-
+		public required RichTextLabel Title { get; init; }
+		public required VBoxContainer Container { get; init; }
 		public override void _Ready() => this.Add(Title, Container);
-		public PuzzleContainer Fill<T>(IList<Button> buttons, IEnumerable<T> puzzles) where T : Display.Data
-		{
-			Container.Remove(free: true, buttons);
-			foreach (var puzzle in puzzles)
-			{
-				Button button = new() { Text = puzzle.Name };
-				button.Pressed += () => Current.Puzzle = puzzle;
-				Container.Add(button);
-			}
-			return this;
-		}
 	}
 	public partial class CodeLoaderContainer : VBoxContainer
 	{
