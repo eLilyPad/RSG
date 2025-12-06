@@ -53,17 +53,6 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 	{
 		PuzzlePacks.Value.Remove(true, _packDisplays);
 	}
-	public void AddPacks(params IEnumerable<PuzzleData.Pack> packs)
-	{
-		foreach (PuzzleData.Pack pack in packs)
-		{
-			PuzzlePackDisplay display = new PuzzlePackDisplay { Name = pack.Name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			display.AddPack(pack);
-			PuzzlePacks.Value.Add(display);
-		}
-	}
-
 
 	public sealed partial class PuzzlePackDisplay : AspectRatioContainer
 	{
@@ -76,18 +65,27 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 		}
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		private readonly List<PuzzleDisplay> _displays = [];
-		public override void _Ready() => this.Add(Puzzles);
-		public void AddPack(PuzzleData.Pack pack)
+		public PuzzlePackDisplay()
 		{
-			foreach (PuzzleData puzzle in pack.Puzzles)
+			ChildEnteredTree += OnChildEnteredTree;
+			ChildExitingTree += OnChildExitingTree;
+
+			void OnChildExitingTree(Node node)
 			{
-				PuzzleDisplay display = new() { Name = puzzle.Name + " Display" };
-				display.Button.Text = puzzle.Name;
-				display.Button.Pressed += () => Current.Puzzle = puzzle;
-				_displays.Add(display);
-				Puzzles.Add(display);
+				if (node is PuzzleDisplay display && _displays.Contains(display))
+				{
+					_displays.Remove(display);
+				}
+			}
+			void OnChildEnteredTree(Node node)
+			{
+				if (node is PuzzleDisplay display)
+				{
+					_displays.Add(display);
+				}
 			}
 		}
+		public override void _Ready() => this.Add(Puzzles);
 	}
 	public sealed partial class PuzzleDisplay : AspectRatioContainer
 	{
