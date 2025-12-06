@@ -18,10 +18,12 @@ public sealed partial class Core : Node
 		Ratio = 16f / 9f,
 		StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
 	}
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public NonogramContainer Nonogram { get; } = new() { Name = "Nonogram" };
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public NonogramContainer Nonogram { get; } = new NonogramContainer { Name = "Nonogram" }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public PuzzleSelectorContainer Levels { get; } = new() { Name = "Level Selector", Visible = false };
 
 	public MainMenu Menu => field ??= new() { Colours = Colours };
@@ -37,6 +39,7 @@ public sealed partial class Core : Node
 
 		Menu.Init(Levels, Colours);
 		Nonogram.Init();
+		Levels.Init();
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
