@@ -51,12 +51,8 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			WriteToTiles(data);
-			foreach (HintPosition position in data.HintPositions)
-			{
-				if (!Hints.TryGetValue(position, out Hint? hint)) { continue; }
-				hint.Text = CalculateHintAt(position);
-			}
+			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
+			WriteToHints(data.HintPositions);
 		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
@@ -73,26 +69,15 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			WriteToTiles(data);
+			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
 			WriteToHints(data.HintPositions);
-			Reset();
+			WriteToTiles(data);
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
 			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
-			if (Current.Puzzle is null)
-			{
-				GD.PushWarning("No Puzzle Selected unable to check if completed");
-				return;
-			}
-			if (!Current.Puzzle.Matches(this))
-			{
-				Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
-				return;
-			}
-			Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
-
+			Status.CompletionLabel.Text = Current.IsComplete() ? StatusBar.PuzzleIncomplete : StatusBar.PuzzleComplete;
 		}
 		public override void Reset()
 		{
@@ -113,7 +98,7 @@ public sealed partial class NonogramContainer : Container
 		public override void Load(Data data)
 		{
 			ChangePuzzleSize(data.Size);
-			WriteToTiles(data);
+			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
 			WriteToHints(positions: data.HintPositions);
 		}
 		public override void OnTilePressed(Vector2I position)
