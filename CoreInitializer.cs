@@ -177,7 +177,8 @@ public static class CoreInitializer
 			menu.PuzzleLoader.Control.Saved.RemoveChildren(free: true);
 			foreach (SaveData puzzle in GetSavedPuzzles())
 			{
-				Button button = new() { Text = puzzle.Name };
+				string status = puzzle.IsComplete ? " - complete" : "";
+				Button button = new() { Text = $"{puzzle.Name}{status}" };
 				button.Pressed += () => Current.Puzzle = puzzle;
 				menu.PuzzleLoader.Control.Saved.Add(button);
 			}

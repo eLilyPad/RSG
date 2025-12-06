@@ -73,19 +73,18 @@ public sealed class PuzzleManager
 	}
 	public static LoadResult Load(OneOf<string, Display.Data> value)
 	{
-		return value.Match(
-			code => Code.Encode(code).Match<LoadResult>(
-				error => error,
-				code =>
-				{
-					PuzzleData data = code.Decode();
-					return Instance.Puzzles[data.Name] = data;
-				}
-			),
-			data => Instance.Puzzles[data.Name] = data switch
+		return value.Match(LoadCode, LoadData);
+		static LoadResult LoadData(Display.Data data) => Instance.Puzzles[data.Name] = data switch
+		{
+			SaveData save => save.Expected,
+			_ => data
+		};
+		static LoadResult LoadCode(string code) => Code.Encode(code).Match<LoadResult>(
+			error => error,
+			code =>
 			{
-				SaveData save => save.Expected,
-				_ => data
+				PuzzleData data = code.Decode();
+				return Instance.Puzzles[data.Name] = data;
 			}
 		);
 	}
