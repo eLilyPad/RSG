@@ -1,4 +1,5 @@
 using Godot;
+using static Godot.Control;
 
 namespace RSG;
 
@@ -14,16 +15,20 @@ public static class CoreInitializer
 		public const string OutsideOfTree = "Outside of Scene Tree unable to initialize";
 	}
 
-	public static PuzzleSelectorContainer Init(this PuzzleSelectorContainer container, MainMenu menu)
+	public static PuzzleSelector Init(this PuzzleSelector container, MainMenu menu)
 	{
 		foreach (PuzzleData.Pack pack in GetPuzzlePacks())
 		{
-			PuzzleSelectorContainer.PuzzlePackDisplay display = new PuzzleSelectorContainer.PuzzlePackDisplay { Name = pack.Name }
-				.Preset(Control.LayoutPreset.FullRect, Control.LayoutPresetMode.KeepSize);
+			PuzzleSelector.PackDisplay display = new PuzzleSelector.PackDisplay { Name = pack.Name }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 			foreach (PuzzleData puzzle in pack.Puzzles)
 			{
-				PuzzleSelectorContainer.PuzzleDisplay puzzleDisplay = new() { Name = puzzle.Name + " Display" };
-				puzzleDisplay.Button.Text = puzzle.Name;
+				PuzzleSelector.PuzzleDisplay puzzleDisplay = new()
+				{
+					Name = puzzle.Name + " Display",
+					Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+					Ratio = 1f
+				};
 				puzzleDisplay.Button.Pressed += Pressed;
 				display.Puzzles.Value.Add(puzzleDisplay);
 
@@ -39,7 +44,7 @@ public static class CoreInitializer
 		return container;
 	}
 	public static MainMenu Init(
-		this MainMenu menu, PuzzleSelectorContainer levels, ColourPack colours
+		this MainMenu menu, PuzzleSelector levels, ColourPack colours
 	)
 	{
 		Assert(condition: menu.IsInsideTree(), $"{nameof(MainMenu)}- {Errors.OutsideOfTree}");
@@ -125,7 +130,29 @@ public static class CoreInitializer
 		menu.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
 		menu.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
 		menu.PuzzleLoader.AboutToPopup += LoadSavedPuzzles;
-		menu.AddPuzzles(GetPuzzlePacks());
+
+		foreach (PuzzleData.Pack pack in GetPuzzlePacks())
+		{
+			Menu.PuzzleContainer container = new Menu.PuzzleContainer
+			{
+				Name = "Pack Container",
+				Alignment = BoxContainer.AlignmentMode.Begin,
+				Title = new RichTextLabel { Name = "Title", Text = pack.Name, FitContent = true }
+					.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize),
+				Container = new VBoxContainer { Name = "Packs", Alignment = BoxContainer.AlignmentMode.End }
+					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+			}
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+
+			foreach (var puzzle in pack.Puzzles)
+			{
+				Button button = new() { Text = puzzle.Name };
+				button.Pressed += () => Current.Puzzle = puzzle;
+				container.Container.Add(button);
+			}
+
+			menu.PuzzleLoader.Control.Add(container);
+		}
 
 		return menu;
 
@@ -157,27 +184,26 @@ public static class CoreInitializer
 		}
 	}
 	private static NonogramContainer.DisplayContainer Init(
-		this NonogramContainer.DisplayContainer display, Menu menu, params List<Display> displays
+		this NonogramContainer.DisplayContainer container, Menu menu, params IEnumerable<Display> displays
 	)
 	{
-		foreach (Display d in displays)
+		Assert(displays.Any(), Errors.NoDisplayGiven);
+
+		foreach (Display display in displays)
 		{
-			display.Tabs.Add(d);
-			display.Add(d);
-			if (Current.Puzzle is null) { continue; }
-			d.Load(Current.Puzzle);
+			container.Tabs.Add(display);
+			container.Add(display);
 		}
 
-		display.TabChanged += OnTabChanged;
-		OnTabChanged(display.CurrentTab);
+		container.TabChanged += OnTabChanged;
+		OnTabChanged(container.CurrentTab);
 
-		return display;
+		return container;
 
 		void OnTabChanged(long index)
 		{
-			Display current = Current.Display = display.CurrentTabDisplay;
-			current.Load(Current.Puzzle);
-			foreach (Display other in displays.Except([current]))
+			Display current = Current.Display = container.CurrentTabDisplay;
+			foreach (Display other in displays.ToList().Except([current]))
 			{
 				if (other == current
 					|| other is not NonogramContainer.IHaveTools { Tools: PopupMenu otherTools }
