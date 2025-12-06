@@ -71,6 +71,7 @@ public sealed partial class NonogramContainer : Container
 			ChangePuzzleSize(data.Size);
 			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
 			WriteToHints(data.HintPositions);
+			Reset();
 			WriteToTiles(data);
 		}
 		public override void OnTilePressed(Vector2I position)
