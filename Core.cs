@@ -22,6 +22,7 @@ public sealed partial class Core : Node
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public NonogramContainer Nonogram { get; } = new() { Name = "Nonogram" };
+	public PuzzleSelectorContainer Levels { get; } = new() { Name = "Level Selector", Visible = false };
 
 	public MainMenu Menu => field ??= new() { Colours = Colours };
 	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
@@ -29,12 +30,16 @@ public sealed partial class Core : Node
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		this.Add(Container.Add(Nonogram, Menu, LoadingScreen));
+		this.Add(Container.Add(Nonogram, Menu, Levels, LoadingScreen));
 
-		Input.Bind((Key.Escape, Menu.Step, "Toggle Main Menu"));
-
+		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
+
+		Menu.Init(Levels, Colours);
+
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+
+		void StepBack() => Menu.StepBack(Menu.Settings, Levels);
 	}
 	public override void _Input(InputEvent input)
 	{
