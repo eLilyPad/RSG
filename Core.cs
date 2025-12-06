@@ -39,7 +39,7 @@ public sealed partial class Core : Node
 
 		Menu.Init(Levels, Colours);
 		Nonogram.Init();
-		Levels.Init();
+		Levels.Init(Menu);
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 

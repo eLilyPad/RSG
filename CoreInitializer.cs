@@ -14,9 +14,28 @@ public static class CoreInitializer
 		public const string OutsideOfTree = "Outside of Scene Tree unable to initialize";
 	}
 
-	public static PuzzleSelectorContainer Init(this PuzzleSelectorContainer container)
+	public static PuzzleSelectorContainer Init(this PuzzleSelectorContainer container, MainMenu menu)
 	{
-		container.AddPacks(GetPuzzlePacks());
+		foreach (PuzzleData.Pack pack in GetPuzzlePacks())
+		{
+			PuzzleSelectorContainer.PuzzlePackDisplay display = new PuzzleSelectorContainer.PuzzlePackDisplay { Name = pack.Name }
+				.Preset(Control.LayoutPreset.FullRect, Control.LayoutPresetMode.KeepSize);
+			foreach (PuzzleData puzzle in pack.Puzzles)
+			{
+				PuzzleSelectorContainer.PuzzleDisplay puzzleDisplay = new() { Name = puzzle.Name + " Display" };
+				puzzleDisplay.Button.Text = puzzle.Name;
+				puzzleDisplay.Button.Pressed += Pressed;
+				display.Puzzles.Value.Add(puzzleDisplay);
+
+				void Pressed()
+				{
+					Current.Puzzle = puzzle;
+					container.Hide();
+					menu.Hide();
+				}
+			}
+			container.PuzzlePacks.Value.Add(display);
+		}
 		return container;
 	}
 	public static MainMenu Init(
@@ -47,34 +66,32 @@ public static class CoreInitializer
 
 		Display.Data startPuzzle = Current.Puzzle;
 
+		container.ChildEnteredTree += OnChildEnteringTree;
+		container.ChildExitingTree += OnChildExitingTree;
+
 		container.Displays.Init(
 			menu: container.ToolsBar,
 			new NonogramContainer.GameDisplay { Name = "Game", Status = container.Status },
 			new NonogramContainer.PaintDisplay { Name = "Paint", },
 			new NonogramContainer.ExpectedDisplay { Name = "Expected", }
 		);
-		container.ToolsBar
-			.Init(container.Displays)
-			.AddPuzzles(GetPuzzlePacks());
+		container.ToolsBar.Init(container.Displays);
 
 		container.Displays.CurrentTabDisplay.Load(Current.Puzzle);
-
-		container.ChildEnteredTree += OnChildEnteringTree;
-		container.ChildExitingTree += OnChildExitingTree;
 
 		return container;
 
 		void OnChildEnteringTree(Node node)
 		{
-			if (container.Displays.HasChild(node) && node is not Display)
-			{
-				GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-				container.Displays.RemoveChild(node);
-			}
 			switch (node)
 			{
 				case NonogramContainer.GameDisplay display:
 					container.Status.CompletionLabel.Visible = true;
+					break;
+				case Display: break;
+				case Node when container.Displays.HasChild(node):
+					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
+					container.Displays.RemoveChild(node);
 					break;
 			}
 		}
@@ -108,6 +125,7 @@ public static class CoreInitializer
 		menu.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
 		menu.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
 		menu.PuzzleLoader.AboutToPopup += LoadSavedPuzzles;
+		menu.AddPuzzles(GetPuzzlePacks());
 
 		return menu;
 
