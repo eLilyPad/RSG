@@ -22,24 +22,22 @@ public sealed partial class NonogramContainer : Container
 
 	public override void _Ready()
 	{
-		this.Add(Background, Container.Add(ToolsBar, Displays, Status))
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		this.Add(Background, Container.Add(ToolsBar, Displays, Status));
 
 		ChildEnteredTree += OnChildEnteringTree;
 		ChildExitingTree += OnChildExitingTree;
 
 		void OnChildEnteringTree(Node node)
 		{
-			if (Displays.HasChild(node) && node is not Display)
-			{
-				GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-				Displays.RemoveChild(node);
-			}
 			switch (node)
 			{
 				case GameDisplay display:
 					Status.CompletionLabel.Visible = true;
+					break;
+				case Display: break;
+				case Node when Displays.HasChild(node):
+					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
+					Displays.RemoveChild(node);
 					break;
 			}
 		}
