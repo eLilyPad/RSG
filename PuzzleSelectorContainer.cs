@@ -9,27 +9,26 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 	public ColorRect Background { get; } = new ColorRect
 	{
 		Name = "Background",
-		Color = Colors.Coral with { A = 0.5f },
-	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
+		Color = Colors.AliceBlue with { A = 0.5f },
+	}
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public ScrollContainer Scroll { get; } = new ScrollContainer()
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public VBoxContainer Puzzles { get; } = new VBoxContainer()
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public Labelled<VBoxContainer> PuzzlePacks { get; } = new()
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	//public VBoxContainer Puzzles { get; } = new VBoxContainer()
+	//	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public Labelled<VBoxContainer> PuzzlePacks { get; } = new Labelled<VBoxContainer>()
 	{
 		Label = new RichTextLabel { Name = "Packs Title", FitContent = true, Text = "Puzzle Packs" }
-		.Preset(LayoutPreset.CenterTop, LayoutPresetMode.KeepSize),
+			.Preset(LayoutPreset.CenterTop, LayoutPresetMode.KeepSize),
 		Value = new VBoxContainer()
-		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-	};
-
-	private readonly List<PuzzleDisplay> _displays = [];
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+	}
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 	private readonly List<PuzzlePackDisplay> _packDisplays = [];
 
 	public override void _Ready()
 	{
-		this.Add(Background);
+		this.Add(Background, Scroll.Add(PuzzlePacks));
 
 		ChildEnteredTree += OnChildEnteredTree;
 		ChildExitingTree += OnChildExitingTree;
@@ -54,27 +53,37 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 	{
 		PuzzlePacks.Value.Remove(true, _packDisplays);
 	}
-	public void Add(params IEnumerable<PuzzleData.Pack> packs)
+	public void AddPacks(params IEnumerable<PuzzleData.Pack> packs)
 	{
 		foreach (PuzzleData.Pack pack in packs)
 		{
-			PuzzlePackDisplay packDisplay = new PuzzlePackDisplay(pack)
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			PuzzlePacks.Value.Add(packDisplay);
+			PuzzlePackDisplay display = new PuzzlePackDisplay { Name = pack.Name }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			display.AddPack(pack);
+			PuzzlePacks.Value.Add(display);
 		}
 	}
 
 
 	public sealed partial class PuzzlePackDisplay : AspectRatioContainer
 	{
-		public VBoxContainer Puzzles { get; } = new VBoxContainer()
-		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
+		{
+			Label = new RichTextLabel { Name = "Label", FitContent = true }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
+			Value = new VBoxContainer { Name = "Puzzles Container" }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+		}
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		private readonly List<PuzzleDisplay> _displays = [];
-		public PuzzlePackDisplay(PuzzleData.Pack pack)
+		public override void _Ready() => this.Add(Puzzles);
+		public void AddPack(PuzzleData.Pack pack)
 		{
 			foreach (PuzzleData puzzle in pack.Puzzles)
 			{
-				PuzzleDisplay display = new(puzzle);
+				PuzzleDisplay display = new() { Name = puzzle.Name + " Display" };
+				display.Button.Text = puzzle.Name;
+				display.Button.Pressed += () => Current.Puzzle = puzzle;
 				_displays.Add(display);
 				Puzzles.Add(display);
 			}
@@ -83,14 +92,6 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 	public sealed partial class PuzzleDisplay : AspectRatioContainer
 	{
 		public Button Button { get; } = new() { Name = "Display Button" };
-
-		public PuzzleDisplay(Display.Data data)
-		{
-			Name = data.Name + " Display";
-			Button.Text = data.Name;
-			Button.Pressed += () => Current.Puzzle = data;
-		}
-
 		public override void _Ready() => this.Add(Button);
 	}
 }
