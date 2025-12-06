@@ -4,7 +4,7 @@ namespace RSG.Nonogram;
 
 using static PuzzleManager;
 
-public sealed partial class PuzzleSelectorContainer : PanelContainer
+public sealed partial class PuzzleSelector : PanelContainer
 {
 	public ColorRect Background { get; } = new ColorRect
 	{
@@ -24,7 +24,7 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
 	}
 		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-	private readonly List<PuzzlePackDisplay> _packDisplays = [];
+	private readonly List<PackDisplay> _packDisplays = [];
 
 	public override void _Ready()
 	{
@@ -35,14 +35,14 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 
 		void OnChildExitingTree(Node node)
 		{
-			if (node is PuzzlePackDisplay pack && _packDisplays.Contains(pack))
+			if (node is PackDisplay pack && _packDisplays.Contains(pack))
 			{
 				_packDisplays.Remove(pack);
 			}
 		}
 		void OnChildEnteredTree(Node node)
 		{
-			if (node is PuzzlePackDisplay pack)
+			if (node is PackDisplay pack)
 			{
 				_packDisplays.Add(pack);
 			}
@@ -54,7 +54,7 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 		PuzzlePacks.Value.Remove(true, _packDisplays);
 	}
 
-	public sealed partial class PuzzlePackDisplay : AspectRatioContainer
+	public sealed partial class PackDisplay : AspectRatioContainer
 	{
 		public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
 		{
@@ -65,7 +65,7 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 		}
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		private readonly List<PuzzleDisplay> _displays = [];
-		public PuzzlePackDisplay()
+		public PackDisplay()
 		{
 			ChildEnteredTree += OnChildEnteredTree;
 			ChildExitingTree += OnChildExitingTree;
@@ -89,7 +89,7 @@ public sealed partial class PuzzleSelectorContainer : PanelContainer
 	}
 	public sealed partial class PuzzleDisplay : AspectRatioContainer
 	{
-		public Button Button { get; } = new() { Name = "Display Button" };
+		public required Button Button { get; init; }
 		public override void _Ready() => this.Add(Button);
 	}
 }

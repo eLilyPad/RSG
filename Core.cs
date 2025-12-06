@@ -24,7 +24,7 @@ public sealed partial class Core : Node
 	public NonogramContainer Nonogram { get; } = new NonogramContainer { Name = "Nonogram" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public PuzzleSelectorContainer Levels { get; } = new() { Name = "Level Selector", Visible = false };
+	public PuzzleSelector Levels { get; } = new() { Name = "Level Selector", Visible = false };
 
 	public MainMenu Menu => field ??= new() { Colours = Colours };
 	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
