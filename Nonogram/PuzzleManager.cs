@@ -32,6 +32,7 @@ public sealed class PuzzleManager
 		public bool IsComplete()
 		{
 			if (Display is null || !Current.Puzzle.Matches(Display)) return false;
+			Instance.PuzzlesCompleted[Current.Puzzle.Name] = true;
 			return true;
 		}
 		private Display? ChangeDisplay(Display? value)
