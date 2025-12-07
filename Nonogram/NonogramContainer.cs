@@ -26,6 +26,7 @@ public sealed partial class NonogramContainer : Container
 	}
 
 	public interface IHaveTools { PopupMenu Tools { get; } }
+	public interface IHaveStatus { StatusBar Status { get; } }
 
 	public sealed partial class DisplayContainer : TabContainer
 	{
@@ -48,36 +49,26 @@ public sealed partial class NonogramContainer : Container
 	{
 		public override void OnTilePressed(Vector2I position) { }
 		public override void Reset() { }
-		public override void Load(Data data)
-		{
-			ChangePuzzleSize(data.Size);
-			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
-			WriteToHints(data.HintPositions);
-		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Game" };
 		public required StatusBar Status { get; init; }
-		public GameDisplay()
-		{
-			Tools.SetItems(
-				clear: false,
-				("Reset", Key.None, Reset)
-			);
-		}
+
 		public override void Load(Data data)
 		{
-			ChangePuzzleSize(data.Size);
-			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
-			WriteToHints(data.HintPositions);
+			base.Load(data);
 			Reset();
-			WriteToTiles(data);
+			if (data is SaveData)
+			{
+				WriteToTiles(data);
+			}
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
 			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
+			Current.Save();
 			Status.CompletionLabel.Text = Current.IsComplete() ? StatusBar.PuzzleIncomplete : StatusBar.PuzzleComplete;
 		}
 		public override void Reset()
@@ -89,19 +80,6 @@ public sealed partial class NonogramContainer : Container
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Paint" };
 
-		public PaintDisplay()
-		{
-			Tools.SetItems(
-				clear: false,
-				("Reset", Key.None, Reset)
-			);
-		}
-		public override void Load(Data data)
-		{
-			ChangePuzzleSize(data.Size);
-			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
-			WriteToHints(positions: data.HintPositions);
-		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);

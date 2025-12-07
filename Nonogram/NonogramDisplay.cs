@@ -180,7 +180,12 @@ public abstract partial class Display : AspectRatioContainer
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
-	public abstract void Load(Data data);
+	public virtual void Load(Data data)
+	{
+		ChangePuzzleSize(data.Size);
+		WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
+		WriteToHints(data.HintPositions);
+	}
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		if (!Tiles.TryGetValue(position, out Tile? button)) return;
