@@ -59,9 +59,9 @@ public sealed partial class NonogramContainer : Container
 		{
 			base.Load(data);
 			Reset();
-			if (data is SaveData)
+			if (data is SaveData save)
 			{
-				WriteToTiles(data);
+				WriteToTiles(save);
 			}
 		}
 		public override void OnTilePressed(Vector2I position)

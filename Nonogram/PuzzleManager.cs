@@ -11,24 +11,35 @@ public sealed class PuzzleManager
 {
 	public sealed record class CurrentPuzzle
 	{
-		public string Name { get; private set; } = Display.Data.DefaultName;
 		public Display.Data Puzzle
 		{
-			get => Instance.Puzzles.GetValueOrDefault(Name, defaultValue: new PuzzleData());
-			set
+			get; set
 			{
 				if (value is null) { return; }
-				Instance.Puzzles[value.Name] = value;
-				Name = value.Name;
+				field = Instance.Puzzles[value.Name] = value;
 				if (Display is null)
 				{
 					return;
 				}
 				Display.Load(value);
 			}
-		}
-		public Display? Display { get; set => field = ChangeDisplay(value); } = null;
+		} = new SaveData();
+		public Display? Display
+		{
+			private get; set
+			{
+				Assert(value is not null, "Display value is null, unable to change current display");
+				(field = value).Load(Puzzle);
+			}
+		} = null;
 
+		public void Save()
+		{
+			Assert(Display is not null, "Display is null unable to save puzzle");
+			SaveData data = new(Puzzle, Display);
+			PuzzleManager.Save(data);
+			Puzzle = data;
+		}
 		public bool IsComplete()
 		{
 			if (Display is null || !Current.Puzzle.Matches(Display)) return false;
