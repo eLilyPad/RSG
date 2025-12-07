@@ -114,6 +114,7 @@ public sealed record SaveData : Display.Data
 			writer.WriteEndObject();
 		}
 	}
+
 	public static OneOf<SaveData, NotFound> Create(NonogramContainer.DisplayContainer displays)
 	{
 		return PuzzleManager.Current.Puzzle switch
@@ -125,12 +126,22 @@ public sealed record SaveData : Display.Data
 	}
 
 	public PuzzleData Expected { get; init; } = new();
+	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
 	public bool IsComplete => Matches(data: Expected);
 
 	public SaveData() { }
 	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
 	public SaveData(PuzzleData expected, Display display) : base(display) => Expected = expected;
+	public SaveData(Display.Data data, Display display) : base(display)
+	{
+		Expected = data switch
+		{
+			SaveData save => save.Expected,
+			PuzzleData puzzle => puzzle,
+			_ => throw new NotImplementedException()
+		};
+	}
 }
 public sealed record PuzzleData : Display.Data
 {
@@ -316,6 +327,8 @@ public sealed record PuzzleData : Display.Data
 		public string Name { get; init; } = "Pack";
 		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
+
+	public static explicit operator SaveData(PuzzleData puzzle) => new() { Expected = puzzle };
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }
 	public PuzzleData(Display display) : base(display) { }
