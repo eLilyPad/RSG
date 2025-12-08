@@ -181,7 +181,7 @@ public abstract partial class Display : AspectRatioContainer
 
 	private Func<HintPosition, Node> HintsParent => pos => pos.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
 
-	public override void _Ready()
+	public override sealed void _Ready()
 	{
 		this.Add(Margin.Add(Grid.Add(Spacer, Columns, Rows, TilesGrid)))
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);

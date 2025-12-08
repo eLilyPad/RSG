@@ -32,18 +32,17 @@ public sealed partial class Core : Node
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		this.Add(Container.Add(Nonogram, Menu, Levels, LoadingScreen));
+		this.Add(Container.Add(Nonogram, Menu, LoadingScreen));
 
 		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
 
-		Menu.Init(Levels, Colours);
-		Nonogram.Init();
-		Levels.Init(Menu);
+		Menu.Init(Colours);
+		Nonogram.Init(Menu);
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
-		void StepBack() => Menu.StepBack(Menu.Settings, Levels);
+		void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels);
 	}
 	public override void _Input(InputEvent input)
 	{

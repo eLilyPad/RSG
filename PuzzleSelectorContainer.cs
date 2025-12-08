@@ -9,26 +9,28 @@ public sealed partial class PuzzleSelector : PanelContainer
 	public ColorRect Background { get; } = new ColorRect
 	{
 		Name = "Background",
-		Color = Colors.AliceBlue with { A = 0.5f },
+		Color = Colors.DarkCyan,
 	}
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public ScrollContainer Scroll { get; } = new ScrollContainer()
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	//public VBoxContainer Puzzles { get; } = new VBoxContainer()
 	//	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public Labelled<VBoxContainer> PuzzlePacks { get; } = new Labelled<VBoxContainer>()
+	public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
 	{
-		Label = new RichTextLabel { Name = "Packs Title", FitContent = true, Text = "Puzzle Packs" }
+		Name = "Puzzles Container",
+		Vertical = true,
+		Label = new RichTextLabel { Name = "PuzzlesTitle", FitContent = true, Text = "Puzzles" }
 			.Preset(LayoutPreset.CenterTop, LayoutPresetMode.KeepSize),
 		Value = new VBoxContainer()
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	}
-		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	private readonly List<PackDisplay> _packDisplays = [];
 
 	public override void _Ready()
 	{
-		this.Add(Background, Scroll.Add(PuzzlePacks));
+		this.Add(Background, Scroll.Add(Puzzles));
 
 		ChildEnteredTree += OnChildEnteredTree;
 		ChildExitingTree += OnChildExitingTree;
@@ -51,7 +53,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public void ClearPacks()
 	{
-		PuzzlePacks.Value.Remove(true, _packDisplays);
+		Puzzles.Value.Remove(true, _packDisplays);
 	}
 
 	public sealed partial class PackDisplay : AspectRatioContainer
@@ -61,6 +63,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Label = new RichTextLabel { Name = "Label", FitContent = true }
 				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
 			Value = new VBoxContainer { Name = "Puzzles Container" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize),
 			Vertical = true
 		}
@@ -88,10 +91,11 @@ public sealed partial class PuzzleSelector : PanelContainer
 		}
 		public override void _Ready() => this.Add(Puzzles);
 	}
-	public sealed partial class PuzzleDisplay : AspectRatioContainer
+	public sealed partial class PuzzleDisplay : BoxContainer
 	{
+		public required ColorRect Background { get; init; }
 		public required Button Button { get; init; }
-		public override void _Ready() => this.Add(Button);
+		public override void _Ready() => this.Add(Background, Button);
 	}
 }
 

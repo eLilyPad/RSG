@@ -6,6 +6,7 @@ namespace RSG;
 using UI;
 using Nonogram;
 using static Nonogram.PuzzleManager;
+using static Nonogram.NonogramContainer;
 
 public static class CoreInitializer
 {
@@ -15,7 +16,86 @@ public static class CoreInitializer
 		public const string OutsideOfTree = "Outside of Scene Tree unable to initialize";
 	}
 
-	public static PuzzleSelector Init(this PuzzleSelector container, MainMenu menu)
+
+	public static MainMenu Init(this MainMenu menu, ColourPack colours)
+	{
+		Assert(condition: menu.IsInsideTree(), $"{nameof(MainMenu)}- {Errors.OutsideOfTree}");
+
+		menu.Background.Color = colours.NonogramBackground;
+
+		menu.Buttons.Play.Pressed += PlayPressed;
+		menu.Buttons.Levels.Pressed += LevelPressed;
+		menu.Buttons.Settings.Pressed += SettingsPressed;
+		menu.Buttons.Quit.Pressed += QuitPressed;
+
+		menu.Settings.VisibilityChanged += () => menu.Buttons.Visible = !menu.Settings.Visible;
+		menu.Levels.Init(menu);
+
+		return menu;
+
+		void PlayPressed() => menu.Hide();
+		void LevelPressed() => menu.Levels.Show();
+		void SettingsPressed() => menu.Settings.Show();
+		void QuitPressed() => menu.GetTree().Quit();
+	}
+	public static NonogramContainer Init(this NonogramContainer container, MainMenu menu)
+	{
+		Assert(condition: container.IsInsideTree(), $"{nameof(NonogramContainer)}- {Errors.OutsideOfTree}");
+
+		Display.Data startPuzzle = Current.Puzzle;
+		GameDisplay game = new()
+		{
+			Name = "Game",
+			Status = container.Status,
+			CompletionScreen = new PuzzleCompleteScreen { Name = "PuzzleCompleteScreen", Visible = false }
+				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
+		};
+		PaintDisplay paint = new() { Name = "Paint", };
+
+		container.AddChild(game.CompletionScreen);
+		container.ChildEnteredTree += OnChildEnteringTree;
+		container.ChildExitingTree += OnChildExitingTree;
+		game.CompletionScreen.Levels.Pressed += OnLevelsPressed;
+
+		container.Displays.Init(menu: container.ToolsBar, game, paint, Display.Default);
+		container.ToolsBar.Init(container.Displays);
+
+		container.Displays.CurrentTabDisplay.Load(Current.Puzzle);
+
+		return container;
+
+		void OnLevelsPressed()
+		{
+			menu.Show();
+			menu.Levels.Show();
+			game.CompletionScreen.Hide();
+		}
+		void OnChildEnteringTree(Node node)
+		{
+			switch (node)
+			{
+				case GameDisplay display:
+					container.Status.CompletionLabel.Visible = true;
+					break;
+				case Display: break;
+				case Node when container.Displays.HasChild(node):
+					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
+					container.Displays.RemoveChild(node);
+					break;
+			}
+		}
+		void OnChildExitingTree(Node node)
+		{
+			switch (node)
+			{
+				case GameDisplay display:
+					container.Status.CompletionLabel.Visible = false;
+					break;
+			}
+		}
+	}
+
+	private static PuzzleSelector Init(this PuzzleSelector container, MainMenu menu)
 	{
 		container.VisibilityChanged += SelectorVisibilityChanged;
 		Fill();
@@ -24,7 +104,7 @@ public static class CoreInitializer
 		void SelectorVisibilityChanged()
 		{
 			if (!container.Visible) return;
-			container.PuzzlePacks.Value.RemoveChildren(true);
+			container.Puzzles.Value.RemoveChildren(true);
 			Fill();
 		}
 		void Fill()
@@ -32,17 +112,19 @@ public static class CoreInitializer
 			PuzzleSelector.PackDisplay saved = new PuzzleSelector.PackDisplay { Name = "SavedDisplay" }
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 			saved.Puzzles.Label.Text = "Saved";
-			container.PuzzlePacks.Value.Add(saved);
+			container.Puzzles.Value.Add(saved);
 
 			foreach (SaveData save in GetSavedPuzzles())
 			{
-				string status = save.IsComplete ? " - complete" : "";
-				PuzzleSelector.PuzzleDisplay puzzleDisplay = new()
+				Color statusColor = save.IsComplete ? Colors.Green : Colors.Black;
+				PuzzleSelector.PuzzleDisplay puzzleDisplay = new PuzzleSelector.PuzzleDisplay()
 				{
 					Name = save.Name + " Display",
-					Button = new() { Name = save.Name + " Button", Text = save.Name + status },
-					Ratio = 1f
-				};
+					Button = new() { Name = save.Name + " Button", Text = save.Name },
+					Background = new ColorRect { Name = "Background", Color = statusColor }
+						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+				}
+					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 				puzzleDisplay.Button.Pressed += Pressed;
 				saved.Puzzles.Value.Add(puzzleDisplay);
 
@@ -64,7 +146,8 @@ public static class CoreInitializer
 					{
 						Name = puzzle.Name + " Display",
 						Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
-						Ratio = 1f
+						Background = new ColorRect { Name = "Background", Color = Colors.Black }
+							.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 					};
 					puzzleDisplay.Button.Pressed += Pressed;
 					display.Puzzles.Value.Add(puzzleDisplay);
@@ -76,81 +159,11 @@ public static class CoreInitializer
 						menu.Hide();
 					}
 				}
-				container.PuzzlePacks.Value.Add(display);
+				container.Puzzles.Value.Add(display);
 			}
 		}
 	}
-	public static MainMenu Init(
-		this MainMenu menu, PuzzleSelector levels, ColourPack colours
-	)
-	{
-		Assert(condition: menu.IsInsideTree(), $"{nameof(MainMenu)}- {Errors.OutsideOfTree}");
-
-		menu.Background.Color = colours.NonogramBackground;
-
-		menu.Buttons.Play.Pressed += PlayPressed;
-		menu.Buttons.Levels.Pressed += LevelPressed;
-		menu.Buttons.Settings.Pressed += SettingsPressed;
-		menu.Buttons.Quit.Pressed += QuitPressed;
-
-		menu.Settings.VisibilityChanged += () => menu.Buttons.Visible = !menu.Settings.Visible;
-
-		return menu;
-
-		void PlayPressed() => menu.Hide();
-		void LevelPressed() => levels.Show();
-		void SettingsPressed() => menu.Settings.Show();
-		void QuitPressed() => menu.GetTree().Quit();
-	}
-	public static NonogramContainer Init(this NonogramContainer container)
-	{
-		Assert(condition: container.IsInsideTree(), $"{nameof(NonogramContainer)}- {Errors.OutsideOfTree}");
-
-		Display.Data startPuzzle = Current.Puzzle;
-
-		container.ChildEnteredTree += OnChildEnteringTree;
-		container.ChildExitingTree += OnChildExitingTree;
-
-		container.Displays.Init(
-			menu: container.ToolsBar,
-			new NonogramContainer.GameDisplay { Name = "Game", Status = container.Status },
-			new NonogramContainer.PaintDisplay { Name = "Paint", },
-			Display.Default
-		);
-		container.ToolsBar.Init(container.Displays);
-
-		container.Displays.CurrentTabDisplay.Load(Current.Puzzle);
-
-		return container;
-
-		void OnChildEnteringTree(Node node)
-		{
-			switch (node)
-			{
-				case NonogramContainer.GameDisplay display:
-					container.Status.CompletionLabel.Visible = true;
-					break;
-				case Display: break;
-				case Node when container.Displays.HasChild(node):
-					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					container.Displays.RemoveChild(node);
-					break;
-			}
-		}
-		void OnChildExitingTree(Node node)
-		{
-			switch (node)
-			{
-				case NonogramContainer.GameDisplay display:
-					container.Status.CompletionLabel.Visible = false;
-					break;
-			}
-		}
-	}
-
-	private static Menu Init(
-		this Menu menu, NonogramContainer.DisplayContainer displays
-	)
+	private static Menu Init(this Menu menu, DisplayContainer displays)
 	{
 		menu.PuzzleLoader.Size = menu.CodeLoader.Size = menu.GetTree().Root.Size / 2;
 		menu.Saver.SetItems(
@@ -221,9 +234,7 @@ public static class CoreInitializer
 			}
 		}
 	}
-	private static NonogramContainer.DisplayContainer Init(
-		this NonogramContainer.DisplayContainer container, Menu menu, params IEnumerable<Display> displays
-	)
+	private static DisplayContainer Init(this DisplayContainer container, Menu menu, params List<Display> displays)
 	{
 		Assert(displays.Any(), Errors.NoDisplayGiven);
 
@@ -244,12 +255,12 @@ public static class CoreInitializer
 			foreach (Display other in displays.ToList().Except([current]))
 			{
 				if (other == current
-					|| other is not NonogramContainer.IHaveTools { Tools: PopupMenu otherTools }
+					|| other is not IHaveTools { Tools: PopupMenu otherTools }
 					|| !menu.HasChild(otherTools)
 				) continue;
 				menu.RemoveChild(otherTools);
 			}
-			if (current is not NonogramContainer.IHaveTools { Tools: PopupMenu currentTools }
+			if (current is not IHaveTools { Tools: PopupMenu currentTools }
 				|| menu.HasChild(currentTools)
 			)
 			{
