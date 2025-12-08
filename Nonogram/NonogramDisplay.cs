@@ -131,7 +131,7 @@ public abstract partial class Display : AspectRatioContainer
 			}
 			return true;
 		}
-		public bool Matches(Display display)
+		public virtual bool Matches(Display display)
 		{
 			foreach ((Vector2I position, bool state) in States)
 			{
