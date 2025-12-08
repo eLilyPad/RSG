@@ -17,31 +17,68 @@ public static class CoreInitializer
 
 	public static PuzzleSelector Init(this PuzzleSelector container, MainMenu menu)
 	{
-		foreach (PuzzleData.Pack pack in GetPuzzlePacks())
+		container.VisibilityChanged += SelectorVisibilityChanged;
+		Fill();
+		return container;
+
+		void SelectorVisibilityChanged()
 		{
-			PuzzleSelector.PackDisplay display = new PuzzleSelector.PackDisplay { Name = pack.Name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			foreach (PuzzleData puzzle in pack.Puzzles)
+			if (!container.Visible) return;
+			container.PuzzlePacks.Value.RemoveChildren(true);
+			Fill();
+		}
+		void Fill()
+		{
+			PuzzleSelector.PackDisplay saved = new PuzzleSelector.PackDisplay { Name = "SavedDisplay" }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			saved.Puzzles.Label.Text = "Saved";
+			container.PuzzlePacks.Value.Add(saved);
+
+			foreach (SaveData save in GetSavedPuzzles())
 			{
+				string status = save.IsComplete ? " - complete" : "";
 				PuzzleSelector.PuzzleDisplay puzzleDisplay = new()
 				{
-					Name = puzzle.Name + " Display",
-					Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+					Name = save.Name + " Display",
+					Button = new() { Name = save.Name + " Button", Text = save.Name + status },
 					Ratio = 1f
 				};
 				puzzleDisplay.Button.Pressed += Pressed;
-				display.Puzzles.Value.Add(puzzleDisplay);
+				saved.Puzzles.Value.Add(puzzleDisplay);
 
 				void Pressed()
 				{
-					Current.Puzzle = puzzle;
+					Current.Puzzle = save;
 					container.Hide();
 					menu.Hide();
 				}
 			}
-			container.PuzzlePacks.Value.Add(display);
+			foreach (PuzzleData.Pack pack in GetPuzzlePacks())
+			{
+				PuzzleSelector.PackDisplay display = new PuzzleSelector.PackDisplay { Name = pack.Name }
+					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+				display.Puzzles.Label.Text = pack.Name;
+				foreach (PuzzleData puzzle in pack.Puzzles)
+				{
+					PuzzleSelector.PuzzleDisplay puzzleDisplay = new()
+					{
+						Name = puzzle.Name + " Display",
+						Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+						Ratio = 1f
+					};
+					puzzleDisplay.Button.Pressed += Pressed;
+					display.Puzzles.Value.Add(puzzleDisplay);
+
+					void Pressed()
+					{
+						Current.Puzzle = puzzle;
+						container.Hide();
+						menu.Hide();
+					}
+				}
+				container.PuzzlePacks.Value.Add(display);
+			}
 		}
-		return container;
 	}
 	public static MainMenu Init(
 		this MainMenu menu, PuzzleSelector levels, ColourPack colours
@@ -78,7 +115,7 @@ public static class CoreInitializer
 			menu: container.ToolsBar,
 			new NonogramContainer.GameDisplay { Name = "Game", Status = container.Status },
 			new NonogramContainer.PaintDisplay { Name = "Paint", },
-			new NonogramContainer.ExpectedDisplay { Name = "Expected", }
+			Display.Default
 		);
 		container.ToolsBar.Init(container.Displays);
 
