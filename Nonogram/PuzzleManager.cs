@@ -33,24 +33,23 @@ public sealed class PuzzleManager
 			}
 		} = null;
 
-		public void Save()
+		/// <summary>
+		/// Updates the current puzzle from the display.
+		///  - saves the changes to puzzle.
+		///  - Writes to game display
+		/// Checks if the display has StatusBar then  
+		/// </summary>
+		public void Update()
 		{
 			Assert(Display is not null, "Display is null unable to save puzzle");
 			SaveData data = new(Puzzle, Display);
-			PuzzleManager.Save(data);
+			Save(data);
 			Puzzle = data;
-		}
-		public bool IsComplete()
-		{
-			if (Display is null || !Current.Puzzle.Matches(Display)) return false;
-			Instance.PuzzlesCompleted[Current.Puzzle.Name] = true;
-			return true;
-		}
-		private Display? ChangeDisplay(Display? value)
-		{
-			if (value is null) return null;
-			value.Load(Puzzle);
-			return value;
+			Instance.PuzzlesCompleted[Current.Puzzle.Name] = data.IsComplete;
+			if (Display is not NonogramContainer.GameDisplay game) return;
+			game.Status.CompletionLabel.Text = data.IsComplete
+				? NonogramContainer.StatusBar.PuzzleComplete
+				: NonogramContainer.StatusBar.PuzzleIncomplete;
 		}
 	}
 	private const string RootPath = "res://", FileType = ".json", SavePath = "Saves";

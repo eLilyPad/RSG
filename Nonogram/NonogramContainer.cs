@@ -68,7 +68,7 @@ public sealed partial class NonogramContainer : Container
 		{
 			base.OnTilePressed(position);
 			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
-			Current.Save();
+			Current.Update();
 		}
 		public override void Reset()
 		{
