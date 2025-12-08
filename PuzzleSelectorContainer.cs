@@ -61,7 +61,8 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Label = new RichTextLabel { Name = "Label", FitContent = true }
 				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
 			Value = new VBoxContainer { Name = "Puzzles Container" }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize),
+			Vertical = true
 		}
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		private readonly List<PuzzleDisplay> _displays = [];
