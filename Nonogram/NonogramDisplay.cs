@@ -142,6 +142,10 @@ public abstract partial class Display : AspectRatioContainer
 			return true;
 		}
 	}
+	private sealed partial class DefaultDisplay : Display
+	{
+		public override void Reset() { }
+	}
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const int TileSize = 31;
@@ -149,6 +153,9 @@ public abstract partial class Display : AspectRatioContainer
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 	public enum PenMode { Block, Fill, Clear }
 	public enum Side { Row, Column }
+
+	public static Display Default { get; } = new DefaultDisplay { Name = "Puzzle Display" };
+
 	public PenMode Pen { get; set; } = PenMode.Fill;
 
 	protected GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }

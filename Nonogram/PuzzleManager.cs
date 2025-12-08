@@ -4,6 +4,7 @@ using Godot;
 namespace RSG.Nonogram;
 
 using static PuzzleData;
+using static NonogramContainer;
 
 using LoadResult = OneOf<Display.Data, PuzzleData.Code.ConversionError, NotFound>;
 
@@ -17,21 +18,24 @@ public sealed class PuzzleManager
 			{
 				if (value is null) { return; }
 				field = Instance.Puzzles[value.Name] = value;
-				if (Display is null)
+				switch (Display)
 				{
-					return;
+					case GameDisplay game when value is SaveData save:
+						if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
+						{
+							game.CompletionScreen.Show();
+							game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
+						}
+						else
+						{
+							game.Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
+						}
+						break;
 				}
 				Display.Load(value);
 			}
 		} = new SaveData();
-		public Display? Display
-		{
-			private get; set
-			{
-				Assert(value is not null, "Display value is null, unable to change current display");
-				(field = value).Load(Puzzle);
-			}
-		} = null;
+		public Display Display { private get; set => (field = value).Load(Puzzle); } = Display.Default;
 
 		/// <summary>
 		/// Updates the current puzzle from the display.
@@ -39,17 +43,11 @@ public sealed class PuzzleManager
 		///  - Writes to game display
 		/// Checks if the display has StatusBar then  
 		/// </summary>
-		public void Update()
+		public void SaveProgress()
 		{
-			Assert(Display is not null, "Display is null unable to save puzzle");
 			SaveData data = new(Puzzle, Display);
 			Save(data);
 			Puzzle = data;
-			Instance.PuzzlesCompleted[Current.Puzzle.Name] = data.IsComplete;
-			if (Display is not NonogramContainer.GameDisplay game) return;
-			game.Status.CompletionLabel.Text = data.IsComplete
-				? NonogramContainer.StatusBar.PuzzleComplete
-				: NonogramContainer.StatusBar.PuzzleIncomplete;
 		}
 	}
 	private const string RootPath = "res://", FileType = ".json", SavePath = "Saves";

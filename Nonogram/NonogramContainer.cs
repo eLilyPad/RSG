@@ -45,30 +45,45 @@ public sealed partial class NonogramContainer : Container
 		}.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		public override void _Ready() => this.Add(CompletionLabel);
 	}
-	public sealed partial class ExpectedDisplay : Display
+	public sealed partial class PuzzleCompleteScreen : PanelContainer
 	{
-		public override void OnTilePressed(Vector2I position) { }
-		public override void Reset() { }
+		public ColorRect Background { get; } = new ColorRect
+		{
+			Name = "Background",
+			Color = Colors.DarkGray,
+		}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public RichTextLabel CompletionTitle { get; } = new RichTextLabel
+		{
+			Name = "Completion Title",
+			BbcodeEnabled = true,
+			Text = "[color=black][font_size=60] Puzzle Complete",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			FitContent = true,
+		}.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
+		public override void _Ready()
+		{
+			this.Add(Background, CompletionTitle);
+		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Game" };
+		public PuzzleCompleteScreen CompletionScreen { get; } = new PuzzleCompleteScreen { };
 		public required StatusBar Status { get; init; }
 
 		public override void Load(Data data)
 		{
 			base.Load(data);
 			Reset();
-			if (data is SaveData save)
-			{
-				WriteToTiles(save);
-			}
+			if (data is not SaveData save) return;
+			WriteToTiles(save);
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
 			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
-			Current.Update();
+			Current.SaveProgress();
 		}
 		public override void Reset()
 		{
