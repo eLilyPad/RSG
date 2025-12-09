@@ -6,12 +6,12 @@ namespace RSG;
 using UI;
 using Nonogram;
 
-public interface IHaveCore { Core Core { get; init; } }
-
 public sealed partial class Core : Node
 {
-	public const string ColourPackPath = "res://Data/DefaultColours.tres";
-
+	public const string
+	ColourPackPath = "res://Data/DefaultColours.tres",
+	DialoguesPath = "res://Data/Dialogues.tres"
+	;
 	public AspectRatioContainer Container { get; } = new AspectRatioContainer
 	{
 		Name = "Container",
@@ -25,14 +25,19 @@ public sealed partial class Core : Node
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public PuzzleSelector Levels { get; } = new() { Name = "Level Selector", Visible = false };
+	public DialogueContainer DialogueContainer { get; } = Dialogues.Container;
 
 	public MainMenu Menu => field ??= new() { Colours = Colours };
 	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
+	public DialogueResources DialogueResources => field ??= DialoguesPath.LoadOrCreateResource<DialogueResources>();
 
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		this.Add(Container.Add(Nonogram, Menu, LoadingScreen));
+		this.Add(Container.Add(Nonogram, Menu, DialogueContainer, LoadingScreen));
+
+		DialogueContainer.Resources = DialogueResources;
+		Dialogues.Start(Dialogue.Intro);
 
 		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
@@ -46,9 +51,15 @@ public sealed partial class Core : Node
 	}
 	public override void _Input(InputEvent input)
 	{
-		if (input.IsPressed() && LoadingScreen.Visible)
+		if (!input.IsPressed()) return;
+		if (LoadingScreen.Visible)
 		{
 			LoadingScreen.Hide();
+			return;
+		}
+		if (input is InputEventMouseButton { Pressed: true })
+		{
+			Dialogues.Next();
 			return;
 		}
 		Input.RunEvent(input);
