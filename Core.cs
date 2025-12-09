@@ -29,15 +29,15 @@ public sealed partial class Core : Node
 
 	public MainMenu Menu => field ??= new() { Colours = Colours };
 	public ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
-	public DialogueResources DialogueResources => field ??= DialoguesPath.LoadOrCreateResource<DialogueResources>();
+
 
 	public override void _Ready()
 	{
 		Name = nameof(Core);
 		this.Add(Container.Add(Nonogram, Menu, DialogueContainer, LoadingScreen));
 
-		DialogueContainer.Resources = DialogueResources;
 		Dialogues.Start(Dialogue.Intro);
+		Dialogues.Container.Resources = Dialogues.DialogueResources;
 
 		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
 		Menu.Settings.Input.InputsContainer.RefreshBindings();

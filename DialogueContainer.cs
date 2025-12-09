@@ -48,7 +48,7 @@ public sealed partial class DialogueContainer : PanelContainer
 		set
 		{
 			Profile.Texture = value.Profile;
-			Background.Texture = value.Background;
+			Background.Texture = value.Background1;
 		}
 	}
 

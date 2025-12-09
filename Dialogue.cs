@@ -24,7 +24,7 @@ public sealed class Dialogues
 
 		public void Start()
 		{
-			GD.Print("Start");
+			Container.Show();
 			SpeechIndex = 0;
 			ReadOnlySpan<Dialogue.Message> messages = Speech.Messages.Span;
 			Display(messages[SpeechIndex]);
@@ -43,12 +43,21 @@ public sealed class Dialogues
 		}
 		private void Display(Dialogue.Message message)
 		{
+			if (message.Text is "what?")
+			{
+				Container.Background.Texture = DialogueResources.Background2;
+			}
 			Container.Title.Text = message.Title;
 			Container.Message.Text = message.Text;
 		}
 	}
-	public static DialogueContainer Container { get; } = new DialogueContainer { Visible = true }
+	public static DialogueContainer Container => field ??= new DialogueContainer
+	{
+		Visible = true,
+		Resources = DialogueResources
+	}
 		.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize);
+	public static DialogueResources DialogueResources => field ??= Core.DialoguesPath.LoadOrCreateResource<DialogueResources>();
 
 	private static Dialogues Instance { get; } = new();
 	private static CurrentDialogue Current => field ??= new() { Container = Container };
@@ -61,13 +70,10 @@ public sealed class Dialogues
 	}
 	public static void Next() => Current.Next();
 
-	private Dictionary<string, Dialogue.Speech> Speeches { get; } = new()
-	{
-		[Dialogue.Intro] = Dialogue.SingleSpeaker("Title", "hello", "what?", "bye")
-	};
+	private Dictionary<string, Dialogue.Speech> Speeches { get; } = [];
 	private Dialogues()
 	{
-		Current.Speech = Speeches[Dialogue.Intro];
+		Current.Speech = Speeches[Dialogue.Intro] = Dialogue.SingleSpeaker("Title", "hello", "what?", "bye");
 	}
 }
 

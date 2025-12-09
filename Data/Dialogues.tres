@@ -1,10 +1,12 @@
-[gd_resource type="Resource" load_steps=4 format=3 uid="uid://d3m36e5m3b4eg"]
+[gd_resource type="Resource" load_steps=5 format=3 uid="uid://d3m36e5m3b4eg"]
 
 [ext_resource type="Texture2D" uid="uid://b38gby482gmoj" path="res://Data/Images/Cat_Background.png" id="1_wppf3"]
 [ext_resource type="Script" uid="uid://bbcmqp1vncer1" path="res://DialogueResources.cs" id="1_xkfse"]
+[ext_resource type="Texture2D" uid="uid://by2aar6o1rtb6" path="res://Data/Images/Cat_Background2.png" id="2_hq7ov"]
 [ext_resource type="Texture2D" uid="uid://erbpe8p6udkd" path="res://Data/Images/GreenProfile.png" id="2_x13ng"]
 
 [resource]
 script = ExtResource("1_xkfse")
-Background = ExtResource("1_wppf3")
+Background1 = ExtResource("2_hq7ov")
+Background2 = ExtResource("1_wppf3")
 Profile = ExtResource("2_x13ng")
