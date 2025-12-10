@@ -98,69 +98,17 @@ public static class CoreInitializer
 	private static PuzzleSelector Init(this PuzzleSelector container, MainMenu menu)
 	{
 		container.VisibilityChanged += SelectorVisibilityChanged;
-		Fill();
+		container.Fill(menu, saves: GetSavedPuzzles());
+		container.Fill(menu, packs: GetPuzzlePacks());
+
 		return container;
 
 		void SelectorVisibilityChanged()
 		{
 			if (!container.Visible) return;
 			container.Puzzles.Value.RemoveChildren(true);
-			Fill();
-		}
-		void Fill()
-		{
-			PuzzleSelector.PackDisplay saved = new PuzzleSelector.PackDisplay { Name = "SavedDisplay" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			saved.Puzzles.Label.Text = "Saved";
-			container.Puzzles.Value.Add(saved);
-
-			foreach (SaveData save in GetSavedPuzzles())
-			{
-				Color statusColor = save.IsComplete ? Colors.Green : Colors.Black;
-				PuzzleSelector.PuzzleDisplay puzzleDisplay = new PuzzleSelector.PuzzleDisplay()
-				{
-					Name = save.Name + " Display",
-					Button = new() { Name = save.Name + " Button", Text = save.Name },
-					Background = new ColorRect { Name = "Background", Color = statusColor }
-						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-				}
-					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-				puzzleDisplay.Button.Pressed += Pressed;
-				saved.Puzzles.Value.Add(puzzleDisplay);
-
-				void Pressed()
-				{
-					Current.Puzzle = save;
-					container.Hide();
-					menu.Hide();
-				}
-			}
-			foreach (PuzzleData.Pack pack in GetPuzzlePacks())
-			{
-				PuzzleSelector.PackDisplay display = new PuzzleSelector.PackDisplay { Name = pack.Name }
-					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-				display.Puzzles.Label.Text = pack.Name;
-				foreach (PuzzleData puzzle in pack.Puzzles)
-				{
-					PuzzleSelector.PuzzleDisplay puzzleDisplay = new()
-					{
-						Name = puzzle.Name + " Display",
-						Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
-						Background = new ColorRect { Name = "Background", Color = Colors.Black }
-							.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-					};
-					puzzleDisplay.Button.Pressed += Pressed;
-					display.Puzzles.Value.Add(puzzleDisplay);
-
-					void Pressed()
-					{
-						Current.Puzzle = puzzle;
-						container.Hide();
-						menu.Hide();
-					}
-				}
-				container.Puzzles.Value.Add(display);
-			}
+			container.Fill(menu, saves: GetSavedPuzzles());
+			container.Fill(menu, packs: GetPuzzlePacks());
 		}
 	}
 	private static Menu Init(this Menu menu, DisplayContainer displays)
