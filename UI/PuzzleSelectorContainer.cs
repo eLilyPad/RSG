@@ -2,8 +2,6 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static PuzzleManager;
-
 public sealed partial class PuzzleSelector : PanelContainer
 {
 	public ColorRect Background { get; } = new ColorRect
@@ -54,6 +52,63 @@ public sealed partial class PuzzleSelector : PanelContainer
 	public void ClearPacks()
 	{
 		Puzzles.Value.Remove(true, _packDisplays);
+	}
+	public void Fill(UI.MainMenu menu, IEnumerable<PuzzleData.Pack> packs)
+	{
+		foreach (PuzzleData.Pack pack in packs)
+		{
+			PackDisplay display = new PackDisplay { Name = pack.Name }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			display.Puzzles.Label.Text = pack.Name;
+			foreach (PuzzleData puzzle in pack.Puzzles)
+			{
+				PuzzleDisplay puzzleDisplay = new()
+				{
+					Name = puzzle.Name + " Display",
+					Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+					Background = new ColorRect { Name = "Background", Color = Colors.Black }
+						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+				};
+				puzzleDisplay.Button.Pressed += Pressed;
+				display.Puzzles.Value.Add(puzzleDisplay);
+
+				void Pressed()
+				{
+					PuzzleManager.Current.Puzzle = puzzle;
+					Hide();
+					menu.Hide();
+				}
+			}
+			Puzzles.Value.Add(display);
+		}
+	}
+	public void Fill(UI.MainMenu menu, IEnumerable<SaveData> saves)
+	{
+		PackDisplay saved = new PackDisplay { Name = "SavedDisplay" }
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		saved.Puzzles.Label.Text = "Saved";
+		Puzzles.Value.Add(saved);
+		foreach (SaveData save in saves)
+		{
+			Color statusColor = save.IsComplete ? Colors.Green : Colors.Black;
+			PuzzleDisplay puzzleDisplay = new PuzzleDisplay()
+			{
+				Name = save.Name + " Display",
+				Button = new() { Name = save.Name + " Button", Text = save.Name },
+				Background = new ColorRect { Name = "Background", Color = statusColor }
+					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+			}
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			puzzleDisplay.Button.Pressed += Pressed;
+			saved.Puzzles.Value.Add(puzzleDisplay);
+
+			void Pressed()
+			{
+				PuzzleManager.Current.Puzzle = save;
+				Hide();
+				menu.Hide();
+			}
+		}
 	}
 
 	public sealed partial class PackDisplay : AspectRatioContainer
