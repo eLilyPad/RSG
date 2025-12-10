@@ -36,8 +36,8 @@ public sealed partial class Core : Node
 		Name = nameof(Core);
 		this.Add(Container.Add(Nonogram, Menu, DialogueContainer, LoadingScreen));
 
-
-		Dialogues.Container.Resources = Dialogues.DialogueResources;
+		//Dialogues.Container.Resources = Dialogues.DialogueResources;
+		Dialogues.Instance.BuildDialogues(Dialogues.DialogueResources);
 		Dialogues.Start(Dialogue.Intro);
 
 		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));

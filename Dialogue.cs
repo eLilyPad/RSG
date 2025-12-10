@@ -9,6 +9,34 @@ using SpeechTemplate = OneOf<
 	(string text, Dialogue.Profile profile),
 	(string text, Dialogue.Profile profile, Dialogue.Background background)
 >;
+
+public static class DialogueBuilder
+{
+	public static Dialogues BuildDialogues(this Dialogues dialogues, DialogueResources resources)
+	{
+		dialogues.SingleSpeaker(
+			Name: Intro,
+			Title: "Little Green Dude",
+			(
+				"hello, did you know... i'm quite green",
+				new Profile(resources.Profile),
+				new Background(resources.Background1)
+			),
+			"if only I was blue, but this is the hand i've been dealt",
+			(
+				"what?",
+				new Background(resources.Background2)
+			),
+			"OH, a little cat has graced you with there presence",
+			"Any way, i'm going to go now...",
+			"You didn't ask but im going to the 4th plane of existence, it's quite calming there",
+			"You haven't heard of it?",
+			"Well that's unfortunate for you I'm off..."
+		);
+		return dialogues;
+	}
+}
+
 public sealed class Dialogues
 {
 	private class CurrentDialogue
@@ -89,25 +117,6 @@ public sealed class Dialogues
 	private Dictionary<string, SpeechExtra> SpeechExtras { get; } = [];
 	private Dialogues()
 	{
-		SingleSpeaker(
-			Name: Intro,
-			Title: "Little Green Dude",
-			(
-				"hello, did you know... i'm quite green",
-				new Profile(DialogueResources.Profile),
-				new Background(DialogueResources.Background1)
-			),
-			"if only I was blue, but this is the hand i've been dealt",
-			(
-				"what?",
-				new Background(DialogueResources.Background2)
-			),
-			"OH, a little cat has graced you with there presence",
-			"Any way, i'm going to go now...",
-			"You didn't ask but im going to the 4th plane of existence, it's quite calming there",
-			"You haven't heard of it?",
-			"Well that's unfortunate for you I'm off..."
-		);
 	}
 	public Speech SingleSpeaker(
 		string Name,
@@ -122,7 +131,7 @@ public sealed class Dialogues
 		Message[] messages = new Message[textMessages.Length];
 		SpeechExtra extras = new();
 
-		foreach (var message in textMessages)
+		foreach (SpeechTemplate message in textMessages)
 		{
 			message.Switch(AddText, AddBackground, AddProfile, AddAll);
 			index++;
