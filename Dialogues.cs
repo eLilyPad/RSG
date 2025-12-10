@@ -58,28 +58,25 @@ public sealed class Dialogues
 	private Dictionary<string, Speech> Speeches { get; } = [];
 	private Dictionary<string, Extras> SpeechExtras { get; } = [];
 	private Dialogues() { }
-	public Speech SingleSpeaker(
-		string Name,
-		string Title,
-		params ReadOnlySpan<SpeechTemplate> textMessages
-	)
+
+	public Speech SingleSpeaker(string Name, string Title, params ReadOnlySpan<SpeechTemplate> messages)
 	{
 		Assert(Instance is not null, "Instance is null");
 		Assert(Name is not null, "Name is null");
 
 		int index = 0;
-		Message[] messages = new Message[textMessages.Length];
+		Message[] builtMessages = new Message[messages.Length];
 		Extras extras = new();
 
-		foreach (SpeechTemplate message in textMessages)
+		foreach (SpeechTemplate message in messages)
 		{
 			message.Switch(AddText, AddBackground, AddProfile, AddAll);
 			index++;
 		}
 		SpeechExtras[Name] = extras;
-		return Speeches[Name] = new Speech(Messages: messages);
+		return Speeches[Name] = new Speech(Messages: builtMessages);
 
-		void AddText(string text) => messages[index] = new Message(Title, text);
+		void AddText(string text) => builtMessages[index] = new Message(Title, text);
 		void AddAll((string Text, Profile Profile, Background Background) value)
 		{
 			AddText(value.Text);
