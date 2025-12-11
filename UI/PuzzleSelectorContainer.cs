@@ -32,7 +32,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public void ClearPacks()
 	{
-		Puzzles.Value.Remove(true, _packDisplays);
+		Puzzles.Value.RemoveChildren(true);
 	}
 	public void Fill(UI.MainMenu menu, IEnumerable<PuzzleData.Pack> packs)
 	{
