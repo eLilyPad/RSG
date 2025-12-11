@@ -16,7 +16,6 @@ public static class CoreInitializer
 		public const string OutsideOfTree = "Outside of Scene Tree unable to initialize";
 	}
 
-
 	public static MainMenu Init(this MainMenu menu, ColourPack colours)
 	{
 		Assert(condition: menu.IsInsideTree(), $"{nameof(MainMenu)}- {Errors.OutsideOfTree}");
