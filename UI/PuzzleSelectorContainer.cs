@@ -26,28 +26,9 @@ public sealed partial class PuzzleSelector : PanelContainer
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	private readonly List<PackDisplay> _packDisplays = [];
 
-	public override void _Ready()
-	{
-		this.Add(Background, Scroll.Add(Puzzles));
-
-		ChildEnteredTree += OnChildEnteredTree;
-		ChildExitingTree += OnChildExitingTree;
-
-		void OnChildExitingTree(Node node)
-		{
-			if (node is PackDisplay pack && _packDisplays.Contains(pack))
-			{
-				_packDisplays.Remove(pack);
-			}
-		}
-		void OnChildEnteredTree(Node node)
-		{
-			if (node is PackDisplay pack)
-			{
-				_packDisplays.Add(pack);
-			}
-		}
-	}
+	public override void _Ready() => this
+		.Add(Background, Scroll.Add(Puzzles))
+		.LinkToParent(_packDisplays);
 
 	public void ClearPacks()
 	{
@@ -97,8 +78,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 				Button = new() { Name = save.Name + " Button", Text = save.Name },
 				Background = new ColorRect { Name = "Background", Color = statusColor }
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-			}
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 			puzzleDisplay.Button.Pressed += Pressed;
 			saved.Puzzles.Value.Add(puzzleDisplay);
 
@@ -111,7 +91,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 		}
 	}
 
-	public sealed partial class PackDisplay : AspectRatioContainer
+	sealed partial class PackDisplay : AspectRatioContainer
 	{
 		public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
 		{
@@ -124,29 +104,12 @@ public sealed partial class PuzzleSelector : PanelContainer
 		}
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		private readonly List<PuzzleDisplay> _displays = [];
-		public PackDisplay()
-		{
-			ChildEnteredTree += OnChildEnteredTree;
-			ChildExitingTree += OnChildExitingTree;
-
-			void OnChildExitingTree(Node node)
-			{
-				if (node is PuzzleDisplay display && _displays.Contains(display))
-				{
-					_displays.Remove(display);
-				}
-			}
-			void OnChildEnteredTree(Node node)
-			{
-				if (node is PuzzleDisplay display)
-				{
-					_displays.Add(display);
-				}
-			}
-		}
-		public override void _Ready() => this.Add(Puzzles);
+		internal PackDisplay() { }
+		public override void _Ready() => this
+			.Add(Puzzles)
+			.LinkToParent(_displays);
 	}
-	public sealed partial class PuzzleDisplay : BoxContainer
+	sealed partial class PuzzleDisplay : BoxContainer
 	{
 		public required ColorRect Background { get; init; }
 		public required Button Button { get; init; }
