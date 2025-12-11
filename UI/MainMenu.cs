@@ -15,7 +15,9 @@ public sealed partial class MainMenu : Container
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector { Name = "Level Selector", Visible = false }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels);
+	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
 	public sealed partial class SettingsContainer : TabContainer
 	{
 		public const int Margin = 0;
@@ -31,8 +33,9 @@ public sealed partial class MainMenu : Container
 	{
 		public Button Play { get; } = new() { Name = nameof(Play), Text = nameof(Play) };
 		public Button Levels { get; } = new() { Name = nameof(Levels), Text = nameof(Levels) };
+		public Button Dialogues { get; } = new() { Name = nameof(Dialogues), Text = nameof(Dialogues) };
 		public Button Settings { get; } = new() { Name = nameof(Settings), Text = nameof(Settings) };
 		public Button Quit { get; } = new() { Name = nameof(Quit), Text = nameof(Quit) };
-		public override void _Ready() => this.Add(Play, Levels, Settings, Quit);
+		public override void _Ready() => this.Add(Play, Levels, Dialogues, Settings, Quit);
 	}
 }

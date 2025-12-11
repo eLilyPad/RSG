@@ -25,18 +25,35 @@ public static class CoreInitializer
 
 		menu.Buttons.Play.Pressed += PlayPressed;
 		menu.Buttons.Levels.Pressed += LevelPressed;
+		menu.Buttons.Dialogues.Pressed += DialoguePressed;
 		menu.Buttons.Settings.Pressed += SettingsPressed;
 		menu.Buttons.Quit.Pressed += QuitPressed;
 
 		menu.Settings.VisibilityChanged += () => menu.Buttons.Visible = !menu.Settings.Visible;
-		menu.Levels.Init(menu);
+		menu.Levels.VisibilityChanged += FillPuzzleSelector;
+		menu.Dialogues.VisibilityChanged += FillDialogueSelector;
 
 		return menu;
 
 		void PlayPressed() => menu.Hide();
 		void LevelPressed() => menu.Levels.Show();
+		void DialoguePressed() => menu.Dialogues.Show();
 		void SettingsPressed() => menu.Settings.Show();
 		void QuitPressed() => menu.GetTree().Quit();
+
+		void FillPuzzleSelector()
+		{
+			if (!menu.Levels.Visible) return;
+			menu.Levels.ClearPacks();
+			menu.Levels.Fill(menu, saves: GetSavedPuzzles());
+			menu.Levels.Fill(menu, packs: GetPuzzlePacks());
+		}
+		void FillDialogueSelector()
+		{
+			if (!menu.Dialogues.Visible) return;
+			menu.Dialogues.Clear();
+			menu.Dialogues.Fill(Dialogues.GetAvailableDialogues());
+		}
 	}
 	public static NonogramContainer Init(this NonogramContainer container, MainMenu menu)
 	{
@@ -95,22 +112,6 @@ public static class CoreInitializer
 		}
 	}
 
-	private static PuzzleSelector Init(this PuzzleSelector container, MainMenu menu)
-	{
-		container.VisibilityChanged += SelectorVisibilityChanged;
-		container.Fill(menu, saves: GetSavedPuzzles());
-		container.Fill(menu, packs: GetPuzzlePacks());
-
-		return container;
-
-		void SelectorVisibilityChanged()
-		{
-			if (!container.Visible) return;
-			container.Puzzles.Value.RemoveChildren(true);
-			container.Fill(menu, saves: GetSavedPuzzles());
-			container.Fill(menu, packs: GetPuzzlePacks());
-		}
-	}
 	private static Menu Init(this Menu menu, DisplayContainer displays)
 	{
 		menu.PuzzleLoader.Size = menu.CodeLoader.Size = menu.GetTree().Root.Size / 2;
@@ -184,7 +185,7 @@ public static class CoreInitializer
 	}
 	private static DisplayContainer Init(this DisplayContainer container, Menu menu, params List<Display> displays)
 	{
-		Assert(displays.Any(), Errors.NoDisplayGiven);
+		Assert(displays.Count != 0, Errors.NoDisplayGiven);
 
 		foreach (Display display in displays)
 		{

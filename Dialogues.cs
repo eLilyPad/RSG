@@ -24,7 +24,7 @@ public sealed class Dialogues
 		public Dictionary<string, CompressedTexture2D> Backgrounds { get; } = [];
 		public Dictionary<string, CompressedTexture2D> Profiles { get; } = [];
 	}
-	public static DialogueContainer Container => field ??= new DialogueContainer { Visible = true, Resources = Resources }
+	public static DialogueContainer Container => field ??= new DialogueContainer { Visible = false, Resources = Resources }
 		.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize);
 	public static DialogueResources Resources => field ??= Core.DialoguesPath.LoadOrCreateResource<DialogueResources>();
 	public static Dialogues Instance => field ??= new();
@@ -43,6 +43,8 @@ public sealed class Dialogues
 		Current.SpeechIndex++;
 		DisplayCurrent();
 	}
+	public static IEnumerable<string> GetAvailableDialogues() => Instance.Speeches.Keys;
+
 	private static void DisplayCurrent()
 	{
 		Container.Show();
