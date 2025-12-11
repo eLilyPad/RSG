@@ -74,9 +74,9 @@ public sealed class Dialogues
 			index++;
 		}
 		SpeechExtras[Name] = extras;
-		return Speeches[Name] = new Speech(Messages: builtMessages);
+		return Speeches[Name] = new(Messages: builtMessages);
 
-		void AddText(string text) => builtMessages[index] = new Message(Title, text);
+		void AddText(string text) => builtMessages[index] = new(Title, text);
 		void AddAll((string Text, Profile Profile, Background Background) value)
 		{
 			AddText(value.Text);
