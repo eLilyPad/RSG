@@ -37,7 +37,6 @@ public sealed partial class Core : Node
 		this.Add(Container.Add(Nonogram, Menu, DialogueContainer, LoadingScreen));
 
 		Dialogues.Instance.BuildDialogues();
-		Dialogues.Start(Dialogue.Intro);
 
 		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
 		Menu.Settings.Input.InputsContainer.RefreshBindings();
@@ -47,7 +46,7 @@ public sealed partial class Core : Node
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
-		void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels);
+		void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels, Menu.Dialogues);
 	}
 	public override void _Input(InputEvent input)
 	{
