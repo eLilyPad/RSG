@@ -24,18 +24,22 @@ public sealed class Dialogues
 		public Dictionary<string, CompressedTexture2D> Backgrounds { get; } = [];
 		public Dictionary<string, CompressedTexture2D> Profiles { get; } = [];
 	}
-	public static DialogueContainer Container => field ??= new DialogueContainer { Visible = false, Resources = Resources }
-		.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize);
+	public static readonly Dialogues Instance = new();
+	public static DialogueContainer Container => field ??= new DialogueContainer { Visible = false }
+		.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize, 30);
 	public static DialogueResources Resources => field ??= Core.DialoguesPath.LoadOrCreateResource<DialogueResources>();
-	public static Dialogues Instance => field ??= new();
+	public static IEnumerable<string> AvailableDialogues => Instance.Speeches.Keys.Except(
+		Instance.Enabled.Where(pair => !pair.Value).Select(pair => pair.Key)
+	);
 
-	private static CurrentDialogue Current => field ??= new();
-
-	public static void Start(string name)
+	private static readonly CurrentDialogue Current = new();
+	public static void Start(string name, bool? enable = null)
 	{
 		if (!Instance.Speeches.TryGetValue(name, out Speech speech)) return;
 		(Current.Speech, Current.SpeechIndex, Current.Name) = (speech, 0, name);
 		DisplayCurrent();
+		if (enable is not bool enabled) return;
+		Instance.Enabled[name] = enabled;
 	}
 	public static void Next()
 	{
@@ -43,7 +47,6 @@ public sealed class Dialogues
 		Current.SpeechIndex++;
 		DisplayCurrent();
 	}
-	public static IEnumerable<string> GetAvailableDialogues() => Instance.Speeches.Keys;
 
 	private static void DisplayCurrent()
 	{
@@ -54,14 +57,23 @@ public sealed class Dialogues
 			Container.Hide();
 			return;
 		}
-		Instance.Display(messages[Current.SpeechIndex]);
+		Instance.Display(in messages[Current.SpeechIndex]);
 	}
 
 	private Dictionary<string, Speech> Speeches { get; } = [];
 	private Dictionary<string, Extras> SpeechExtras { get; } = [];
+	private Dictionary<string, bool> Enabled { get; } = [];
 	private Dialogues() { }
 
-	public Speech SingleSpeaker(string Name, string Title, params ReadOnlySpan<SpeechTemplate> messages)
+	public void Enable(string name) => Enabled[name] = true;
+	public void EnableAll()
+	{
+		foreach (string name in Speeches.Keys)
+		{
+			Enabled[name] = true;
+		}
+	}
+	public Speech SingleSpeaker(in string Name, string Title, params ReadOnlySpan<SpeechTemplate> messages)
 	{
 		Assert(Instance is not null, "Instance is null");
 		Assert(Name is not null, "Name is null");
@@ -69,14 +81,14 @@ public sealed class Dialogues
 		int index = 0;
 		Message[] builtMessages = new Message[messages.Length];
 		Extras extras = new();
+		Enabled[Name] = false;
 
 		foreach (SpeechTemplate message in messages)
 		{
 			message.Switch(AddText, AddBackground, AddProfile, AddAll);
 			index++;
 		}
-		SpeechExtras[Name] = extras;
-		return Speeches[Name] = new(Messages: builtMessages);
+		return Add(Name, new(Messages: builtMessages), extras);
 
 		void AddText(string text) => builtMessages[index] = new(Title, text);
 		void AddAll((string Text, Profile Profile, Background Background) value)
@@ -97,10 +109,15 @@ public sealed class Dialogues
 		}
 	}
 
-	private void Display(Message message)
+	private Speech Add(string name, Speech speech, Extras extras)
 	{
-		Container.Title.Text = message.Title;
-		string text = Container.Message.Text = message.Text;
+		SpeechExtras[name] = extras;
+		return Speeches[name] = speech;
+	}
+	private void Display(in Message message)
+	{
+		Container.Message.Title.Text = message.Title;
+		string text = Container.Message.Message.Text = message.Text;
 		if (!SpeechExtras.TryGetValue(Current.Name, out Extras? extras)) return;
 		if (extras.Backgrounds.TryGetValue(text, out CompressedTexture2D? background))
 		{
@@ -108,7 +125,7 @@ public sealed class Dialogues
 		}
 		if (extras.Profiles.TryGetValue(text, out CompressedTexture2D? profile))
 		{
-			Container.Profile.Texture = profile;
+			Container.Profile.ProfileTexture.Texture = profile;
 		}
 
 	}
