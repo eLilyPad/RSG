@@ -151,7 +151,7 @@ public abstract partial class Display : AspectRatioContainer
 	public const int TileSize = 31;
 	// [Bug] ^^ if this changes the tile becomes a rectangle, with the height being larger than the width
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
-	public enum PenMode { Block, Fill, Clear }
+	public enum PenMode : int { Block = 2, Fill = 1, Clear = 0 }
 	public enum Side { Row, Column }
 
 	public static Display Default { get; } = new DefaultDisplay { Name = "Puzzle Display" };
@@ -196,15 +196,17 @@ public abstract partial class Display : AspectRatioContainer
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		if (!Tiles.TryGetValue(position, out Tile? button)) return;
-		Pen = Input.IsMouseButtonPressed(BlockButton)
-			? PenMode.Block
-			: Input.IsMouseButtonPressed(FillButton)
-			? PenMode.Fill
+		bool
+		block = Input.IsMouseButtonPressed(BlockButton),
+		fill = Input.IsMouseButtonPressed(FillButton);
+		Pen = block ? PenMode.Block
+			: fill ? PenMode.Fill
 			: PenMode.Clear;
+
 		button.Button.Text = Pen switch
 		{
-			PenMode.Block => button.Button.Text is EmptyText or FillText ? BlockText : EmptyText,
-			PenMode.Fill => button.Button.Text is EmptyText ? FillText : EmptyText,
+			PenMode.Block => button.Button.Text is BlockText ? EmptyText : BlockText,
+			PenMode.Fill => button.Button.Text is FillText ? EmptyText : FillText,
 			PenMode.Clear when button.Button.Text is not EmptyText => EmptyText,
 			_ => button.Button.Text
 		};
@@ -251,10 +253,6 @@ public abstract partial class Display : AspectRatioContainer
 
 			void ButtonDown()
 			{
-				if (Input.IsMouseButtonPressed(BlockButton))
-				{
-					GD.Print("Block button pressed");
-				}
 				OnTilePressed(position);
 			}
 			void MouseEntered()
