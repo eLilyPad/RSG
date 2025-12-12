@@ -1,9 +1,11 @@
-[gd_resource type="Resource" load_steps=3 format=3 uid="uid://csilxxhwcc001"]
+[gd_resource type="Resource" load_steps=4 format=3 uid="uid://csilxxhwcc001"]
 
 [ext_resource type="AudioStream" uid="uid://bmmnm46iygktj" path="res://Data/SoundEffects/pop.mp3" id="1_2losr"]
+[ext_resource type="AudioStream" uid="uid://b5g4lnva2lu2f" path="res://Data/SoundEffects/click.mp3" id="1_s8sqa"]
 [ext_resource type="Script" uid="uid://22rq8b8rjonb" path="res://Nonogram/SoundEffects.cs" id="2_s8sqa"]
 
 [resource]
 script = ExtResource("2_s8sqa")
-TileClicked = ExtResource("1_2losr")
+FillTileClicked = ExtResource("1_2losr")
+BlockTileClicked = ExtResource("1_s8sqa")
 PuzzleComplete = ExtResource("1_2losr")
