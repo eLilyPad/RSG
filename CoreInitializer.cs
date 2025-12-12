@@ -51,7 +51,7 @@ public static class CoreInitializer
 		{
 			if (!menu.Dialogues.Visible) return;
 			menu.Dialogues.Clear();
-			menu.Dialogues.Fill(Dialogues.GetAvailableDialogues());
+			menu.Dialogues.Fill(Dialogues.AvailableDialogues);
 		}
 	}
 	public static NonogramContainer Init(this NonogramContainer container, MainMenu menu)
@@ -127,30 +127,7 @@ public static class CoreInitializer
 
 		menu.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
 		menu.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
-		menu.PuzzleLoader.AboutToPopup += LoadSavedPuzzles;
-
-		foreach (PuzzleData.Pack pack in GetPuzzlePacks())
-		{
-			Menu.PuzzleContainer container = new Menu.PuzzleContainer
-			{
-				Name = "Pack Container",
-				Alignment = BoxContainer.AlignmentMode.Begin,
-				Title = new RichTextLabel { Name = "Title", Text = pack.Name, FitContent = true }
-					.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize),
-				Container = new VBoxContainer { Name = "Packs", Alignment = BoxContainer.AlignmentMode.End }
-					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-			}
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-
-			foreach (var puzzle in pack.Puzzles)
-			{
-				Button button = new() { Text = puzzle.Name };
-				button.Pressed += () => Current.Puzzle = puzzle;
-				container.Container.Add(button);
-			}
-
-			menu.PuzzleLoader.Control.Add(container);
-		}
+		menu.PuzzleLoader.AboutToPopup += LoadPuzzles;
 
 		return menu;
 
@@ -170,8 +147,9 @@ public static class CoreInitializer
 				notFound => GD.Print("No current puzzle found")
 			);
 		}
-		void LoadSavedPuzzles()
+		void LoadPuzzles()
 		{
+			menu.PuzzleLoader.Control.RemoveChildren(free: true);
 			menu.PuzzleLoader.Control.Saved.RemoveChildren(free: true);
 			foreach (SaveData puzzle in GetSavedPuzzles())
 			{
@@ -179,6 +157,28 @@ public static class CoreInitializer
 				Button button = new() { Text = $"{puzzle.Name}{status}" };
 				button.Pressed += () => Current.Puzzle = puzzle;
 				menu.PuzzleLoader.Control.Saved.Add(button);
+			}
+			foreach (PuzzleData.Pack pack in GetPuzzlePacks())
+			{
+				Menu.PuzzleContainer container = new Menu.PuzzleContainer
+				{
+					Name = "Pack Container",
+					Alignment = BoxContainer.AlignmentMode.Begin,
+					Title = new RichTextLabel { Name = "Title", Text = pack.Name, FitContent = true }
+						.Preset(LayoutPreset.TopLeft, LayoutPresetMode.KeepSize),
+					Container = new VBoxContainer { Name = "Packs", Alignment = BoxContainer.AlignmentMode.End }
+						.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+				}
+					.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+
+				foreach (var puzzle in pack.Puzzles)
+				{
+					Button button = new() { Text = puzzle.Name };
+					button.Pressed += () => Current.Puzzle = puzzle;
+					container.Container.Add(button);
+				}
+
+				menu.PuzzleLoader.Control.Add(container);
 			}
 		}
 	}
