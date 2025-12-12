@@ -8,9 +8,11 @@ public static class DialogueBuilder
 {
 	public static Dialogues BuildDialogues(this Dialogues dialogues)
 	{
+		const string titleSettings = "[font_size=80]", narratorsName = "Little Green Dude";
+
 		dialogues.SingleSpeaker(
 			Name: Intro,
-			Title: "Little Green Dude",
+			Title: titleSettings + narratorsName,
 			(
 				"hello, did you know... i'm quite green",
 				Profile.LGD,
@@ -22,10 +24,9 @@ public static class DialogueBuilder
 			"You haven't heard of it?",
 			"Well that's unfortunate for you I'm off..."
 		);
-
 		dialogues.SingleSpeaker(
 			Name: CatOnThePath,
-			Title: "Little Green Dude",
+			Title: titleSettings + narratorsName,
 			(
 				"hello, did you know... i'm quite green",
 				Profile.LGD,
@@ -44,7 +45,7 @@ public static class DialogueBuilder
 
 public abstract record Dialogue
 {
-	public const string Intro = "intro", CatOnThePath = "catOnThePath";
+	public const string Intro = "Introduction", CatOnThePath = "catOnThePath";
 	public readonly record struct Background(CompressedTexture2D Value)
 	{
 		public static Background Background1 { get; } = new(Dialogues.Resources.Background1);
