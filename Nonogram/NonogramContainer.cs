@@ -6,25 +6,6 @@ using static PuzzleManager;
 
 public sealed partial class NonogramContainer : Container
 {
-	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
-	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
-	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = new(.2f, .3f, 0) }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-	public override void _Ready()
-	{
-		this.Add(Background, Container.Add(ToolsBar, Displays, Status));
-	}
-
 	public interface IHaveTools { PopupMenu Tools { get; } }
 	public interface IHaveStatus { StatusBar Status { get; } }
 
@@ -91,8 +72,20 @@ public sealed partial class NonogramContainer : Container
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
-			base.OnTilePressed(position);
-			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
+			if (!Tiles.TryGetValue(position, out Tile? button)) return;
+			bool
+			block = Input.IsMouseButtonPressed(BlockButton),
+			fill = Input.IsMouseButtonPressed(FillButton);
+			if (block)
+			{
+				button.Button.Text = BlockText;
+				Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.BlockTileClicked);
+			}
+			else if (fill)
+			{
+				button.Button.Text = FillText;
+				Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.FillTileClicked);
+			}
 			Current.SaveProgress();
 		}
 		public override void Reset()
@@ -115,5 +108,21 @@ public sealed partial class NonogramContainer : Container
 			foreach (Hint label in Hints.Values) ResetHint(label);
 		}
 	}
+
+	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
+	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
+	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = new(.2f, .3f, 0) }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+
+	public override void _Ready() => this.Add(Background, Container.Add(ToolsBar, Displays, Status));
 }
 public interface IColours { Color NonogramBackground { get; } }
