@@ -25,6 +25,10 @@ public sealed class PuzzleManager
 						{
 							game.CompletionScreen.Show();
 							game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
+							if (save.Expected.DialogueName is string dialogueName)
+							{
+								Dialogues.Start(dialogueName, true);
+							}
 						}
 						else
 						{

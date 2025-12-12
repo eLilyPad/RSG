@@ -264,7 +264,7 @@ public sealed record PuzzleData : Display.Data
 			{
 				Name = "Procedural",
 				Puzzles = [
-					new("Heart Emoji", selector: HeartEmoji, size),
+					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Intro},
 					new("Spiral", selector: Spiral, size),
 					new("Noise", selector: Noise, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
@@ -329,6 +329,8 @@ public sealed record PuzzleData : Display.Data
 	}
 
 	public static explicit operator SaveData(PuzzleData puzzle) => new() { Expected = puzzle };
+
+	public string? DialogueName { get; init; } = null;
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }
 	public PuzzleData(Display display) : base(display) { }
