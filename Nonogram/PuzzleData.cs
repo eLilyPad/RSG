@@ -280,7 +280,7 @@ public sealed record PuzzleData : Display.Data
 			}
 			bool HeartEmoji(Vector2I position)
 			{
-				const int lineThickness = 1, curveRadius = radius / 2, size = radius - 2;
+				const int lineThickness = 0, curveRadius = radius / 2, size = radius - 2;
 				int curveHeight = puzzleCenter.Y - radius / 4;
 				Vector2I
 				leftCurveCenter = puzzleCenter with { X = puzzleCenter.X - curveRadius, Y = curveHeight },
