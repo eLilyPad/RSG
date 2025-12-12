@@ -4,6 +4,7 @@ using Godot;
 namespace RSG.Nonogram;
 
 using static PuzzleData;
+using static NonogramContainer;
 
 using LoadResult = OneOf<Display.Data, PuzzleData.Code.ConversionError, NotFound>;
 
@@ -11,35 +12,46 @@ public sealed class PuzzleManager
 {
 	public sealed record class CurrentPuzzle
 	{
-		public string Name { get; private set; } = Display.Data.DefaultName;
 		public Display.Data Puzzle
 		{
-			get => Instance.Puzzles.GetValueOrDefault(Name, defaultValue: new PuzzleData());
-			set
+			get; set
 			{
 				if (value is null) { return; }
-				Instance.Puzzles[value.Name] = value;
-				Name = value.Name;
-				if (Display is null)
+				field = Instance.Puzzles[value.Name] = value;
+				switch (Display)
 				{
-					return;
+					case GameDisplay game when value is SaveData save:
+						if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
+						{
+							game.CompletionScreen.Show();
+							game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
+							if (save.Expected.DialogueName is string dialogueName)
+							{
+								Dialogues.Start(dialogueName, true);
+							}
+						}
+						else
+						{
+							game.Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
+						}
+						break;
 				}
 				Display.Load(value);
 			}
-		}
-		public Display? Display { get; set => field = ChangeDisplay(value); } = null;
+		} = new SaveData();
+		public Display Display { private get; set => (field = value).Load(Puzzle); } = Display.Default;
 
-		public bool IsComplete()
+		/// <summary>
+		/// Updates the current puzzle from the display.
+		///  - saves the changes to puzzle.
+		///  - Writes to game display
+		/// Checks if the display has StatusBar then  
+		/// </summary>
+		public void SaveProgress()
 		{
-			if (Display is null || !Current.Puzzle.Matches(Display)) return false;
-			Instance.PuzzlesCompleted[Current.Puzzle.Name] = true;
-			return true;
-		}
-		private Display? ChangeDisplay(Display? value)
-		{
-			if (value is null) return null;
-			value.Load(Puzzle);
-			return value;
+			SaveData data = new(Puzzle, Display);
+			Save(data);
+			Puzzle = data;
 		}
 	}
 	private const string RootPath = "res://", FileType = ".json", SavePath = "Saves";

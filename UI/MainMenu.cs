@@ -13,7 +13,11 @@ public sealed partial class MainMenu : Container
 	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons) }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public MainMenu() => this.Add(Background, Buttons, Settings);
+	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector { Name = "Level Selector", Visible = false }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
 	public sealed partial class SettingsContainer : TabContainer
 	{
 		public const int Margin = 0;
@@ -23,14 +27,15 @@ public sealed partial class MainMenu : Container
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
 		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public SettingsContainer() => this.Add(Audio, Video, Input);
+		public override void _Ready() => this.Add(Audio, Video, Input);
 	}
 	public sealed partial class MainButtons : VBoxContainer
 	{
 		public Button Play { get; } = new() { Name = nameof(Play), Text = nameof(Play) };
 		public Button Levels { get; } = new() { Name = nameof(Levels), Text = nameof(Levels) };
+		public Button Dialogues { get; } = new() { Name = nameof(Dialogues), Text = nameof(Dialogues) };
 		public Button Settings { get; } = new() { Name = nameof(Settings), Text = nameof(Settings) };
 		public Button Quit { get; } = new() { Name = nameof(Quit), Text = nameof(Quit) };
-		public MainButtons() => this.Add(Play, Levels, Settings, Quit);
+		public override void _Ready() => this.Add(Play, Levels, Dialogues, Settings, Quit);
 	}
 }

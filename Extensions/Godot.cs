@@ -4,6 +4,26 @@ namespace RSG.Extensions;
 
 public static class GDX
 {
+	public static void LinkToParent<T>(this Node node, List<T> list) where T : Node
+	{
+		node.ChildEnteredTree += OnChildEnteredTree;
+		node.ChildExitingTree += OnChildExitingTree;
+
+		void OnChildExitingTree(Node node)
+		{
+			if (node is T display && list.Contains(display))
+			{
+				list.Remove(display);
+			}
+		}
+		void OnChildEnteredTree(Node node)
+		{
+			if (node is T display)
+			{
+				list.Add(display);
+			}
+		}
+	}
 	public static void RefillGrid<TValue>(
 		this IDictionary<Vector2I, TValue> nodes,
 		int size,

@@ -131,7 +131,7 @@ public abstract partial class Display : AspectRatioContainer
 			}
 			return true;
 		}
-		public bool Matches(Display display)
+		public virtual bool Matches(Display display)
 		{
 			foreach ((Vector2I position, bool state) in States)
 			{
@@ -142,6 +142,10 @@ public abstract partial class Display : AspectRatioContainer
 			return true;
 		}
 	}
+	private sealed partial class DefaultDisplay : Display
+	{
+		public override void Reset() { }
+	}
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const int TileSize = 31;
@@ -149,6 +153,9 @@ public abstract partial class Display : AspectRatioContainer
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 	public enum PenMode { Block, Fill, Clear }
 	public enum Side { Row, Column }
+
+	public static Display Default { get; } = new DefaultDisplay { Name = "Puzzle Display" };
+
 	public PenMode Pen { get; set; } = PenMode.Fill;
 
 	protected GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
@@ -174,13 +181,18 @@ public abstract partial class Display : AspectRatioContainer
 
 	private Func<HintPosition, Node> HintsParent => pos => pos.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
 
-	public override void _Ready()
+	public override sealed void _Ready()
 	{
 		this.Add(Margin.Add(Grid.Add(Spacer, Columns, Rows, TilesGrid)))
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
-	public abstract void Load(Data data);
+	public virtual void Load(Data data)
+	{
+		ChangePuzzleSize(data.Size);
+		WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
+		WriteToHints(data.HintPositions);
+	}
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		if (!Tiles.TryGetValue(position, out Tile? button)) return;

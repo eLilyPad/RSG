@@ -26,6 +26,7 @@ public sealed partial class NonogramContainer : Container
 	}
 
 	public interface IHaveTools { PopupMenu Tools { get; } }
+	public interface IHaveStatus { StatusBar Status { get; } }
 
 	public sealed partial class DisplayContainer : TabContainer
 	{
@@ -44,41 +45,55 @@ public sealed partial class NonogramContainer : Container
 		}.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		public override void _Ready() => this.Add(CompletionLabel);
 	}
-	public sealed partial class ExpectedDisplay : Display
+	public sealed partial class PuzzleCompleteScreen : PanelContainer
 	{
-		public override void OnTilePressed(Vector2I position) { }
-		public override void Reset() { }
-		public override void Load(Data data)
+		public ColorRect Background { get; } = new ColorRect
 		{
-			ChangePuzzleSize(data.Size);
-			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
-			WriteToHints(data.HintPositions);
+			Name = "Background",
+			Color = Colors.DarkGray,
+		}
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public RichTextLabel CompletionTitle { get; } = new RichTextLabel
+		{
+			Name = "Completion Title",
+			BbcodeEnabled = true,
+			Text = "[color=black][font_size=60] Puzzle Complete",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			FitContent = true,
+		}
+			.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
+		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Completion Container" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public HBoxContainer Options { get; } = new HBoxContainer { Name = "Options Container" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public Button Levels { get; } = new() { Name = "LevelsButton", Text = "Levels" };
+		public override void _Ready()
+		{
+			this.Add(
+				Background,
+				Container.Add(CompletionTitle, Options.Add(Levels))
+			);
 		}
 	}
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Game" };
+		public required PuzzleCompleteScreen CompletionScreen { get; init; }
 		public required StatusBar Status { get; init; }
-		public GameDisplay()
-		{
-			Tools.SetItems(
-				clear: false,
-				("Reset", Key.None, Reset)
-			);
-		}
+
 		public override void Load(Data data)
 		{
-			ChangePuzzleSize(data.Size);
-			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
-			WriteToHints(data.HintPositions);
+			base.Load(data);
 			Reset();
-			WriteToTiles(data);
+			if (data is not SaveData save) return;
+			WriteToTiles(save);
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
 			Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.TileClicked);
-			Status.CompletionLabel.Text = Current.IsComplete() ? StatusBar.PuzzleIncomplete : StatusBar.PuzzleComplete;
+			Current.SaveProgress();
 		}
 		public override void Reset()
 		{
@@ -89,19 +104,6 @@ public sealed partial class NonogramContainer : Container
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Paint" };
 
-		public PaintDisplay()
-		{
-			Tools.SetItems(
-				clear: false,
-				("Reset", Key.None, Reset)
-			);
-		}
-		public override void Load(Data data)
-		{
-			ChangePuzzleSize(data.Size);
-			WriteToTiles(data switch { SaveData save => save.Expected, _ => data });
-			WriteToHints(positions: data.HintPositions);
-		}
 		public override void OnTilePressed(Vector2I position)
 		{
 			base.OnTilePressed(position);
