@@ -67,9 +67,9 @@ public abstract partial class Display : AspectRatioContainer
 			}
 			return nameProp.GetString() ?? DefaultName;
 		}
-		public static Dictionary<Vector2I, bool> ReadTiles(JsonElement tilesProp)
+		public static Dictionary<Vector2I, TileMode> ReadTiles(JsonElement tilesProp)
 		{
-			Dictionary<Vector2I, bool> tiles = [];
+			Dictionary<Vector2I, TileMode> tiles = [];
 			foreach (JsonElement element in tilesProp.EnumerateArray())
 			{
 				if (!element.TryGetProperty(PropertyNames.Position, out JsonElement positionProp)
@@ -84,56 +84,58 @@ public abstract partial class Display : AspectRatioContainer
 					GD.PrintErr($"Error parsing value in JSON: {element}");
 					continue;
 				}
-				tiles[position] = valueProp.GetBoolean();
+				//tiles[position] = valueProp.GetInt32().ToTileMode();
+				tiles[position] = valueProp.TryGetInt32(out int value) ? value.ToTileMode() : TileMode.Clear;
 			}
 			return tiles;
 		}
-		public static IImmutableDictionary<Vector2I, bool> AsStates(Display display) => display.Tiles.ToImmutableDictionary(
+		public static IImmutableDictionary<Vector2I, TileMode> AsStates(Display display) => display.Tiles.ToImmutableDictionary(
 			keySelector: pair => pair.Key,
-			elementSelector: pair => pair.Value.Button.Text is FillText
+			elementSelector: pair => pair.Value.Button.Text is FillText ? TileMode.Fill : TileMode.Clear
 		);
 
 		public const string DefaultName = "Puzzle";
 		public const int DefaultSize = 15;
 		public virtual string Name { get; set; } = DefaultName;
-		public IImmutableDictionary<Vector2I, bool> States => Tiles.ToImmutableDictionary();
+		public IImmutableDictionary<Vector2I, TileMode> States => Tiles.ToImmutableDictionary();
 		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
 			key => HintPosition.Convert(key)
 		);
-		public Dictionary<Vector2I, bool> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
+		public Dictionary<Vector2I, TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 			.GridRange()
-			.ToDictionary(elementSelector: _ => false);
+			.ToDictionary(elementSelector: _ => TileMode.Clear);
 		public virtual int Size => (int)Mathf.Sqrt(Tiles.Count);
 		public Data(int size = DefaultSize)
 		{
-			Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: _ => false);
+			Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: _ => TileMode.Clear);
 		}
 		public Data(Display display)
 		{
-			Tiles = display.Tiles.ToDictionary(elementSelector: pair => pair.Value.Button.Text is FillText);
+			Tiles = display.Tiles.ToDictionary(elementSelector: selector);
+			static TileMode selector(KeyValuePair<Vector2I, Tile> pair) => pair.Value.Button.Text.FromText();
 		}
-		public string StateAsText(Vector2I position) => States.GetValueOrDefault(position) ? FillText : EmptyText;
+
 		public bool Matches(Display display, Vector2I position)
 		{
-			if (!States.TryGetValue(position, out bool state)
+			if (!States.TryGetValue(position, out TileMode state)
 				|| !display.Tiles.TryGetValue(position, out Tile? tile)
 				|| !tile.Button.Matches(state)
 			) return false;
 			return true;
 		}
-		public bool Matches(Data data)
+		public bool Matches(Data expected)
 		{
-			foreach ((Vector2I position, bool state) in States)
+			foreach ((Vector2I position, TileMode state) in States)
 			{
-				if (!data.Tiles.TryGetValue(position, out bool tileState)
-					|| tileState != state
-				) return false;
+				if (!expected.Tiles.TryGetValue(position, out TileMode tile)) return false;
+				if (tile is not TileMode.Fill) continue;
+				if (tile != state) return false;
 			}
 			return true;
 		}
 		public virtual bool Matches(Display display)
 		{
-			foreach ((Vector2I position, bool state) in States)
+			foreach ((Vector2I position, TileMode state) in States)
 			{
 				if (!display.Tiles.TryGetValue(position, out Tile? tile)
 					|| !tile.Button.Matches(state)
@@ -151,12 +153,10 @@ public abstract partial class Display : AspectRatioContainer
 	public const int TileSize = 31;
 	// [Bug] ^^ if this changes the tile becomes a rectangle, with the height being larger than the width
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
-	public enum PenMode : int { Block = 2, Fill = 1, Clear = 0 }
+	public enum TileMode : int { Block = 2, Fill = 1, Clear = 0 }
 	public enum Side { Row, Column }
 
 	public static Display Default { get; } = new DefaultDisplay { Name = "Puzzle Display" };
-
-	public PenMode Pen { get; set; } = PenMode.Fill;
 
 	protected GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
@@ -197,18 +197,22 @@ public abstract partial class Display : AspectRatioContainer
 	{
 		if (!Tiles.TryGetValue(position, out Tile? button)) return;
 		bool
-		block = Input.IsMouseButtonPressed(BlockButton),
-		fill = Input.IsMouseButtonPressed(FillButton);
-		Pen = block ? PenMode.Block
-			: fill ? PenMode.Fill
-			: PenMode.Clear;
+		blocked = Input.IsMouseButtonPressed(BlockButton),
+		filled = Input.IsMouseButtonPressed(FillButton);
+		//if (!blocked && !filled) return;
+		string text = button.Button.Text;
+		TileMode previousMode = button.Button.Text.FromText();
+		TileMode input = blocked ? TileMode.Block
+			: filled ? TileMode.Fill
+			: TileMode.Clear;
 
-		button.Button.Text = Pen switch
+		button.Button.Text = (previousMode, input) switch
 		{
-			PenMode.Block => button.Button.Text is BlockText ? EmptyText : BlockText,
-			PenMode.Fill => button.Button.Text is FillText ? EmptyText : FillText,
-			PenMode.Clear when button.Button.Text is not EmptyText => EmptyText,
-			_ => button.Button.Text
+			_ when previousMode == input => EmptyText,
+			(_, TileMode.Fill) => FillText,
+			(_, TileMode.Block) => BlockText,
+			(_, TileMode.Clear) => EmptyText,
+			_ => text
 		};
 	}
 	public string CalculateHintAt(HintPosition position) => Tiles.CalculateHints(position);
@@ -226,8 +230,8 @@ public abstract partial class Display : AspectRatioContainer
 		{
 			tile.Button.Text = data switch
 			{
-				SaveData save => save.StateAsText(position),
-				_ => data.StateAsText(position)
+				SaveData save => save.States.AsText(position),
+				_ => data.States.AsText(position)
 			};
 		}
 	}
@@ -286,9 +290,5 @@ public sealed partial class Tile : AspectRatioContainer
 		CustomMinimumSize = Vector2.One * Display.TileSize,
 		ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
 	};
-
-	public override void _Ready()
-	{
-		this.Add(Button);
-	}
+	public override void _Ready() => this.Add(Button);
 }

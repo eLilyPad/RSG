@@ -73,28 +73,6 @@ public sealed record SaveData : Display.Data
 				Tiles = ReadTiles(tilesProp),
 				Expected = new() { Name = name, Tiles = ReadTiles(expectedTilesProp) }
 			};
-
-			static Dictionary<Vector2I, bool> ReadTiles(JsonElement tilesProp)
-			{
-				Dictionary<Vector2I, bool> tiles = [];
-				foreach (JsonElement element in tilesProp.EnumerateArray())
-				{
-					if (!element.TryGetProperty(PropertyNames.Position, out JsonElement positionProp)
-						|| !positionProp.GetString().TryParse(out Vector2I position)
-					)
-					{
-						GD.PrintErr($"Error parsing position in JSON: {element}");
-						continue;
-					}
-					if (!element.TryGetProperty(PropertyNames.Value, out JsonElement valueProp))
-					{
-						GD.PrintErr($"Error parsing value in JSON: {element}");
-						continue;
-					}
-					tiles[position] = valueProp.GetBoolean();
-				}
-				return tiles;
-			}
 		}
 		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
 		{
@@ -103,11 +81,11 @@ public sealed record SaveData : Display.Data
 			Serialize(writer, value.Expected, PuzzleData.Converter.Options);
 			writer.WritePropertyName(PropertyNames.Tiles);
 			writer.WriteStartArray();
-			foreach ((Vector2I position, bool state) in value.Tiles)
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
 				writer.WriteStartObject();
 				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteBoolean(PropertyNames.Value, state);
+				writer.WriteNumber(PropertyNames.Value, state.ToDouble());
 				writer.WriteEndObject();
 			}
 			writer.WriteEndArray();
@@ -128,7 +106,7 @@ public sealed record SaveData : Display.Data
 	public PuzzleData Expected { get; init; } = new();
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
-	public bool IsComplete => Matches(data: Expected);
+	public bool IsComplete => Matches(expected: Expected);
 
 	public SaveData() { }
 	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
@@ -172,11 +150,11 @@ public sealed record PuzzleData : Display.Data
 			writer.WriteString(PropertyNames.Name, value.Name);
 			writer.WritePropertyName(PropertyNames.Tiles);
 			writer.WriteStartArray();
-			foreach ((Vector2I position, bool state) in value.Tiles)
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
 				writer.WriteStartObject();
 				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteBoolean(PropertyNames.Value, state);
+				writer.WriteNumber(PropertyNames.Value, (double)state);
 				writer.WriteEndObject();
 			}
 			writer.WriteEndArray();
@@ -225,10 +203,9 @@ public sealed record PuzzleData : Display.Data
 		{
 			string code = "";
 			code += value.Size + SizeBarrier;
-			foreach ((Vector2I position, bool state) in value.Tiles)
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
-				GD.Print($"State: {position}");
-				code += state ? FillToken : BlankToken;
+				code += state is Display.TileMode.Fill ? FillToken : BlankToken;
 			}
 			return new()
 			{
@@ -242,7 +219,7 @@ public sealed record PuzzleData : Display.Data
 		{
 			string states = States;
 			int width = Size;
-			return new PuzzleData { Tiles = (Vector2I.One * Size).GridRange().ToDictionary(elementSelector: IsFillToken) };
+			return new PuzzleData(DefaultName, IsFillToken, Size);
 			bool IsFillToken(Vector2I position)
 			{
 				int index = position.Y * width + position.X;
@@ -337,7 +314,9 @@ public sealed record PuzzleData : Display.Data
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size)
 	{
 		Name = name;
-		Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: selector);
+		Tiles = (Vector2I.One * size).GridRange().ToDictionary(
+			elementSelector: position => selector(position) ? Display.TileMode.Fill : Display.TileMode.Clear
+		);
 	}
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 
