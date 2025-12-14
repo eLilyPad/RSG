@@ -18,24 +18,7 @@ public sealed class PuzzleManager
 			{
 				if (value is null) { return; }
 				field = Instance.Puzzles[value.Name] = value;
-				switch (Display)
-				{
-					case GameDisplay game when value is SaveData save:
-						if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
-						{
-							game.CompletionScreen.Show();
-							game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
-							if (save.Expected.DialogueName is string dialogueName)
-							{
-								Dialogues.Start(dialogueName, true);
-							}
-						}
-						else
-						{
-							game.Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
-						}
-						break;
-				}
+				CheckCompletion();
 				Display.Load(value);
 			}
 		} = new SaveData();
@@ -52,6 +35,28 @@ public sealed class PuzzleManager
 			SaveData data = new(Puzzle, Display);
 			Save(data);
 			Puzzle = data;
+		}
+		public bool CheckCompletion()
+		{
+			switch (Display)
+			{
+				case GameDisplay game when Puzzle is SaveData save:
+					if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
+					{
+						game.CompletionScreen.Show();
+						game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
+						if (save.Expected.DialogueName is string dialogueName)
+						{
+							GD.Print("starting dialogue " + dialogueName);
+							Dialogues.Start(dialogueName, true);
+						}
+						return true;
+					}
+
+					game.Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
+					break;
+			}
+			return false;
 		}
 	}
 	private const string RootPath = "res://", FileType = ".json", SavePath = "Saves";
