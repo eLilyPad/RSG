@@ -73,18 +73,21 @@ public sealed partial class NonogramContainer : Container
 		public override void OnTilePressed(Vector2I position)
 		{
 			if (!Tiles.TryGetValue(position, out Tile? button)) return;
-			bool
-			block = Input.IsMouseButtonPressed(BlockButton),
-			fill = Input.IsMouseButtonPressed(FillButton);
-			if (block)
+
+			TileMode input = PressedMode;
+			TileMode previousMode = button.Button.Text.FromText();
+
+			switch (input)
 			{
-				button.Button.Text = BlockText;
-				Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.BlockTileClicked);
-			}
-			else if (fill)
-			{
-				button.Button.Text = FillText;
-				Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.FillTileClicked);
+				case TileMode.Fill:
+					button.Button.Text = input == previousMode ? EmptyText : FillText;
+					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.FillTileClicked);
+					break;
+				case TileMode.Block:
+					button.Button.Text = input == previousMode ? EmptyText : BlockText;
+					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.BlockTileClicked);
+					break;
+				case TileMode.Clear: break;
 			}
 			Current.SaveProgress();
 		}
