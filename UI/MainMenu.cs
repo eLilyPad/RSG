@@ -4,19 +4,18 @@ namespace RSG.UI;
 
 public sealed partial class MainMenu : Container
 {
+	public const int Margin = 100;
 	public required ColourPack Colours { get; init => Background.Color = (field = value).MainMenuBackground; }
 	public ColorRect Background { get; } = new ColorRect { Name = nameof(Background) }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public SettingsContainer Settings { get; } = new SettingsContainer { Name = "Settings", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 100);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons) }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize)
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector { Name = "Level Selector", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
 	public sealed partial class SettingsContainer : TabContainer
 	{
