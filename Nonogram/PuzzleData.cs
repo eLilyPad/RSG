@@ -92,6 +92,7 @@ public sealed record SaveData : Display.Data
 			writer.WriteEndObject();
 		}
 	}
+	//public sealed record 
 
 	public static OneOf<SaveData, NotFound> Create(NonogramContainer.DisplayContainer displays)
 	{
@@ -234,19 +235,17 @@ public sealed record PuzzleData : Display.Data
 		public static Pack Procedural()
 		{
 			const int size = DefaultSize, radius = size / 2;
-
 			Vector2I puzzleCenter = Vector2I.One * radius;
-
 			return new()
 			{
 				Name = "Procedural",
 				Puzzles = [
 					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Intro},
 					new("Spiral", selector: Spiral, size),
-					new("Noise", selector: Noise, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
-					new("Grid", selector: RemainderThreeIsZero, size),
-					new("Border", selector: BorderSelector, size),
+					//new("Noise", selector: Noise, size),
+					//new("Grid", selector: RemainderThreeIsZero, size),
+					//new("Border", selector: BorderSelector, size),
 				]
 			};
 
@@ -311,13 +310,7 @@ public sealed record PuzzleData : Display.Data
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }
 	public PuzzleData(Display display) : base(display) { }
-	public PuzzleData(string name, Func<Vector2I, bool> selector, int size)
-	{
-		Name = name;
-		Tiles = (Vector2I.One * size).GridRange().ToDictionary(
-			elementSelector: position => selector(position) ? Display.TileMode.Fill : Display.TileMode.Clear
-		);
-	}
+	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 
 	public override string ToString()
