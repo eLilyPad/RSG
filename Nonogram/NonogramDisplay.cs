@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Godot;
 
 namespace RSG.Nonogram;
@@ -19,24 +18,18 @@ public abstract partial class Display : AspectRatioContainer
 			new(Side.Column, value.Match(position => position.Y, index => index))
 		];
 
-		public readonly string AsFormat()
+		public readonly string AsFormat() => Side switch
 		{
-			return Side switch
-			{
-				Side.Column => "\n",
-				Side.Row => "\t",
-				_ => ""
-			};
-		}
-		public readonly int IndexFrom(Vector2I position)
+			Side.Column => "\n",
+			Side.Row => "\t",
+			_ => ""
+		};
+		public readonly int IndexFrom(Vector2I position) => Side switch
 		{
-			return Side switch
-			{
-				Side.Column => position.Y,
-				Side.Row => position.X,
-				_ => -1
-			};
-		}
+			Side.Column => position.Y,
+			Side.Row => position.X,
+			_ => -1
+		};
 		public readonly (HorizontalAlignment, VerticalAlignment) Alignment() => (
 			Side switch
 			{
@@ -52,98 +45,7 @@ public abstract partial class Display : AspectRatioContainer
 			}
 		);
 	}
-	public abstract record Data
-	{
-		public readonly record struct Empty(int Size);
-		public static class PropertyNames
-		{
-			public const string Tiles = "Tiles", Name = "Name", Position = "Position", Value = "Value";
-		}
-		public static string ReadName(JsonElement root)
-		{
-			if (!root.TryGetProperty(PropertyNames.Name, out JsonElement nameProp))
-			{
-				return DefaultName;
-			}
-			return nameProp.GetString() ?? DefaultName;
-		}
-		public static Dictionary<Vector2I, TileMode> ReadTiles(JsonElement tilesProp)
-		{
-			Dictionary<Vector2I, TileMode> tiles = [];
-			foreach (JsonElement element in tilesProp.EnumerateArray())
-			{
-				if (!element.TryGetProperty(PropertyNames.Position, out JsonElement positionProp)
-					|| !positionProp.GetString().TryParse(out Vector2I position)
-				)
-				{
-					GD.PrintErr($"Error parsing position in JSON: {element}");
-					continue;
-				}
-				if (!element.TryGetProperty(PropertyNames.Value, out JsonElement valueProp))
-				{
-					GD.PrintErr($"Error parsing value in JSON: {element}");
-					continue;
-				}
-				//tiles[position] = valueProp.GetInt32().ToTileMode();
-				tiles[position] = valueProp.TryGetInt32(out int value) ? value.ToTileMode() : TileMode.Clear;
-			}
-			return tiles;
-		}
-		public static IImmutableDictionary<Vector2I, TileMode> AsStates(Display display) => display.Tiles.ToImmutableDictionary(
-			keySelector: pair => pair.Key,
-			elementSelector: pair => pair.Value.Button.Text is FillText ? TileMode.Fill : TileMode.Clear
-		);
 
-		public const string DefaultName = "Puzzle";
-		public const int DefaultSize = 15;
-		public virtual string Name { get; set; } = DefaultName;
-		public IImmutableDictionary<Vector2I, TileMode> States => Tiles.ToImmutableDictionary();
-		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
-			key => HintPosition.Convert(key)
-		);
-		public Dictionary<Vector2I, TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
-			.GridRange()
-			.ToDictionary(elementSelector: _ => TileMode.Clear);
-		public virtual int Size => (int)Mathf.Sqrt(Tiles.Count);
-		public Data(int size = DefaultSize)
-		{
-			Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: _ => TileMode.Clear);
-		}
-		public Data(Display display)
-		{
-			Tiles = display.Tiles.ToDictionary(elementSelector: selector);
-			static TileMode selector(KeyValuePair<Vector2I, Tile> pair) => pair.Value.Button.Text.FromText();
-		}
-
-		public bool Matches(Display display, Vector2I position)
-		{
-			if (!States.TryGetValue(position, out TileMode state)
-				|| !display.Tiles.TryGetValue(position, out Tile? tile)
-				|| !tile.Button.Matches(state)
-			) return false;
-			return true;
-		}
-		public bool Matches(Data expected)
-		{
-			foreach ((Vector2I position, TileMode state) in States)
-			{
-				if (!expected.Tiles.TryGetValue(position, out TileMode tile)) return false;
-				if (tile is not TileMode.Fill) continue;
-				if (tile != state) return false;
-			}
-			return true;
-		}
-		public virtual bool Matches(Display display)
-		{
-			foreach ((Vector2I position, TileMode state) in States)
-			{
-				if (!display.Tiles.TryGetValue(position, out Tile? tile)
-					|| !tile.Button.Matches(state)
-				) return false;
-			}
-			return true;
-		}
-	}
 	private sealed partial class DefaultDisplay : Display
 	{
 		public override void Reset() { }
@@ -157,6 +59,9 @@ public abstract partial class Display : AspectRatioContainer
 	public enum Side { Row, Column }
 
 	public static Display Default { get; } = new DefaultDisplay { Name = "Puzzle Display" };
+	public static TileMode PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Block
+		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Fill
+		: TileMode.Clear;
 
 	protected GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
@@ -196,24 +101,9 @@ public abstract partial class Display : AspectRatioContainer
 	public virtual void OnTilePressed(Vector2I position)
 	{
 		if (!Tiles.TryGetValue(position, out Tile? button)) return;
-		bool
-		blocked = Input.IsMouseButtonPressed(BlockButton),
-		filled = Input.IsMouseButtonPressed(FillButton);
-		//if (!blocked && !filled) return;
-		string text = button.Button.Text;
+		TileMode input = PressedMode;
 		TileMode previousMode = button.Button.Text.FromText();
-		TileMode input = blocked ? TileMode.Block
-			: filled ? TileMode.Fill
-			: TileMode.Clear;
-
-		button.Button.Text = (previousMode, input) switch
-		{
-			_ when previousMode == input => EmptyText,
-			(_, TileMode.Fill) => FillText,
-			(_, TileMode.Block) => BlockText,
-			(_, TileMode.Clear) => EmptyText,
-			_ => text
-		};
+		button.Button.Text = input == previousMode ? EmptyText : input.AsText();
 	}
 	public string CalculateHintAt(HintPosition position) => Tiles.CalculateHints(position);
 	public void WriteToHints(IEnumerable<HintPosition> positions)
