@@ -56,7 +56,11 @@ public static class TileExtensions
 	}
 	public static string AsText<T>(this IImmutableDictionary<T, TileMode> modes, T position) where T : notnull
 	{
-		return modes.GetValueOrDefault(position, TileMode.Clear) switch
+		return modes.GetValueOrDefault(position, TileMode.Clear).AsText();
+	}
+	public static string AsText(this TileMode mode)
+	{
+		return mode switch
 		{
 			TileMode.Block => BlockText,
 			TileMode.Fill => FillText,
