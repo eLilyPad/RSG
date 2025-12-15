@@ -243,8 +243,8 @@ public sealed record PuzzleData : Display.Data
 					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Intro},
 					new("Spiral", selector: Spiral, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
-					//new("Noise", selector: Noise, size),
-					//new("Grid", selector: RemainderThreeIsZero, size),
+					//new("Noise", selector: position => position.IsOverNoiseThreshold(threshold: 0), size),
+					//new("Grid", selector: position => position.X % 3 == 0 || position.Y % 3 == 0, size),
 					//new("Border", selector: BorderSelector, size),
 				]
 			};
@@ -256,20 +256,20 @@ public sealed record PuzzleData : Display.Data
 			}
 			bool HeartEmoji(Vector2I position)
 			{
-				const int lineThickness = 0, curveRadius = radius / 2, size = radius - 2;
-				int curveHeight = puzzleCenter.Y - radius / 4;
+				const int lineThickness = 0, curveRadius = (radius / 2) + 1, size = radius - 2;
+				int curveHeight = puzzleCenter.Y - (radius / 3) - 1;
 				Vector2I
-				leftCurveCenter = puzzleCenter with { X = puzzleCenter.X - curveRadius, Y = curveHeight },
-				rightCurveCenter = puzzleCenter with { X = puzzleCenter.X + curveRadius, Y = curveHeight };
+				leftCurveCenter = puzzleCenter with { Y = puzzleCenter.Y - curveRadius + 1, X = curveHeight + 2 },
+				rightCurveCenter = puzzleCenter with { Y = puzzleCenter.Y + curveRadius - 1, X = curveHeight + 2 };
 
-				return IsBottomTriangle()
+				return IsBottomTriangle(puzzleCenter with { X = puzzleCenter.X + 1 })
 					|| IsInCurve(center: rightCurveCenter)
 					|| IsInCurve(center: leftCurveCenter);
 
-				bool IsInCurve(Vector2I center) => position.Y < puzzleCenter.Y
+				bool IsInCurve(Vector2I center) => position.X <= puzzleCenter.X
 					&& position.IsIn(center, radius: curveRadius, shape: Shape.Circle, thickness: lineThickness);
-				bool IsBottomTriangle() => position.Y > puzzleCenter.Y - 1
-					&& position.IsIn(center: puzzleCenter, radius: size, shape: Shape.Diamond, thickness: lineThickness);
+				bool IsBottomTriangle(Vector2I center) => position.X >= puzzleCenter.X
+					&& position.IsIn(center, radius: size, shape: Shape.Diamond, thickness: lineThickness);
 			}
 			bool SmileyEmoji(Vector2I position)
 			{
@@ -279,8 +279,8 @@ public sealed record PuzzleData : Display.Data
 				mouthSize = radius / 2,
 				eyeHeight = radius - 2;
 				Vector2I
-				rightEyeCenter = new(radius + radius / 2, eyeHeight),
-				leftEyeCenter = new(radius - radius / 2, eyeHeight);
+				rightEyeCenter = new(y: radius + radius / 2, x: eyeHeight),
+				leftEyeCenter = new(y: radius - radius / 2, x: eyeHeight);
 
 				return position.IsIn(puzzleCenter, radius, Shape.Circle, thickness: lineThickness)
 					|| IsEye(center: leftEyeCenter)
@@ -289,11 +289,9 @@ public sealed record PuzzleData : Display.Data
 
 				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
 				bool IsMouth() => position.IsIn(puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
-					&& position.Y > puzzleCenter.Y;
+					&& position.X > puzzleCenter.X;
 			}
 
-			static bool Noise(Vector2I position) => position.IsOverNoiseThreshold(threshold: 0);
-			static bool RemainderThreeIsZero(Vector2I position) => position.X % 3 == 0 || position.Y % 3 == 0;
 			static bool BorderSelector(Vector2I position)
 			{
 				return isBorder(position.X) || isBorder(position.Y);
