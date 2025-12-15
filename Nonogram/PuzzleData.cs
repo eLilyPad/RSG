@@ -241,6 +241,7 @@ public sealed record PuzzleData : Display.Data
 				Name = "Procedural",
 				Puzzles = [
 					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Intro},
+					new("Kitty", selector: Cat, size) { DialogueName = Dialogue.CatOnThePath},
 					new("Spiral", selector: Spiral, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
 					//new("Noise", selector: position => position.IsOverNoiseThreshold(threshold: 0), size),
@@ -256,7 +257,7 @@ public sealed record PuzzleData : Display.Data
 			}
 			bool HeartEmoji(Vector2I position)
 			{
-				const int lineThickness = 0, curveRadius = (radius / 2) + 1, size = radius - 2;
+				const int curveRadius = (radius / 2) + 1, size = radius - 2;
 				int curveHeight = puzzleCenter.Y - (radius / 3) - 1;
 				Vector2I
 				leftCurveCenter = puzzleCenter with { Y = puzzleCenter.Y - curveRadius + 1, X = curveHeight + 2 },
@@ -267,9 +268,9 @@ public sealed record PuzzleData : Display.Data
 					|| IsInCurve(center: leftCurveCenter);
 
 				bool IsInCurve(Vector2I center) => position.X <= puzzleCenter.X
-					&& position.IsIn(center, radius: curveRadius, shape: Shape.Circle, thickness: lineThickness);
+					&& position.IsIn(center, radius: curveRadius, shape: Shape.Circle);
 				bool IsBottomTriangle(Vector2I center) => position.X >= puzzleCenter.X
-					&& position.IsIn(center, radius: size, shape: Shape.Diamond, thickness: lineThickness);
+					&& position.IsIn(center, radius: size, shape: Shape.Diamond);
 			}
 			bool SmileyEmoji(Vector2I position)
 			{
@@ -290,6 +291,39 @@ public sealed record PuzzleData : Display.Data
 				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
 				bool IsMouth() => position.IsIn(puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
 					&& position.X > puzzleCenter.X;
+			}
+			bool Cat(Vector2I position)
+			{
+				const int
+				lineThickness = 1,
+				eyeSize = 1,
+				mouthSize = radius / 4,
+				mouthHeight = radius + 4,
+				faceSize = radius - 1,
+				eyeHeight = radius - 1;
+				Vector2I
+				faceCenter = puzzleCenter with { X = puzzleCenter.X + 1 },
+				rightEyeCenter = new(y: radius + radius / 3, x: eyeHeight),
+				leftEyeCenter = new(y: radius - radius / 3, x: eyeHeight),
+				rightMouthCenter = new(y: radius + radius / 4, x: mouthHeight - 1),
+				leftMouthCenter = new(y: radius - radius / 4, x: mouthHeight - 1);
+
+				return position.IsIn(faceCenter, faceSize, Shape.Circle, thickness: lineThickness)
+					|| IsEye(center: leftEyeCenter)
+					|| IsEye(center: rightEyeCenter)
+					|| IsMouth(center: rightMouthCenter)
+					|| IsMouth(center: leftMouthCenter)
+					|| IsEar();
+
+				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
+				bool IsMouth(Vector2I center) => position.X > puzzleCenter.X + 2 &&
+					position.IsIn(center, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness);
+				/// Only works in puzzle size 15
+				bool IsEar() => position is (0, 3) or (0, 11)
+					or (1, 2) or (1, 4) or (1, 10) or (1, 12)
+					or (2, 2) or (2, 5) or (2, 9) or (2, 12)
+					or (3, 2) or (3, 6) or (3, 8) or (3, 12)
+					or (4, 2) or (4, 12);
 			}
 
 			static bool BorderSelector(Vector2I position)
