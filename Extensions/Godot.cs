@@ -24,45 +24,6 @@ public static class GDX
 			}
 		}
 	}
-	public static void RefillGrid<TValue>(
-		this IDictionary<Vector2I, TValue> nodes,
-		int size,
-		Func<Vector2I, TValue> create,
-		OneOf<Node, Func<Vector2I, Node>> parent,
-		OneOf<Action<Vector2I>, Action<TValue>> reset
-	)
-	where TValue : Node
-	{
-		nodes.Refill(values: (Vector2I.One * size).GridRange(), create, parent, reset);
-	}
-	public static void Refill<TKey, TValue>(
-		this IDictionary<TKey, TValue> nodes,
-		IEnumerable<TKey> values,
-		Func<TKey, TValue> create,
-		OneOf<Node, Func<TKey, Node>> parent,
-		OneOf<Action<TKey>, Action<TValue>> reset
-	)
-	where TValue : Node
-	where TKey : notnull
-	{
-		foreach (var position in values)
-		{
-			if (!nodes.TryGetValue(position, out TValue? node))
-			{
-				node = nodes[position] = create(position);
-				Parent(position).AddChild(node);
-			}
-			reset.Switch(position.PassOn(), node.PassOn());
-		}
-		foreach (var position in nodes.Keys.Except(values))
-		{
-			if (!nodes.TryGetValue(position, out var node)) { continue; }
-			nodes.Remove(position);
-			Parent(position).RemoveChild(node);
-			node.QueueFree();
-		}
-		Node Parent(TKey position) => parent.Match(node => node, getParent => getParent(position));
-	}
 
 	public static T LoadOrCreateResource<T>(this string path) where T : Resource, new()
 	{
