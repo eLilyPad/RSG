@@ -45,7 +45,6 @@ public abstract partial class Display : AspectRatioContainer
 			}
 		);
 	}
-
 	private sealed partial class DefaultDisplay : Display
 	{
 		public override void Reset() { }
@@ -64,25 +63,19 @@ public abstract partial class Display : AspectRatioContainer
 		: TileMode.Clear;
 
 	public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public GuideLines Guides { get; } = new GuideLines { Name = "GuideLines" }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public Control Spacer { get; } = new Control { Name = "Spacer" }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public Container Spacer { get; } = new Container { Name = "Spacer" }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public GridContainer Grid { get; } = new GridContainer { Name = "MainContainer", Columns = 2 }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Rows { get; } = new VBoxContainer { Name = "RowHints" }
-	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Expand)
-	.Preset(preset: LayoutPreset.CenterRight, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Expand)
+		.Preset(preset: LayoutPreset.CenterRight, resizeMode: LayoutPresetMode.KeepSize);
 	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
-	.SizeFlags(horizontal: SizeFlags.Expand, vertical: SizeFlags.ExpandFill)
-	.Preset(preset: LayoutPreset.CenterBottom, resizeMode: LayoutPresetMode.KeepSize);
-	public MarginContainer Margin { get; } = new MarginContainer { Name = "Margin" }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 20);
+		.SizeFlags(horizontal: SizeFlags.Expand, vertical: SizeFlags.ExpandFill)
+		.Preset(preset: LayoutPreset.CenterBottom, resizeMode: LayoutPresetMode.KeepSize);
 	public Container TilesContainer { get; } = new Container { Name = "Tiles Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
@@ -91,9 +84,9 @@ public abstract partial class Display : AspectRatioContainer
 
 	public override sealed void _Ready()
 	{
-		this.Add(Margin.Add(
+		this.Add(
 				Grid.Add(Spacer, Columns, Rows, TilesContainer.Add(Guides, TilesGrid))
-			))
+			)
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
@@ -233,22 +226,22 @@ public sealed partial class GuideLines : Container
 		BackGround,
 		Lines
 	);
-	public void CreateLines(Vector2I size, int space = 174)
+	public void CreateLines(Vector2I size, int space = 172)
 	{
 		Image image = Image.CreateEmpty(size.X, size.Y, false, Image.Format.Rgba8);
 		foreach ((int x, int y) in size.GridRange())
 		{
-			//if (x is 0 || y is 0) { continue; }
+			if (x < 2 || y < 2) continue;
 			if (x % space is not 0 && y % space is not 0) { continue; }
-			image.SetPixel(x - 1, y + 1, Colors.Black);
-			image.SetPixel(x - 1, y, Colors.Black);
-			image.SetPixel(x - 1, y - 1, Colors.Black);
-			image.SetPixel(x, y + 1, Colors.Black);
 			image.SetPixel(x, y, Colors.Black);
 			image.SetPixel(x, y - 1, Colors.Black);
-			image.SetPixel(x + 1, y + 1, Colors.Black);
-			image.SetPixel(x + 1, y, Colors.Black);
-			image.SetPixel(x + 1, y - 1, Colors.Black);
+			image.SetPixel(x, y - 2, Colors.Black);
+			image.SetPixel(x - 1, y, Colors.Black);
+			image.SetPixel(x - 1, y - 1, Colors.Black);
+			image.SetPixel(x - 1, y - 2, Colors.Black);
+			image.SetPixel(x - 2, y, Colors.Black);
+			image.SetPixel(x - 2, y - 1, Colors.Black);
+			image.SetPixel(x - 2, y - 2, Colors.Black);
 		}
 		Lines.Texture = ImageTexture.CreateFromImage(image);
 

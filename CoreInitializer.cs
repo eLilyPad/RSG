@@ -78,8 +78,8 @@ public static class CoreInitializer
 
 		container.Displays.CurrentTabDisplay.Load(Current.Puzzle);
 
-		Vector2I guideSize = new Vector2I((int)game.Guides.BackGround.Size.X, (int)game.Guides.BackGround.Size.Y) / 2;
-		game.Guides.CreateLines(size: guideSize);
+		Vector2I guideSize = (Vector2I)game.Guides.BackGround.Size / 2;
+		game.Guides.CreateLines(size: guideSize with { Y = guideSize.X });
 
 		return container;
 
