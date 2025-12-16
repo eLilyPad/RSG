@@ -63,32 +63,37 @@ public abstract partial class Display : AspectRatioContainer
 		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Fill
 		: TileMode.Clear;
 
-	protected GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
+	public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	protected Control Spacer { get; } = new Control { Name = "Spacer" }
+	public GuideLines Guides { get; } = new GuideLines { Name = "GuideLines" }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	protected GridContainer Grid { get; } = new GridContainer { Name = "MainContainer", Columns = 2 }
+	public Control Spacer { get; } = new Control { Name = "Spacer" }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	protected VBoxContainer Rows { get; } = new VBoxContainer { Name = "RowHints" }
+	public GridContainer Grid { get; } = new GridContainer { Name = "MainContainer", Columns = 2 }
+	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+	.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public VBoxContainer Rows { get; } = new VBoxContainer { Name = "RowHints" }
 	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Expand)
 	.Preset(preset: LayoutPreset.CenterRight, resizeMode: LayoutPresetMode.KeepSize);
-	protected HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
+	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
 	.SizeFlags(horizontal: SizeFlags.Expand, vertical: SizeFlags.ExpandFill)
 	.Preset(preset: LayoutPreset.CenterBottom, resizeMode: LayoutPresetMode.KeepSize);
-	protected MarginContainer Margin { get; } = new MarginContainer { Name = "Margin" }
+	public MarginContainer Margin { get; } = new MarginContainer { Name = "Margin" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 20);
+	public Container TilesContainer { get; } = new Container { Name = "Tiles Container" }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	protected Dictionary<Vector2I, Tile> Tiles { get; } = [];
 	protected Dictionary<HintPosition, Hint> Hints { get; } = [];
 
-	private Func<HintPosition, Node> HintsParent => pos => pos.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
-
 	public override sealed void _Ready()
 	{
-		this.Add(Margin.Add(Grid.Add(Spacer, Columns, Rows, TilesGrid)))
+		this.Add(Margin.Add(
+				Grid.Add(Spacer, Columns, Rows, TilesContainer.Add(Guides, TilesGrid))
+			))
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	}
 	public abstract void Reset();
@@ -132,10 +137,46 @@ public abstract partial class Display : AspectRatioContainer
 			GD.PrintErr($"size: ({size}) < 1: replacing with default size {Data.DefaultSize}");
 			size = Data.DefaultSize;
 		}
-		IEnumerable<HintPosition> values = HintPosition.AsRange(TilesGrid.Columns = size);
-		Hints.Refill(values, create: CreateHint, parent: HintsParent, reset: (Action<Hint>)ResetHint);
-		Tiles.RefillGrid(size, create: CreateTile, parent: TilesGrid, reset: (Action<Tile>)ResetTile);
+		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(TilesGrid.Columns = size);
+		var tileValues = (Vector2I.One * size).GridRange();
 
+		foreach (HintPosition hintPosition in hintValues)
+		{
+			if (!Hints.TryGetValue(hintPosition, out var node))
+			{
+				Node parent = HintsParent(hintPosition);
+				node = Hints[hintPosition] = CreateHint(hintPosition);
+				parent.AddChild(node);
+			}
+			ResetHint(node);
+		}
+		foreach (Vector2I gridPosition in (Vector2I.One * size).GridRange())
+		{
+			if (!Tiles.TryGetValue(gridPosition, out var node))
+			{
+				node = Tiles[gridPosition] = CreateTile(gridPosition);
+				TilesGrid.AddChild(node);
+			}
+			ResetTile(node);
+		}
+		foreach (var position in Hints.Keys.Except(hintValues))
+		{
+			if (!Hints.TryGetValue(position, out var node)) { continue; }
+			Hints.Remove(position);
+			HintsParent(position).RemoveChild(node);
+			node.QueueFree();
+		}
+		foreach (var position in Tiles.Keys.Except(tileValues))
+		{
+			if (!Tiles.TryGetValue(position, out var node)) { continue; }
+			Tiles.Remove(position);
+			TilesGrid.RemoveChild(node);
+			node.QueueFree();
+		}
+
+
+
+		Node HintsParent(HintPosition pos) => pos.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
 		Hint CreateHint(HintPosition position) => new(position);
 		Tile CreateTile(Vector2I position)
 		{
@@ -181,4 +222,35 @@ public sealed partial class Tile : AspectRatioContainer
 		ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
 	};
 	public override void _Ready() => this.Add(Button);
+}
+public sealed partial class GuideLines : Container
+{
+	public ColorRect BackGround { get; } = new ColorRect { Color = Colors.AntiqueWhite with { A = 0.3f } }
+		.Preset(LayoutPreset.FullRect);
+	public TextureRect Lines { get; } = new TextureRect { Name = "Lines", ClipContents = true }.Preset(LayoutPreset.FullRect);
+	//public Texture2D Lines { get; }
+	public override void _Ready() => this.Add(
+		BackGround,
+		Lines
+	);
+	public void CreateLines(Vector2I size, int space = 174)
+	{
+		Image image = Image.CreateEmpty(size.X, size.Y, false, Image.Format.Rgba8);
+		foreach ((int x, int y) in size.GridRange())
+		{
+			//if (x is 0 || y is 0) { continue; }
+			if (x % space is not 0 && y % space is not 0) { continue; }
+			image.SetPixel(x - 1, y + 1, Colors.Black);
+			image.SetPixel(x - 1, y, Colors.Black);
+			image.SetPixel(x - 1, y - 1, Colors.Black);
+			image.SetPixel(x, y + 1, Colors.Black);
+			image.SetPixel(x, y, Colors.Black);
+			image.SetPixel(x, y - 1, Colors.Black);
+			image.SetPixel(x + 1, y + 1, Colors.Black);
+			image.SetPixel(x + 1, y, Colors.Black);
+			image.SetPixel(x + 1, y - 1, Colors.Black);
+		}
+		Lines.Texture = ImageTexture.CreateFromImage(image);
+
+	}
 }
