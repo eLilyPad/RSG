@@ -295,9 +295,6 @@ public sealed record PuzzleData : Display.Data
 			bool Cat(Vector2I position)
 			{
 				const int
-				lineThickness = 1,
-				eyeSize = 1,
-				mouthSize = radius / 4,
 				mouthHeight = radius + 4,
 				faceSize = radius - 1,
 				eyeHeight = radius - 1;
@@ -307,23 +304,29 @@ public sealed record PuzzleData : Display.Data
 				leftEyeCenter = new(y: radius - radius / 3, x: eyeHeight),
 				rightMouthCenter = new(y: radius + radius / 4, x: mouthHeight - 1),
 				leftMouthCenter = new(y: radius - radius / 4, x: mouthHeight - 1);
-
-				return position.IsIn(faceCenter, faceSize, Shape.Circle, thickness: lineThickness)
-					|| IsEye(center: leftEyeCenter)
-					|| IsEye(center: rightEyeCenter)
-					|| IsMouth(center: rightMouthCenter)
-					|| IsMouth(center: leftMouthCenter)
-					|| IsEar();
-
-				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
-				bool IsMouth(Vector2I center) => position.X > puzzleCenter.X + 2 &&
-					position.IsIn(center, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness);
-				/// Only works in puzzle size 15
-				bool IsEar() => position is (0, 3) or (0, 11)
+				bool
+				isNose = position is (8, 7),
+				isEyebrow = position is (4, 5) or (4, 9),
+				//isEyebrow = position is (4, 5) or (4, 9),
+				isEye = position is (6, 3) or (6, 4) or (6, 10) or (6, 11)
+					or (7, 4) or (7, 5) or (7, 9) or (7, 10),
+				isMouth = position is (10, 4) or (10, 7) or (10, 10)
+					or (11, 5) or (11, 6) or (11, 8) or (11, 9),
+				isEar = position is (0, 3) or (0, 11)
 					or (1, 2) or (1, 4) or (1, 10) or (1, 12)
 					or (2, 2) or (2, 5) or (2, 9) or (2, 12)
 					or (3, 2) or (3, 6) or (3, 8) or (3, 12)
-					or (4, 2) or (4, 12);
+					or (4, 2) or (4, 12),
+				isWhisker = position is (6, 0) or (6, 14)
+					or (7, 1) or (7, 13)
+					or (9, 0) or (9, 1) or (9, 13) or (9, 14)
+					or (11, 1) or (11, 13)
+					or (12, 0) or (12, 14),
+				isFacialFeatures = isEye || isNose || isEyebrow || isMouth,
+				isFace = position.IsIn(faceCenter, faceSize, Shape.Circle)
+					&& !(position is (8, 1) or (8, 13));
+
+				return isFace && !isFacialFeatures || isEar || isWhisker;
 			}
 
 			static bool BorderSelector(Vector2I position)
