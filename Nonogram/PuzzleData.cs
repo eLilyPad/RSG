@@ -307,7 +307,6 @@ public sealed record PuzzleData : Display.Data
 				bool
 				isNose = position is (8, 7),
 				isEyebrow = position is (4, 5) or (4, 9),
-				//isEyebrow = position is (4, 5) or (4, 9),
 				isEye = position is (6, 3) or (6, 4) or (6, 10) or (6, 11)
 					or (7, 4) or (7, 5) or (7, 9) or (7, 10),
 				isMouth = position is (10, 4) or (10, 7) or (10, 10)
