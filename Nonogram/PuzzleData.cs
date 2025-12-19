@@ -22,10 +22,42 @@ public static class PuzzleBuilder
 		};
 		return noise.GetNoise2D(x, y) > threshold;
 	}
+	public static bool IsInLines(this Vector2I position, int thickness = 1, params ReadOnlySpan<(Vector2I start, Vector2I stop)> values)
+	{
+		foreach ((Vector2I start, Vector2I stop) in values)
+		{
+			if (start == stop)
+			{
+				return position.DistanceTo(start) <= thickness * .5f;
+			}
+			Vector2
+			pos = position,
+			ab = stop - start,
+			ap = position - start;
+
+			float t = ap.Dot(ab) / ab.LengthSquared();
+			t = Mathf.Clamp(t, 0, 1);
+
+			Vector2 closest = start + ab * t;
+			float maxDistance = thickness * 0.5f;
+			if (pos.DistanceTo(closest) <= maxDistance) return true;
+		}
+		return false;
+	}
 	public static bool IsInSpiral(this Vector2I position, Vector2I center, int a, int b, int thickness = 0)
 	{
 		Vector2I offset = center - position;
 		return Mathf.Abs(offset.Squared() - (a + b * Mathf.Atan2(offset.Y, offset.X))) <= thickness;
+	}
+	public static bool IsInCircle(this Vector2I position, Vector2I center, int radius, int thickness = 0)
+	{
+		Vector2I offset = center - position;
+		int
+		innerRadius = radius - thickness,
+		offsetSquared = offset.Squared();
+		return thickness < 0 ? In(radius) : In(radius) && !In(innerRadius);
+
+		bool In(int size) => size * size >= offsetSquared;
 	}
 	public static bool IsIn(this Vector2I position, Vector2I center, int radius, Shape shape, int thickness = 0)
 	{
@@ -289,7 +321,7 @@ public sealed record PuzzleData : Display.Data
 					|| IsMouth();
 
 				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
-				bool IsMouth() => position.IsIn(puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
+				bool IsMouth() => position.IsIn(center: puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
 					&& position.X > puzzleCenter.X;
 			}
 			bool Cat(Vector2I position)
@@ -306,24 +338,24 @@ public sealed record PuzzleData : Display.Data
 				leftMouthCenter = new(y: radius - radius / 4, x: mouthHeight - 1);
 				bool
 				isNose = position is (8, 7),
-				isEyebrow = position is (4, 5) or (4, 9),
-				isEye = position is (6, 3) or (6, 4) or (6, 10) or (6, 11)
-					or (7, 4) or (7, 5) or (7, 9) or (7, 10),
-				isMouth = position is (10, 4) or (10, 7) or (10, 10)
-					or (11, 5) or (11, 6) or (11, 8) or (11, 9),
-				isEar = position is (0, 3) or (0, 11)
-					or (1, 2) or (1, 4) or (1, 10) or (1, 12)
-					or (2, 2) or (2, 5) or (2, 9) or (2, 12)
-					or (3, 2) or (3, 6) or (3, 8) or (3, 12)
-					or (4, 2) or (4, 12),
-				isWhisker = position is (6, 0) or (6, 14)
-					or (7, 1) or (7, 13)
-					or (9, 0) or (9, 1) or (9, 13) or (9, 14)
-					or (11, 1) or (11, 13)
-					or (12, 0) or (12, 14),
+				isEyebrow = position is (4, 5 or 9),
+				isEye = position is (6, 3 or 4 or 10 or 11)
+					or (7, 4 or 5 or 9 or 10),
+				isMouth = position is (10, 4 or 7 or 10)
+					or (11, 5 or 6 or 8 or 9),
+				isEar = position.IsInLines(1,
+					(new(1, 2), new(4, 2)),
+					(new(1, 12), new(4, 12)),
+					(new(0, 3), new(3, 6)),
+					(new(0, 11), new(3, 8))
+				),
+				isWhisker = position is (6, 0 or 14)
+					or (9, 0 or 1 or 13 or 14)
+					or (7 or 11, 1 or 13)
+					or (12, 0 or 14),
 				isFacialFeatures = isEye || isNose || isEyebrow || isMouth,
 				isFace = position.IsIn(faceCenter, faceSize, Shape.Circle)
-					&& !(position is (8, 1) or (8, 13));
+					&& !(position is (8, 1 or 13));
 
 				return isFace && !isFacialFeatures || isEar || isWhisker;
 			}
