@@ -131,83 +131,86 @@ public abstract partial class Display : AspectRatioContainer
 			size = Data.DefaultSize;
 		}
 		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(TilesGrid.Columns = size);
-		var tileValues = (Vector2I.One * size).GridRange();
+		IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
 
-		foreach (HintPosition hintPosition in hintValues)
+		foreach (HintPosition position in hintValues)
 		{
-			if (!Hints.TryGetValue(hintPosition, out var node))
+			if (!Hints.TryGetValue(position, out Hint? node))
 			{
-				Node parent = HintsParent(hintPosition);
-				node = Hints[hintPosition] = CreateHint(hintPosition);
-				parent.AddChild(node);
+				node = Hints[position] = Hint.Create(position: position, parent: HintsParent(position));
 			}
 			ResetHint(node);
 		}
-		foreach (Vector2I gridPosition in (Vector2I.One * size).GridRange())
+		foreach (Vector2I position in tileValues)
 		{
-			if (!Tiles.TryGetValue(gridPosition, out var node))
+			if (!Tiles.TryGetValue(position, out Tile? node))
 			{
-				node = Tiles[gridPosition] = CreateTile(gridPosition);
-				TilesGrid.AddChild(node);
+				node = Tiles[position] = Tile.Create(position: position, parent: TilesGrid, pressed: OnTilePressed);
 			}
 			ResetTile(node);
 		}
-		foreach (var position in Hints.Keys.Except(hintValues))
+
+		foreach (HintPosition position in Hints.Keys.Except(hintValues))
 		{
-			if (!Hints.TryGetValue(position, out var node)) { continue; }
+			if (!Hints.TryGetValue(position, out Hint? node)) { continue; }
 			Hints.Remove(position);
 			HintsParent(position).RemoveChild(node);
 			node.QueueFree();
 		}
-		foreach (var position in Tiles.Keys.Except(tileValues))
+		foreach (Vector2I position in Tiles.Keys.Except(tileValues))
 		{
-			if (!Tiles.TryGetValue(position, out var node)) { continue; }
+			if (!Tiles.TryGetValue(position, out Tile? node)) { continue; }
 			Tiles.Remove(position);
 			TilesGrid.RemoveChild(node);
 			node.QueueFree();
 		}
 
-
-
-		Node HintsParent(HintPosition pos) => pos.Side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
-		Hint CreateHint(HintPosition position) => new(position);
-		Tile CreateTile(Vector2I position)
+		Node HintsParent(HintPosition position) => position.Side switch
 		{
-			Tile button = new() { Name = $"Tile (X: {position.X}, Y: {position.Y})" };
-			button.Button.MouseEntered += MouseEntered;
-			button.Button.ButtonDown += ButtonDown;
-
-			return button;
-
-			void ButtonDown()
-			{
-				OnTilePressed(position);
-			}
-			void MouseEntered()
-			{
-				bool fill = Input.IsMouseButtonPressed(FillButton);
-				bool block = Input.IsMouseButtonPressed(BlockButton);
-				if (!fill && !block) { return; }
-				OnTilePressed(position);
-			}
-		}
+			Side.Row => Rows,
+			Side.Column => Columns,
+			_ => this
+		};
 	}
 	protected virtual void ResetTile(Tile button) => button.Button.Text = EmptyText;
 	protected virtual void ResetHint(Hint hint) => hint.Text = EmptyHint;
 }
 public sealed partial class Hint : RichTextLabel
 {
-	public Hint(Display.HintPosition position)
+	public static Hint Create(Display.HintPosition position, Node parent)
 	{
-		Name = $"Hint (Side: {position.Side}, Index: {position.Index})";
-		Text = Display.EmptyHint;
-		FitContent = true;
-		CustomMinimumSize = Vector2.One * Display.TileSize;
-		(HorizontalAlignment, VerticalAlignment) = position.Alignment();
+		Hint hint = new()
+		{
+			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
+			Text = Display.EmptyHint,
+			FitContent = true,
+			CustomMinimumSize = Vector2.One * Display.TileSize,
+		};
+		(hint.HorizontalAlignment, hint.VerticalAlignment) = position.Alignment();
+		parent.AddChild(hint);
+		return hint;
 	}
+	private Hint() { }
 }
 public sealed partial class Tile : AspectRatioContainer
 {
+	public static Tile Create(Vector2I position, Node parent, Action<Vector2I> pressed)
+	{
+		Tile button = new() { Name = $"Tile (X: {position.X}, Y: {position.Y})" };
+		button.Button.MouseEntered += MouseEntered;
+		button.Button.ButtonDown += Pressed;
+		parent.AddChild(button);
+
+		return button;
+		void Pressed() => pressed(position);
+		void MouseEntered()
+		{
+			bool fill = Input.IsMouseButtonPressed(Display.FillButton);
+			bool block = Input.IsMouseButtonPressed(Display.BlockButton);
+			if (!fill && !block) { return; }
+			pressed(position);
+		}
+	}
 	public Button Button { get; } = new()
 	{
 		Text = Display.EmptyText,
@@ -215,35 +218,4 @@ public sealed partial class Tile : AspectRatioContainer
 		ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
 	};
 	public override void _Ready() => this.Add(Button);
-}
-public sealed partial class GuideLines : Container
-{
-	public ColorRect BackGround { get; } = new ColorRect { Color = Colors.AntiqueWhite with { A = 0.3f } }
-		.Preset(LayoutPreset.FullRect);
-	public TextureRect Lines { get; } = new TextureRect { Name = "Lines", ClipContents = true }.Preset(LayoutPreset.FullRect);
-	//public Texture2D Lines { get; }
-	public override void _Ready() => this.Add(
-		BackGround,
-		Lines
-	);
-	public void CreateLines(Vector2I size, int space = 172)
-	{
-		Image image = Image.CreateEmpty(size.X, size.Y, false, Image.Format.Rgba8);
-		foreach ((int x, int y) in size.GridRange())
-		{
-			if (x < 2 || y < 2) continue;
-			if (x % space is not 0 && y % space is not 0) { continue; }
-			image.SetPixel(x, y, Colors.Black);
-			image.SetPixel(x, y - 1, Colors.Black);
-			image.SetPixel(x, y - 2, Colors.Black);
-			image.SetPixel(x - 1, y, Colors.Black);
-			image.SetPixel(x - 1, y - 1, Colors.Black);
-			image.SetPixel(x - 1, y - 2, Colors.Black);
-			image.SetPixel(x - 2, y, Colors.Black);
-			image.SetPixel(x - 2, y - 1, Colors.Black);
-			image.SetPixel(x - 2, y - 2, Colors.Black);
-		}
-		Lines.Texture = ImageTexture.CreateFromImage(image);
-
-	}
 }
