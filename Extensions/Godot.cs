@@ -4,6 +4,24 @@ namespace RSG.Extensions;
 
 public static class GDX
 {
+	public static void SetPixel(this Image image, int x, int y, Color color, int size)
+	{
+		int half = size / 2;
+
+		for (int dx = -half; dx <= half; dx++)
+		{
+			for (int dy = -half; dy <= half; dy++)
+			{
+				int px = x + dx;
+				int py = y + dy;
+
+				if (px >= 0 && py >= 0 && px < image.GetWidth() && py < image.GetHeight())
+				{
+					image.SetPixel(px, py, color);
+				}
+			}
+		}
+	}
 	public static void LinkToParent<T>(this Node node, List<T> list) where T : Node
 	{
 		node.ChildEnteredTree += OnChildEnteredTree;
