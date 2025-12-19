@@ -82,9 +82,9 @@ public static class AudioExtensions
 	};
 	public static AudioStream GetVolumeClickedAudio(this Buses bus) => bus switch
 	{
-		Buses.Music => NonogramSounds.TileClicked,
-		Buses.SoundEffects => NonogramSounds.TileClicked,
-		Buses.Master => NonogramSounds.TileClicked,
+		Buses.Music => NonogramSounds.FillTileClicked,
+		Buses.SoundEffects => NonogramSounds.FillTileClicked,
+		Buses.Master => NonogramSounds.FillTileClicked,
 		_ => throw new Exception("Bus enum value has no assigned audio stream.")
 	};
 

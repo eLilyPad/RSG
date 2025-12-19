@@ -22,10 +22,42 @@ public static class PuzzleBuilder
 		};
 		return noise.GetNoise2D(x, y) > threshold;
 	}
+	public static bool IsInLines(this Vector2I position, int thickness = 1, params ReadOnlySpan<(Vector2I start, Vector2I stop)> values)
+	{
+		foreach ((Vector2I start, Vector2I stop) in values)
+		{
+			if (start == stop)
+			{
+				return position.DistanceTo(start) <= thickness * .5f;
+			}
+			Vector2
+			pos = position,
+			ab = stop - start,
+			ap = position - start;
+
+			float t = ap.Dot(ab) / ab.LengthSquared();
+			t = Mathf.Clamp(t, 0, 1);
+
+			Vector2 closest = start + ab * t;
+			float maxDistance = thickness * 0.5f;
+			if (pos.DistanceTo(closest) <= maxDistance) return true;
+		}
+		return false;
+	}
 	public static bool IsInSpiral(this Vector2I position, Vector2I center, int a, int b, int thickness = 0)
 	{
 		Vector2I offset = center - position;
 		return Mathf.Abs(offset.Squared() - (a + b * Mathf.Atan2(offset.Y, offset.X))) <= thickness;
+	}
+	public static bool IsInCircle(this Vector2I position, Vector2I center, int radius, int thickness = 0)
+	{
+		Vector2I offset = center - position;
+		int
+		innerRadius = radius - thickness,
+		offsetSquared = offset.Squared();
+		return thickness < 0 ? In(radius) : In(radius) && !In(innerRadius);
+
+		bool In(int size) => size * size >= offsetSquared;
 	}
 	public static bool IsIn(this Vector2I position, Vector2I center, int radius, Shape shape, int thickness = 0)
 	{
@@ -73,28 +105,6 @@ public sealed record SaveData : Display.Data
 				Tiles = ReadTiles(tilesProp),
 				Expected = new() { Name = name, Tiles = ReadTiles(expectedTilesProp) }
 			};
-
-			static Dictionary<Vector2I, bool> ReadTiles(JsonElement tilesProp)
-			{
-				Dictionary<Vector2I, bool> tiles = [];
-				foreach (JsonElement element in tilesProp.EnumerateArray())
-				{
-					if (!element.TryGetProperty(PropertyNames.Position, out JsonElement positionProp)
-						|| !positionProp.GetString().TryParse(out Vector2I position)
-					)
-					{
-						GD.PrintErr($"Error parsing position in JSON: {element}");
-						continue;
-					}
-					if (!element.TryGetProperty(PropertyNames.Value, out JsonElement valueProp))
-					{
-						GD.PrintErr($"Error parsing value in JSON: {element}");
-						continue;
-					}
-					tiles[position] = valueProp.GetBoolean();
-				}
-				return tiles;
-			}
 		}
 		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
 		{
@@ -103,17 +113,18 @@ public sealed record SaveData : Display.Data
 			Serialize(writer, value.Expected, PuzzleData.Converter.Options);
 			writer.WritePropertyName(PropertyNames.Tiles);
 			writer.WriteStartArray();
-			foreach ((Vector2I position, bool state) in value.Tiles)
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
 				writer.WriteStartObject();
 				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteBoolean(PropertyNames.Value, state);
+				writer.WriteNumber(PropertyNames.Value, state.ToDouble());
 				writer.WriteEndObject();
 			}
 			writer.WriteEndArray();
 			writer.WriteEndObject();
 		}
 	}
+	//public sealed record 
 
 	public static OneOf<SaveData, NotFound> Create(NonogramContainer.DisplayContainer displays)
 	{
@@ -128,7 +139,7 @@ public sealed record SaveData : Display.Data
 	public PuzzleData Expected { get; init; } = new();
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
-	public bool IsComplete => Matches(data: Expected);
+	public bool IsComplete => Matches(expected: Expected);
 
 	public SaveData() { }
 	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
@@ -172,11 +183,11 @@ public sealed record PuzzleData : Display.Data
 			writer.WriteString(PropertyNames.Name, value.Name);
 			writer.WritePropertyName(PropertyNames.Tiles);
 			writer.WriteStartArray();
-			foreach ((Vector2I position, bool state) in value.Tiles)
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
 				writer.WriteStartObject();
 				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteBoolean(PropertyNames.Value, state);
+				writer.WriteNumber(PropertyNames.Value, (double)state);
 				writer.WriteEndObject();
 			}
 			writer.WriteEndArray();
@@ -225,10 +236,9 @@ public sealed record PuzzleData : Display.Data
 		{
 			string code = "";
 			code += value.Size + SizeBarrier;
-			foreach ((Vector2I position, bool state) in value.Tiles)
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
-				GD.Print($"State: {position}");
-				code += state ? FillToken : BlankToken;
+				code += state is Display.TileMode.Fill ? FillToken : BlankToken;
 			}
 			return new()
 			{
@@ -242,7 +252,7 @@ public sealed record PuzzleData : Display.Data
 		{
 			string states = States;
 			int width = Size;
-			return new PuzzleData { Tiles = (Vector2I.One * Size).GridRange().ToDictionary(elementSelector: IsFillToken) };
+			return new PuzzleData(DefaultName, IsFillToken, Size);
 			bool IsFillToken(Vector2I position)
 			{
 				int index = position.Y * width + position.X;
@@ -257,19 +267,18 @@ public sealed record PuzzleData : Display.Data
 		public static Pack Procedural()
 		{
 			const int size = DefaultSize, radius = size / 2;
-
 			Vector2I puzzleCenter = Vector2I.One * radius;
-
 			return new()
 			{
 				Name = "Procedural",
 				Puzzles = [
 					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Intro},
+					new("Kitty", selector: Cat, size) { DialogueName = Dialogue.CatOnThePath},
 					new("Spiral", selector: Spiral, size),
-					new("Noise", selector: Noise, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
-					new("Grid", selector: RemainderThreeIsZero, size),
-					new("Border", selector: BorderSelector, size),
+					//new("Noise", selector: position => position.IsOverNoiseThreshold(threshold: 0), size),
+					//new("Grid", selector: position => position.X % 3 == 0 || position.Y % 3 == 0, size),
+					//new("Border", selector: BorderSelector, size),
 				]
 			};
 
@@ -280,20 +289,20 @@ public sealed record PuzzleData : Display.Data
 			}
 			bool HeartEmoji(Vector2I position)
 			{
-				const int lineThickness = 1, curveRadius = radius / 2, size = radius - 2;
-				int curveHeight = puzzleCenter.Y - radius / 4;
+				const int curveRadius = (radius / 2) + 1, size = radius - 2;
+				int curveHeight = puzzleCenter.Y - (radius / 3) - 1;
 				Vector2I
-				leftCurveCenter = puzzleCenter with { X = puzzleCenter.X - curveRadius, Y = curveHeight },
-				rightCurveCenter = puzzleCenter with { X = puzzleCenter.X + curveRadius, Y = curveHeight };
+				leftCurveCenter = puzzleCenter with { Y = puzzleCenter.Y - curveRadius + 1, X = curveHeight + 2 },
+				rightCurveCenter = puzzleCenter with { Y = puzzleCenter.Y + curveRadius - 1, X = curveHeight + 2 };
 
-				return IsBottomTriangle()
+				return IsBottomTriangle(puzzleCenter with { X = puzzleCenter.X + 1 })
 					|| IsInCurve(center: rightCurveCenter)
 					|| IsInCurve(center: leftCurveCenter);
 
-				bool IsInCurve(Vector2I center) => position.Y < puzzleCenter.Y
-					&& position.IsIn(center, radius: curveRadius, shape: Shape.Circle, thickness: lineThickness);
-				bool IsBottomTriangle() => position.Y > puzzleCenter.Y - 1
-					&& position.IsIn(center: puzzleCenter, radius: size, shape: Shape.Diamond, thickness: lineThickness);
+				bool IsInCurve(Vector2I center) => position.X <= puzzleCenter.X
+					&& position.IsIn(center, radius: curveRadius, shape: Shape.Circle);
+				bool IsBottomTriangle(Vector2I center) => position.X >= puzzleCenter.X
+					&& position.IsIn(center, radius: size, shape: Shape.Diamond);
 			}
 			bool SmileyEmoji(Vector2I position)
 			{
@@ -303,8 +312,8 @@ public sealed record PuzzleData : Display.Data
 				mouthSize = radius / 2,
 				eyeHeight = radius - 2;
 				Vector2I
-				rightEyeCenter = new(radius + radius / 2, eyeHeight),
-				leftEyeCenter = new(radius - radius / 2, eyeHeight);
+				rightEyeCenter = new(y: radius + radius / 2, x: eyeHeight),
+				leftEyeCenter = new(y: radius - radius / 2, x: eyeHeight);
 
 				return position.IsIn(puzzleCenter, radius, Shape.Circle, thickness: lineThickness)
 					|| IsEye(center: leftEyeCenter)
@@ -312,12 +321,45 @@ public sealed record PuzzleData : Display.Data
 					|| IsMouth();
 
 				bool IsEye(Vector2I center) => position.IsIn(center, radius: eyeSize, shape: Shape.Circle);
-				bool IsMouth() => position.IsIn(puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
-					&& position.Y > puzzleCenter.Y;
+				bool IsMouth() => position.IsIn(center: puzzleCenter, radius: mouthSize, shape: Shape.Circle, thickness: lineThickness)
+					&& position.X > puzzleCenter.X;
+			}
+			bool Cat(Vector2I position)
+			{
+				const int
+				mouthHeight = radius + 4,
+				faceSize = radius - 1,
+				eyeHeight = radius - 1;
+				Vector2I
+				faceCenter = puzzleCenter with { X = puzzleCenter.X + 1 },
+				rightEyeCenter = new(y: radius + radius / 3, x: eyeHeight),
+				leftEyeCenter = new(y: radius - radius / 3, x: eyeHeight),
+				rightMouthCenter = new(y: radius + radius / 4, x: mouthHeight - 1),
+				leftMouthCenter = new(y: radius - radius / 4, x: mouthHeight - 1);
+				bool
+				isNose = position is (8, 7),
+				isEyebrow = position is (4, 5 or 9),
+				isEye = position is (6, 3 or 4 or 10 or 11)
+					or (7, 4 or 5 or 9 or 10),
+				isMouth = position is (10, 4 or 7 or 10)
+					or (11, 5 or 6 or 8 or 9),
+				isEar = position.IsInLines(1,
+					(new(1, 2), new(4, 2)),
+					(new(1, 12), new(4, 12)),
+					(new(0, 3), new(3, 6)),
+					(new(0, 11), new(3, 8))
+				),
+				isWhisker = position is (6, 0 or 14)
+					or (9, 0 or 1 or 13 or 14)
+					or (7 or 11, 1 or 13)
+					or (12, 0 or 14),
+				isFacialFeatures = isEye || isNose || isEyebrow || isMouth,
+				isFace = position.IsIn(faceCenter, faceSize, Shape.Circle)
+					&& !(position is (8, 1 or 13));
+
+				return isFace && !isFacialFeatures || isEar || isWhisker;
 			}
 
-			static bool Noise(Vector2I position) => position.IsOverNoiseThreshold(threshold: 0);
-			static bool RemainderThreeIsZero(Vector2I position) => position.X % 3 == 0 || position.Y % 3 == 0;
 			static bool BorderSelector(Vector2I position)
 			{
 				return isBorder(position.X) || isBorder(position.Y);
@@ -334,11 +376,7 @@ public sealed record PuzzleData : Display.Data
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }
 	public PuzzleData(Display display) : base(display) { }
-	public PuzzleData(string name, Func<Vector2I, bool> selector, int size)
-	{
-		Name = name;
-		Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: selector);
-	}
+	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 
 	public override string ToString()
