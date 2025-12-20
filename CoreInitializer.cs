@@ -44,10 +44,7 @@ public static class CoreInitializer
 		{
 			if (!menu.Levels.Visible) return;
 			menu.Levels.ClearPacks();
-			if (OS.HasFeature("editor"))
-			{
-				menu.Levels.Fill(menu, saves: GetSavedPuzzles());
-			}
+			menu.Levels.Fill(menu, saves: GetSavedPuzzles());
 			menu.Levels.Fill(menu, packs: GetPuzzlePacks());
 		}
 		void FillDialogueSelector()
