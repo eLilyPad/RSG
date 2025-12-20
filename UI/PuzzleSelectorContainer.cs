@@ -4,16 +4,10 @@ namespace RSG.Nonogram;
 
 public sealed partial class PuzzleSelector : PanelContainer
 {
-	public ColorRect Background { get; } = new ColorRect
-	{
-		Name = "Background",
-		Color = Colors.DarkCyan,
-	}
+	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkCyan }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public ScrollContainer Scroll { get; } = new ScrollContainer()
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	//public VBoxContainer Puzzles { get; } = new VBoxContainer()
-	//	.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
 	{
 		Name = "Puzzles Container",
@@ -50,45 +44,43 @@ public sealed partial class PuzzleSelector : PanelContainer
 					Background = new ColorRect { Name = "Background", Color = Colors.Black }
 						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 				};
-				puzzleDisplay.Button.Pressed += Pressed;
+				puzzleDisplay.Button.Pressed += SelectorPressed(menu, puzzle);
 				display.Puzzles.Value.Add(puzzleDisplay);
-
-				void Pressed()
-				{
-					PuzzleManager.Current.Puzzle = puzzle;
-					Hide();
-					menu.Hide();
-				}
 			}
 			Puzzles.Value.Add(display);
 		}
 	}
 	public void Fill(UI.MainMenu menu, IEnumerable<SaveData> saves)
 	{
+		Assert(IsInstanceValid(Puzzles.Value), "Puzzles container is not valid");
 		PackDisplay saved = new PackDisplay { Name = "SavedDisplay" }
 		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		saved.Puzzles.Label.Text = "Saved";
-		Puzzles.Value.Add(saved);
+		Puzzles.Value.AddChild(saved);
 		foreach (SaveData save in saves)
 		{
 			Color statusColor = save.IsComplete ? Colors.Green : Colors.Black;
-			PuzzleDisplay puzzleDisplay = new PuzzleDisplay()
+			PuzzleDisplay puzzleDisplay = new PuzzleDisplay
 			{
 				Name = save.Name + " Display",
 				Button = new() { Name = save.Name + " Button", Text = save.Name },
 				Background = new ColorRect { Name = "Background", Color = statusColor }
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-			puzzleDisplay.Button.Pressed += Pressed;
+			puzzleDisplay.Button.Pressed += SelectorPressed(menu, save);
 			saved.Puzzles.Value.Add(puzzleDisplay);
-
-			void Pressed()
-			{
-				PuzzleManager.Current.Puzzle = save;
-				Hide();
-				menu.Hide();
-			}
 		}
+	}
+	private Action SelectorPressed(UI.MainMenu menu, Display.Data data)
+	{
+		return () =>
+		{
+			if (!IsInstanceValid(this)) return;
+			PuzzleManager.Current.Puzzle = data;
+			Hide();
+			if (!IsInstanceValid(menu)) return;
+			menu.Hide();
+		};
 	}
 
 	sealed partial class PackDisplay : AspectRatioContainer
