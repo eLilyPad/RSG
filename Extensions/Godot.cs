@@ -36,6 +36,7 @@ public static class GDX
 		}
 		void OnChildEnteredTree(Node node)
 		{
+			if (!GodotObject.IsInstanceValid(node)) return;
 			if (node is T display)
 			{
 				list.Add(display);
