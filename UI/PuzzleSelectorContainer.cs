@@ -20,81 +20,81 @@ public sealed partial class PuzzleSelector : PanelContainer
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	private readonly List<PackDisplay> _packDisplays = [];
 
-	public override void _Ready() => this
-		.Add(Background, Scroll.Add(Puzzles))
-		.LinkToParent(_packDisplays);
+	public override void _Ready() => this.Add(Background, Scroll.Add(Puzzles));
 
 	public void ClearPacks()
 	{
-		Puzzles.Value.RemoveChildren(true);
+		foreach (PackDisplay pack in _packDisplays)
+		{
+			if (!IsInstanceValid(Puzzles.Value)) continue;
+			if (Puzzles.Value.HasChild(pack))
+			{
+				Puzzles.Value.RemoveChild(pack);
+				pack.QueueFree();
+			}
+		}
 	}
 	public void Fill(UI.MainMenu menu, IEnumerable<PuzzleData.Pack> packs)
 	{
 		foreach (PuzzleData.Pack pack in packs)
 		{
-			PackDisplay display = new PackDisplay { Name = pack.Name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			display.Puzzles.Label.Text = pack.Name;
-			foreach (PuzzleData puzzle in pack.Puzzles)
-			{
-				PuzzleDisplay puzzleDisplay = new()
-				{
-					Name = puzzle.Name + " Display",
-					Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
-					Background = new ColorRect { Name = "Background", Color = Colors.Black }
-						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-				};
-				puzzleDisplay.Button.Pressed += SelectorPressed(menu, puzzle);
-				display.Puzzles.Value.Add(puzzleDisplay);
-			}
-			Puzzles.Value.Add(display);
+			PackDisplay display = PackDisplay.Create(pack.Name, this, menu, pack.Puzzles);
+			_packDisplays.Add(display);
 		}
 	}
 	public void Fill(UI.MainMenu menu, IEnumerable<SaveData> saves)
 	{
-		Assert(IsInstanceValid(Puzzles.Value), "Puzzles container is not valid");
-		PackDisplay saved = new PackDisplay { Name = "SavedDisplay" }
-		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		saved.Puzzles.Label.Text = "Saved";
-		Puzzles.Value.AddChild(saved);
-		foreach (SaveData save in saves)
-		{
-			Color statusColor = save.IsComplete ? Colors.Green : Colors.Black;
-			PuzzleDisplay puzzleDisplay = new PuzzleDisplay
-			{
-				Name = save.Name + " Display",
-				Button = new() { Name = save.Name + " Button", Text = save.Name },
-				Background = new ColorRect { Name = "Background", Color = statusColor }
-					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-			puzzleDisplay.Button.Pressed += SelectorPressed(menu, save);
-			saved.Puzzles.Value.Add(puzzleDisplay);
-		}
-	}
-	private Action SelectorPressed(UI.MainMenu menu, Display.Data data)
-	{
-		return () =>
-		{
-			if (!IsInstanceValid(this)) return;
-			PuzzleManager.Current.Puzzle = data;
-			Hide();
-			if (!IsInstanceValid(menu)) return;
-			menu.Hide();
-		};
+		PackDisplay display = PackDisplay.Create("Saved Puzzles", this, menu, saves);
+		_packDisplays.Add(display);
 	}
 
-	sealed partial class PackDisplay : AspectRatioContainer
+	sealed partial class PackDisplay : PanelContainer
 	{
+		public static PackDisplay Create(string name, PuzzleSelector parent, Control menu, IEnumerable<Display.Data> data)
+		{
+			PackDisplay display = new PackDisplay { Name = name }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			display.Puzzles.Label.Text = name;
+			foreach (Display.Data puzzle in data)
+			{
+				Color statusColor = puzzle switch
+				{
+					SaveData { IsComplete: true } save => Colors.Green,
+					_ => Colors.Black
+				};
+				PuzzleDisplay puzzleDisplay = new PuzzleDisplay
+				{
+					Name = puzzle.Name + " Display",
+					Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+					Background = new ColorRect { Name = "Background", Color = statusColor }
+						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+				}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+				puzzleDisplay.Button.Pressed += pressed;
+				display.Puzzles.Value.Add(puzzleDisplay);
+
+				void pressed()
+				{
+					if (!IsInstanceValid(parent)) return;
+					PuzzleManager.Current.Puzzle = puzzle;
+					parent.Hide();
+					if (!IsInstanceValid(menu)) return;
+					menu.Hide();
+				}
+			}
+			parent.Puzzles.Value.AddChild(display);
+			return display;
+		}
+
 		public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
 		{
+			Name = "Puzzles Display",
 			Label = new RichTextLabel { Name = "Label", FitContent = true }
 				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
 			Value = new VBoxContainer { Name = "Puzzles Container" }
-				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize),
+				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
 			Vertical = true
 		}
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			.Preset(LayoutPreset.FullRect);
 		private readonly List<PuzzleDisplay> _displays = [];
 		internal PackDisplay() { }
 		public override void _Ready() => this
