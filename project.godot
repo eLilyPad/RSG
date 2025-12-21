@@ -13,11 +13,17 @@ config_version=5
 config/name="RSGames"
 run/main_scene="res://Core.tscn"
 config/features=PackedStringArray("4.5", "C#", "GL Compatibility")
+boot_splash/image="uid://b2gp5k67a88cg"
 config/icon="res://icon.svg"
 
 [autoload]
 
 Core="*res://Core.cs"
+
+[debug]
+
+settings/stdout/verbose_stdout=true
+file_logging/enable_file_logging=true
 
 [display]
 

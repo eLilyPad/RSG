@@ -8,6 +8,60 @@ using static NonogramContainer;
 
 using LoadResult = OneOf<Display.Data, PuzzleData.Code.ConversionError, NotFound>;
 
+public static class FileManager
+{
+	public static class Paths
+	{
+		public const string
+		Project = "res://",
+		User = "user://",
+		FileType = ".json",
+		Save = "Saves";
+	}
+
+	public static string SavePath => (OS.HasFeature("editor") ? Paths.Project : OS.GetUserDataDir()) + "/" + Paths.Save;
+
+	public static IList<SaveData> GetSaved()
+	{
+		IList<SaveData> puzzles = [];
+		string globalPath = ProjectSettings.GlobalizePath(SavePath);
+		try
+		{
+			if (!Directory.Exists(globalPath)) { return puzzles; }
+			foreach (string path in Directory.EnumerateFiles(globalPath))
+			{
+				string json = File.ReadAllText(path);
+				if (Deserialize<SaveData>(json, options: Converter.Options) is not SaveData data) continue;
+				puzzles.Add(data);
+			}
+		}
+		catch (Exception exception)
+		{
+			GD.PrintErr(exception);
+			return puzzles;
+		}
+		return puzzles;
+	}
+	public static void Save(Display.Data data)
+	{
+		string path = SavedPuzzlesPath(data.Name);
+		Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
+		string contents = data switch
+		{
+			SaveData save => Serialize(save, Converter.Options),
+			PuzzleData puzzle => Serialize(puzzle, Converter.Options),
+			_ => ""
+		};
+		File.WriteAllText(path, contents);
+	}
+
+	private static string SavedPuzzlesPath(string name)
+	{
+		string path = $"{SavePath}/{name}{Paths.FileType}";
+		return ProjectSettings.GlobalizePath(path);
+	}
+}
+
 public sealed class PuzzleManager
 {
 	public sealed record class CurrentPuzzle
@@ -59,35 +113,12 @@ public sealed class PuzzleManager
 			return false;
 		}
 	}
-	private const string RootPath = "res://", FileType = ".json", SavePath = "Saves";
 
 	public static CurrentPuzzle Current => field ??= new();
 	private static PuzzleManager Instance => field ??= new();
 
 	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
-	public static IList<SaveData> GetSavedPuzzles()
-	{
-		IList<SaveData> puzzles = [];
-		string savePath = ProjectSettings.GlobalizePath(RootPath + "/" + SavePath);
-		try
-		{
-			foreach (string path in Directory.EnumerateFiles(savePath))
-			{
-				string json = File.ReadAllText(path);
-				if (Deserialize<SaveData>(json, options: Converter.Options) is not SaveData data)
-				{
-					continue;
-				}
-				puzzles.Add(data);
-			}
-		}
-		catch (Exception exception)
-		{
-			GD.PrintErr(exception);
-			return [];
-		}
-		return puzzles;
-	}
+	public static IList<SaveData> GetSavedPuzzles() => FileManager.GetSaved();
 	public static LoadResult Load(OneOf<string, Display.Data> value)
 	{
 		return value.Match(LoadCode, LoadData);
@@ -105,31 +136,19 @@ public sealed class PuzzleManager
 			}
 		);
 	}
-	public static void Save(OneOf<PuzzleData, Display.Data.Empty, SaveData> puzzle)
+	public static void Save(OneOf<PuzzleData, SaveData> puzzle)
 	{
-		puzzle.Switch(Puzzle, Empty, Savable);
-		static void Empty(Display.Data.Empty empty) => Puzzle(new(empty));
+		puzzle.Switch(Puzzle, Savable);
 		static void Savable(SaveData save)
 		{
-			string path = SavedPuzzlesPath(save.Expected.Name);
-			Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
-			string contents = Serialize(save, Converter.Options);
-			File.WriteAllText(path, contents);
-			Instance.Puzzles[save.Expected.Name] = save.Expected;
+			FileManager.Save(save);
+			Instance.Puzzles[save.Name] = save.Expected;
 		}
 		static void Puzzle(PuzzleData data)
 		{
-			string path = SavedPuzzlesPath(data.Name);
-			Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
-			File.WriteAllText(path, contents: Serialize(data, Converter.Options));
+			FileManager.Save(data);
 			Instance.Puzzles[data.Name] = data;
 		}
-	}
-
-	private static string SavedPuzzlesPath(string name)
-	{
-		string path = $"{RootPath}/{SavePath}/{name}{FileType}";
-		return ProjectSettings.GlobalizePath(path);
 	}
 
 	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];

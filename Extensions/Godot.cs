@@ -36,6 +36,7 @@ public static class GDX
 		}
 		void OnChildEnteredTree(Node node)
 		{
+			if (!GodotObject.IsInstanceValid(node)) return;
 			if (node is T display)
 			{
 				list.Add(display);
@@ -85,6 +86,7 @@ public static class GDX
 		{
 			//if (!parent.HasChild(node)) { continue; }
 			if (node.IsAncestorOf(parent)) { continue; }
+			if (!GodotObject.IsInstanceValid(node)) { continue; }
 			parent.RemoveChild(node);
 			if (free) node.QueueFree();
 		}
