@@ -16,18 +16,9 @@ public sealed partial class CoreContainer : AspectRatioContainer
 	public PuzzleSelector Levels { get; } = new PuzzleSelector { Name = "Level Selector", Visible = false };
 	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", Colours = Core.Colours }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public override void _Ready()
-	{
-		this.Add(Nonogram, Menu, Dialogues.Container, LoadingScreen);
-		Input.Bind((Key.Escape, StepBack, "Toggle Main Menu"));
-		Menu.Settings.Input.InputsContainer.RefreshBindings();
 
-		Menu.Init(Core.Colours);
-		Nonogram.Init(Menu);
-
-		void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels, Menu.Dialogues);
-	}
-
+	public override void _Ready() => this.Add(Nonogram, Menu, Dialogues.Container, LoadingScreen);
+	public void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels, Menu.Dialogues);
 }
 public sealed partial class Core : Node
 {
@@ -47,7 +38,13 @@ public sealed partial class Core : Node
 		Name = nameof(Core);
 		this.Add(Container);
 
+		Input.Bind((Key.Escape, Container.StepBack, "Toggle Main Menu"));
+		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
+
 		Dialogues.Instance.BuildDialogues();
+
+		Container.Menu.Init(Colours);
+		Container.Nonogram.Init(Container.Menu);
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 	}
