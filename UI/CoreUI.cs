@@ -16,81 +16,15 @@ public sealed partial class CoreUI : AspectRatioContainer
 		container.Menu.Buttons.Dialogues.Pressed += container.Menu.Dialogues.Show;
 		container.Menu.Buttons.Settings.Pressed += container.Menu.Settings.Show;
 		container.Menu.Buttons.Quit.Pressed += () => container.GetTree().Quit();
-		container.Menu.Settings.VisibilityChanged += SettingsVisibilityChanged;
-		container.Menu.Levels.VisibilityChanged += FillPuzzleSelector;
-		container.Menu.Dialogues.VisibilityChanged += FillDialogueSelector;
-
-		container.Nonogram.ChildEnteredTree += OnChildEnteringTree;
-		container.Nonogram.ChildExitingTree += OnChildExitingTree;
-		container.Nonogram.Displays.TabChanged += OnDisplaysTabChanged;
-		container.Nonogram.CompletionScreen.Levels.Pressed += OnLevelsPressed;
-
-		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += OnCodeChanged;
-		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
-		container.Nonogram.ToolsBar.PuzzleLoader.AboutToPopup += LoadPuzzles;
-
-		container.Console.Input.Line.TextSubmitted += ConsoleInputSubmitted;
-		container.Console.Input.Line.TextChanged += ConsoleInputChanged;
-		container.Console.Input.SuggestionDisplay.ItemSelected += InputWithSuggestion;
-		container.Console.VisibilityChanged += GrabInputFocus;
-
-		OnDisplaysTabChanged(container.Nonogram.Displays.CurrentTab);
-
-		return container;
-
-		void ConsoleInputChanged(string input)
-		{
-			RSG.Console.Instance.Submitted(input);
-			container.Console.Input.SuggestionDisplay.Clear();
-			foreach (string suggestion in RSG.Console.Instance.Suggestions(input))
-			{
-				container.Console.Input.SuggestionDisplay.AddItem(suggestion);
-			}
-			//changed(input);
-		}
-		void ConsoleInputSubmitted(string input)
-		{
-			if (input.Length == 0) return;
-			Submitted(input);
-			container.Console.Input.Line.Clear();
-		}
-		void GrabInputFocus()
-		{
-			if (!container.Console.Input.Line.IsVisibleInTree()) return;
-			container.Console.Input.Line.GrabFocus();
-		}
-		void InputWithSuggestion(long index)
-		{
-			container.Console.Input.Line.Text += container.Console.Input.SuggestionDisplay.GetItemText((int)index);
-			container.Console.Input.Line.GrabFocus();
-		}
-		void Submitted(string input)
-		{
-			container.Console.Log.Label.Text = "\n" + input;
-			RSG.Console.Instance.Submitted(input);
-			//submitted(input);
-		}
-
-		void SettingsVisibilityChanged()
-		{
-			container.Menu.Buttons.Visible = !container.Menu.Settings.Visible;
-		}
-		void FillPuzzleSelector()
+		container.Menu.Settings.VisibilityChanged += () => container.Menu.Buttons.Visible = !container.Menu.Settings.Visible;
+		container.Menu.Levels.VisibilityChanged += () =>
 		{
 			if (!container.Menu.Levels.Visible)
 			{
 				container.Menu.Hide();
 				return;
 			}
-			foreach (PuzzleSelector.PackDisplay pack in _levelSelectorDisplays)
-			{
-				if (!IsInstanceValid(container.Menu.Levels.Puzzles.Value)) continue;
-				if (container.Menu.Levels.Puzzles.Value.HasChild(pack))
-				{
-					container.Menu.Levels.Puzzles.Value.RemoveChild(pack);
-					pack.QueueFree();
-				}
-			}
+			container.Menu.Levels.Puzzles.Value.Remove(free: true, _levelSelectorDisplays);
 			IEnumerable<(string name, IEnumerable<Display.Data> data)> packConfigs = [
 				("Saved Puzzles", PuzzleManager.GetSavedPuzzles()),
 				.. PuzzleManager.GetPuzzlePacks().Select(PuzzleData.Pack.Convert)
@@ -106,48 +40,54 @@ public sealed partial class CoreUI : AspectRatioContainer
 				container.Menu.Levels.Puzzles.Value.AddChild(display);
 				_levelSelectorDisplays.Add(display);
 			}
-		}
-		void FillDialogueSelector()
+		};
+		container.Menu.Dialogues.VisibilityChanged += () =>
 		{
 			if (!container.Menu.Dialogues.Visible) return;
 			container.Menu.Dialogues.Clear();
 			container.Menu.Dialogues.Fill(Dialogues.AvailableDialogues);
-		}
-		void OnDisplaysTabChanged(long index)
+		};
+
+		container.Nonogram.ChildEnteredTree += node =>
 		{
-			Display current = container.Nonogram.Displays.CurrentTabDisplay;
-			foreach (Display other in container.Nonogram.Displays.Tabs.ToList().Except([current]))
+			switch (node)
 			{
-				if (other == current
-					|| other is not NonogramContainer.IHaveTools { Tools: PopupMenu otherTools }
-					|| !container.Menu.HasChild(otherTools)
-				) continue;
-				container.Menu.RemoveChild(otherTools);
+				case NonogramContainer.GameDisplay display:
+					container.Nonogram.Status.CompletionLabel.Visible = true;
+					break;
+				case Display: break;
+				case Node when container.Nonogram.Displays.HasChild(node):
+					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
+					container.Nonogram.Displays.RemoveChild(node);
+					break;
 			}
-			if (current is not NonogramContainer.IHaveTools { Tools: PopupMenu currentTools }
-				|| container.Menu.HasChild(currentTools)
-			)
+		};
+		container.Nonogram.ChildExitingTree += node =>
+		{
+			switch (node)
 			{
-				return;
+				case NonogramContainer.GameDisplay display:
+					container.Nonogram.Status.CompletionLabel.Visible = false;
+					break;
 			}
-			container.Menu.AddChild(currentTools);
-		}
-		void OnLevelsPressed()
+		};
+		container.Nonogram.Displays.TabChanged += OnDisplaysTabChanged;
+		container.Nonogram.CompletionScreen.Levels.Pressed += () =>
 		{
 			container.Menu.Show();
 			container.Menu.Levels.Show();
 			container.Nonogram.CompletionScreen.Hide();
-		}
-		void OnCodeSubmitted(string value) => PuzzleManager.Load(value).Switch(
+		};
+		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += value => PuzzleData.Code.Encode(value).Switch(
+			error => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
+			code => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
+		);
+		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += value => PuzzleManager.Load(value).Switch(
 			container.Nonogram.Displays.CurrentTabDisplay.Load,
 			error => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
 			notFound => GD.Print("Not Found")
 		);
-		void OnCodeChanged(string value) => PuzzleData.Code.Encode(value).Switch(
-			error => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			code => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
-		);
-		void LoadPuzzles()
+		container.Nonogram.ToolsBar.PuzzleLoader.AboutToPopup += () =>
 		{
 			foreach (PuzzleSelector.PackDisplay pack in _levelLoaderDisplays)
 			{
@@ -174,29 +114,67 @@ public sealed partial class CoreUI : AspectRatioContainer
 				container.Nonogram.ToolsBar.PuzzleLoader.Control.AddChild(display);
 				_levelLoaderDisplays.Add(display);
 			}
-		}
-		void OnChildEnteringTree(Node node)
+		};
+
+		container.Console.Input.Line.TextSubmitted += input =>
 		{
-			switch (node)
-			{
-				case NonogramContainer.GameDisplay display:
-					container.Nonogram.Status.CompletionLabel.Visible = true;
-					break;
-				case Display: break;
-				case Node when container.Nonogram.Displays.HasChild(node):
-					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					container.Nonogram.Displays.RemoveChild(node);
-					break;
-			}
-		}
-		void OnChildExitingTree(Node node)
+			if (input.Length == 0) return;
+			RSG.Console.Instance.Submitted(input);
+			container.Console.Log.Label.Text += input + "\n";
+			GrabConsoleInputFocus(clear: true);
+		};
+		container.Console.Input.Line.TextChanged += input =>
 		{
-			switch (node)
+			container.Console.Input.SuggestionDisplay.Clear();
+			IEnumerable<string> suggestions = RSG.Console.Instance.Suggestions(input);
+			foreach (string suggestion in suggestions)
 			{
-				case NonogramContainer.GameDisplay display:
-					container.Nonogram.Status.CompletionLabel.Visible = false;
-					break;
+				container.Console.Input.SuggestionDisplay.AddItem(suggestion);
 			}
+		};
+		container.Console.Input.Line.VisibilityChanged += () => GrabConsoleInputFocus(true);
+		container.Console.Input.SuggestionDisplay.ItemSelected += index =>
+		{
+			string suggestion = container.Console.Input.SuggestionDisplay.GetItemText((int)index);
+			if (!container.Console.Input.Line.Text.EndsWith(' '))
+			{
+				container.Console.Input.Line.Text += ' ';
+			}
+			container.Console.Input.Line.Text += suggestion;
+			GrabConsoleInputFocus();
+		};
+
+		OnDisplaysTabChanged(container.Nonogram.Displays.CurrentTab);
+
+		return container;
+
+		void OnDisplaysTabChanged(long index)
+		{
+			Display current = container.Nonogram.Displays.CurrentTabDisplay;
+			foreach (Display other in container.Nonogram.Displays.Tabs.ToList().Except([current]))
+			{
+				if (other == current
+					|| other is not NonogramContainer.IHaveTools { Tools: PopupMenu otherTools }
+					|| !container.Menu.HasChild(otherTools)
+				) continue;
+				container.Menu.RemoveChild(otherTools);
+			}
+			if (current is not NonogramContainer.IHaveTools { Tools: PopupMenu currentTools }
+				|| container.Menu.HasChild(currentTools)
+			)
+			{
+				return;
+			}
+			container.Menu.AddChild(currentTools);
+		}
+		void GrabConsoleInputFocus(bool clear = false)
+		{
+			if (clear)
+			{
+				container.Console.Input.Line.Clear();
+			}
+			if (!container.Console.Input.Line.IsVisibleInTree()) return;
+			container.Console.Input.Line.GrabFocus();
 		}
 	}
 
@@ -220,7 +198,11 @@ public sealed partial class CoreUI : AspectRatioContainer
 		Console,
 		LoadingScreen
 	);
-	public void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels, Menu.Dialogues);
+	public void StepBack()
+	{
+		Menu.StepBack(Console, Menu.Settings, Menu.Levels, Menu.Dialogues);
+	}
+
 	public void ToggleConsole() => Console.Visible = !Console.Visible;
 }
 
