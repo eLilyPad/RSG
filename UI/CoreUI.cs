@@ -15,9 +15,8 @@ public sealed partial class CoreUI : AspectRatioContainer
 		container.Menu.Buttons.Levels.Pressed += container.Menu.Levels.Show;
 		container.Menu.Buttons.Dialogues.Pressed += container.Menu.Dialogues.Show;
 		container.Menu.Buttons.Settings.Pressed += container.Menu.Settings.Show;
-		container.Menu.Buttons.Quit.Pressed += QuitPressed;
-
-		container.Menu.Buttons.Settings.VisibilityChanged += SettingsVisibilityChanged;
+		container.Menu.Buttons.Quit.Pressed += () => container.GetTree().Quit();
+		container.Menu.Settings.VisibilityChanged += SettingsVisibilityChanged;
 		container.Menu.Levels.VisibilityChanged += FillPuzzleSelector;
 		container.Menu.Dialogues.VisibilityChanged += FillDialogueSelector;
 
@@ -30,11 +29,48 @@ public sealed partial class CoreUI : AspectRatioContainer
 		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += OnCodeSubmitted;
 		container.Nonogram.ToolsBar.PuzzleLoader.AboutToPopup += LoadPuzzles;
 
+		container.Console.Input.Line.TextSubmitted += ConsoleInputSubmitted;
+		container.Console.Input.Line.TextChanged += ConsoleInputChanged;
+		container.Console.Input.SuggestionDisplay.ItemSelected += InputWithSuggestion;
+		container.Console.VisibilityChanged += GrabInputFocus;
+
 		OnDisplaysTabChanged(container.Nonogram.Displays.CurrentTab);
 
 		return container;
 
-		void QuitPressed() => container.GetTree().Quit();
+		void ConsoleInputChanged(string input)
+		{
+			RSG.Console.Instance.Submitted(input);
+			container.Console.Input.SuggestionDisplay.Clear();
+			foreach (string suggestion in RSG.Console.Instance.Suggestions(input))
+			{
+				container.Console.Input.SuggestionDisplay.AddItem(suggestion);
+			}
+			//changed(input);
+		}
+		void ConsoleInputSubmitted(string input)
+		{
+			if (input.Length == 0) return;
+			Submitted(input);
+			container.Console.Input.Line.Clear();
+		}
+		void GrabInputFocus()
+		{
+			if (!container.Console.Input.Line.IsVisibleInTree()) return;
+			container.Console.Input.Line.GrabFocus();
+		}
+		void InputWithSuggestion(long index)
+		{
+			container.Console.Input.Line.Text += container.Console.Input.SuggestionDisplay.GetItemText((int)index);
+			container.Console.Input.Line.GrabFocus();
+		}
+		void Submitted(string input)
+		{
+			container.Console.Log.Label.Text = "\n" + input;
+			RSG.Console.Instance.Submitted(input);
+			//submitted(input);
+		}
+
 		void SettingsVisibilityChanged()
 		{
 			container.Menu.Buttons.Visible = !container.Menu.Settings.Visible;
@@ -169,10 +205,22 @@ public sealed partial class CoreUI : AspectRatioContainer
 	public NonogramContainer Nonogram { get; } = PuzzleManager.Current.UI;
 	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", Colours = Core.Colours }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public ConsoleContainer Console { get; } = new ConsoleContainer
+	{
+		Name = "Console",
+		Visible = false,
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public ColourPack Colours { set { Menu.Background.Color = value.NonogramBackground; } }
 
-	public override void _Ready() => this.Add(PuzzleManager.Current.UI, Menu, Dialogues.Container, LoadingScreen);
+	public override void _Ready() => this.Add(
+		PuzzleManager.Current.UI,
+		Menu,
+		Dialogues.Container,
+		Console,
+		LoadingScreen
+	);
 	public void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels, Menu.Dialogues);
+	public void ToggleConsole() => Console.Visible = !Console.Visible;
 }
 

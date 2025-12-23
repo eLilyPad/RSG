@@ -5,6 +5,7 @@ namespace RSG;
 
 using UI;
 using Nonogram;
+
 public sealed partial class Core : Node
 {
 	public const string
@@ -34,7 +35,10 @@ public sealed partial class Core : Node
 		this.Add(Container);
 		Dialogues.Instance.BuildDialogues();
 
-		Input.Bind((Key.Escape, Container.StepBack, "Toggle Main Menu"));
+		Input.Bind(
+			(Key.Escape, Container.StepBack, "Toggle Main Menu"),
+			(Key.Slash, Container.ToggleConsole, "Toggle Console")
+		);
 
 		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
 		Container.Colours = Colours;
