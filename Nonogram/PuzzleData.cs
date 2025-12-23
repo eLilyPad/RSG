@@ -366,6 +366,8 @@ public sealed record PuzzleData : Display.Data
 				static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
 			}
 		}
+		public static (string Name, IEnumerable<Display.Data> Puzzles) Convert(Pack pack) => (pack.Name, pack.Puzzles);
+
 		public string Name { get; init; } = "Pack";
 		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
