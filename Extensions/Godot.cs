@@ -86,6 +86,7 @@ public static class GDX
 		{
 			//if (!parent.HasChild(node)) { continue; }
 			if (node.IsAncestorOf(parent)) { continue; }
+			if (!GodotObject.IsInstanceValid(parent)) { continue; }
 			if (!GodotObject.IsInstanceValid(node)) { continue; }
 			parent.RemoveChild(node);
 			if (free) node.QueueFree();
