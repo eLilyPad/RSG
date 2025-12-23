@@ -70,6 +70,8 @@ public sealed partial class Core : Node
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
+		Console.Add("/", ("quit", new Console.Command { Default = () => GetTree().Quit() }));
+
 		void SavePuzzlePressed()
 		{
 			SaveData.Create(Container.Nonogram.Displays).Switch(
