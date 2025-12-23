@@ -5,28 +5,13 @@ namespace RSG;
 
 using UI;
 using Nonogram;
-
-public sealed partial class CoreContainer : AspectRatioContainer
-{
-	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public NonogramContainer Nonogram { get; } = new NonogramContainer { Name = "Nonogram" }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, 40);
-	public PuzzleSelector Levels { get; } = new PuzzleSelector { Name = "Level Selector", Visible = false };
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", Colours = Core.Colours }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-	public override void _Ready() => this.Add(Nonogram, Menu, Dialogues.Container, LoadingScreen);
-	public void StepBack() => Menu.StepBack(Menu.Settings, Menu.Levels, Menu.Dialogues);
-}
 public sealed partial class Core : Node
 {
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
-	public CoreContainer Container => field ??= new CoreContainer
+	public CoreUI Container => field ??= new CoreUI
 	{
 		Name = "Core UI",
 		Ratio = 16f / 9f,
@@ -36,17 +21,58 @@ public sealed partial class Core : Node
 	public override void _Ready()
 	{
 		Name = nameof(Core);
+		Display.Data startPuzzle = PuzzleManager.Current.Puzzle;
+
+		NonogramContainer.GameDisplay game = new()
+		{
+			Name = "Game",
+			Status = Container.Nonogram.Status
+		};
+		NonogramContainer.PaintDisplay paint = new() { Name = "Paint", };
+		ReadOnlySpan<Display> displays = [game, paint, Display.Default];
+
 		this.Add(Container);
-
-		Input.Bind((Key.Escape, Container.StepBack, "Toggle Main Menu"));
-		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
-
 		Dialogues.Instance.BuildDialogues();
 
-		Container.Menu.Init(Colours);
-		Container.Nonogram.Init(Container.Menu);
+		Input.Bind((Key.Escape, Container.StepBack, "Toggle Main Menu"));
+
+		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
+		Container.Colours = Colours;
+
+		foreach (Display display in displays)
+		{
+			Container.Nonogram.Displays.Tabs.Add(display);
+			Container.Nonogram.Displays.Add(display);
+		}
+
+		Container.Nonogram.ToolsBar.PuzzleLoader.Size = Container.Nonogram.ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
+		Container.Nonogram.ToolsBar.Saver.SetItems(clear: true, ("Save Puzzle", Key.None, SavePuzzlePressed));
+		Container.Nonogram.ToolsBar.Loader.SetItems(
+			false,
+			("Load Puzzle", Key.None, () => Container.Nonogram.ToolsBar.PuzzleLoader.PopupCentered()),
+			("Load From Code", Key.None, () => Container.Nonogram.ToolsBar.CodeLoader.PopupCentered())
+		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
+		);
+
+		Container.Nonogram.Displays.CurrentTabDisplay.Load(PuzzleManager.Current.Puzzle);
+
+		Vector2I guideSize = (Vector2I)game.TilesGrid.Size / 2;
+		guideSize = guideSize with { Y = guideSize.X };
+		game.Guides.CreateLines(size: guideSize);
+		paint.Guides.CreateLines(size: guideSize);
+		Display.Default.Guides.CreateLines(size: guideSize);
+
+		CoreUI.ConnectSignals(Container);
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+
+		void SavePuzzlePressed()
+		{
+			SaveData.Create(Container.Nonogram.Displays).Switch(
+				save => PuzzleManager.Save(save),
+				notFound => GD.Print("No current puzzle found")
+			);
+		}
 	}
 	public override void _Input(InputEvent input)
 	{

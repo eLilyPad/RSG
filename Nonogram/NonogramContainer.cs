@@ -28,12 +28,13 @@ public sealed partial class NonogramContainer : Container
 	}
 	public sealed partial class PuzzleCompleteScreen : PanelContainer
 	{
-		public ColorRect Background { get; } = new ColorRect
-		{
-			Name = "Background",
-			Color = Colors.DarkGray,
-		}
+		public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkGray }
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Completion Container" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public HBoxContainer Options { get; } = new HBoxContainer { Name = "Options Container" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public Button Levels { get; } = new() { Name = "LevelsButton", Text = "Levels" };
 		public RichTextLabel CompletionTitle { get; } = new RichTextLabel
 		{
 			Name = "Completion Title",
@@ -44,11 +45,6 @@ public sealed partial class NonogramContainer : Container
 			FitContent = true,
 		}
 			.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
-		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Completion Container" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public HBoxContainer Options { get; } = new HBoxContainer { Name = "Options Container" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public Button Levels { get; } = new() { Name = "LevelsButton", Text = "Levels" };
 		public override void _Ready()
 		{
 			this.Add(
@@ -60,7 +56,6 @@ public sealed partial class NonogramContainer : Container
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Game" };
-		public required PuzzleCompleteScreen CompletionScreen { get; init; }
 		public required StatusBar Status { get; init; }
 
 		public override void Load(Data data)
@@ -89,6 +84,7 @@ public sealed partial class NonogramContainer : Container
 					break;
 				case TileMode.Clear: break;
 			}
+			Current.CheckCompletion();
 			Current.SaveProgress();
 		}
 		public override void Reset()
@@ -112,7 +108,13 @@ public sealed partial class NonogramContainer : Container
 		}
 	}
 
-	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
+	public PuzzleCompleteScreen CompletionScreen { get; } = new PuzzleCompleteScreen
+	{
+		Name = "PuzzleCompleteScreen",
+		Visible = false
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public Menu ToolsBar { get; } = new Menu { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
@@ -124,6 +126,10 @@ public sealed partial class NonogramContainer : Container
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-	public override void _Ready() => this.Add(Background, Container.Add(ToolsBar, Displays, Status));
+	public override void _Ready() => this.Add(
+		Background,
+		Container.Add(ToolsBar, Displays, Status),
+		CompletionScreen
+	);
 }
 public interface IColours { Color NonogramBackground { get; } }

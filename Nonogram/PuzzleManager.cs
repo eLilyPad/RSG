@@ -72,11 +72,12 @@ public sealed class PuzzleManager
 			{
 				if (value is null) { return; }
 				field = Instance.Puzzles[value.Name] = value;
-				CheckCompletion();
-				Display.Load(value);
+				UI.Displays.CurrentTabDisplay.Load(value);
 			}
 		} = new SaveData();
-		public Display Display { private get; set => (field = value).Load(Puzzle); } = Display.Default;
+		public NonogramContainer UI { get; } = new NonogramContainer { Name = "Nonogram" }
+			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill)
+			.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize, 40);
 
 		/// <summary>
 		/// Updates the current puzzle from the display.
@@ -86,18 +87,18 @@ public sealed class PuzzleManager
 		/// </summary>
 		public void SaveProgress()
 		{
-			SaveData data = new(Puzzle, Display);
+			SaveData data = new(Puzzle, UI.Displays.CurrentTabDisplay);
 			Save(data);
 			Puzzle = data;
 		}
 		public bool CheckCompletion()
 		{
-			switch (Display)
+			switch (UI.Displays.CurrentTabDisplay)
 			{
 				case GameDisplay game when Puzzle is SaveData save:
 					if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
 					{
-						game.CompletionScreen.Show();
+						UI.CompletionScreen.Show();
 						game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
 						if (save.Expected.DialogueName is string dialogueName)
 						{
