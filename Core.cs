@@ -23,48 +23,40 @@ public sealed partial class Core : Node
 	{
 		Name = nameof(Core);
 		Display.Data startPuzzle = PuzzleManager.Current.Puzzle;
-
-		NonogramContainer.GameDisplay game = new()
-		{
-			Name = "Game",
-			Status = Container.Nonogram.Status
-		};
-		NonogramContainer.PaintDisplay paint = new() { Name = "Paint", };
-		ReadOnlySpan<Display> displays = [game, paint, Display.Default];
+		NonogramContainer nonogram = PuzzleManager.Current.UI;
+		NonogramContainer.GameDisplay game = new() { Name = "Game", Colours = Colours, Status = nonogram.Status };
+		NonogramContainer.PaintDisplay paint = new() { Name = "Paint", Colours = Colours };
+		Display.Default defaultDisplay = new() { Name = "Puzzle Display", Colours = Colours };
+		ReadOnlySpan<Display> displays = [game, paint, defaultDisplay];
 
 		this.Add(Container);
 		Dialogues.Instance.BuildDialogues();
 
 		Input.Bind(
 			(Key.Escape, Container.StepBack, "Toggle Main Menu"),
-			(Key.Slash, Container.ToggleConsole, "Toggle Console")
+			(Key.Slash, CoreUI.ToggleConsole, "Toggle Console")
 		);
 
 		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
-		Container.Colours = Colours;
+
+		Container.Menu.Background.Color = Colours.MainMenuBackground;
+		nonogram.Background.Color = Colours.NonogramBackground;
 
 		foreach (Display display in displays)
 		{
-			Container.Nonogram.Displays.Tabs.Add(display);
-			Container.Nonogram.Displays.Add(display);
+			nonogram.Displays.Tabs.Add(display);
+			nonogram.Displays.Add(display);
 		}
 
-		Container.Nonogram.ToolsBar.PuzzleLoader.Size = Container.Nonogram.ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
-		Container.Nonogram.ToolsBar.Saver.SetItems(clear: true, ("Save Puzzle", Key.None, SavePuzzlePressed));
-		Container.Nonogram.ToolsBar.Loader.SetItems(
+		nonogram.ToolsBar.PuzzleLoader.Size = nonogram.ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
+		nonogram.ToolsBar.Saver.SetItems(clear: true, ("Save Puzzle", Key.None, SavePuzzlePressed));
+		nonogram.ToolsBar.Loader.SetItems(
 			false,
-			("Load Puzzle", Key.None, () => Container.Nonogram.ToolsBar.PuzzleLoader.PopupCentered()),
-			("Load From Code", Key.None, () => Container.Nonogram.ToolsBar.CodeLoader.PopupCentered())
+			("Load Puzzle", Key.None, () => nonogram.ToolsBar.PuzzleLoader.PopupCentered()),
+			("Load From Code", Key.None, () => nonogram.ToolsBar.CodeLoader.PopupCentered())
 		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
 		);
-
-		Container.Nonogram.Displays.CurrentTabDisplay.Load(PuzzleManager.Current.Puzzle);
-
-		Vector2I guideSize = (Vector2I)game.TilesGrid.Size / 2;
-		guideSize = guideSize with { Y = guideSize.X };
-		game.Guides.CreateLines(size: guideSize);
-		paint.Guides.CreateLines(size: guideSize);
-		Display.Default.Guides.CreateLines(size: guideSize);
+		nonogram.Displays.CurrentTabDisplay.Load(PuzzleManager.Current.Puzzle);
 
 		CoreUI.ConnectSignals(Container);
 
@@ -74,7 +66,7 @@ public sealed partial class Core : Node
 
 		void SavePuzzlePressed()
 		{
-			SaveData.Create(Container.Nonogram.Displays).Switch(
+			SaveData.Create(nonogram.Displays).Switch(
 				save => PuzzleManager.Save(save),
 				notFound => GD.Print("No current puzzle found")
 			);
