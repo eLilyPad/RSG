@@ -1,3 +1,5 @@
+using static Godot.Control;
+
 namespace RSG;
 
 public static class ConsoleExtensions
@@ -107,8 +109,19 @@ public sealed record Console
 			Instance.Modules[prefix][input] = command;
 		}
 	}
+	public static void GrabInputFocus(bool clearSuggestions = false)
+	{
+		if (clearSuggestions)
+		{
+			Container.Input.Line.Clear();
+		}
+		if (!Container.Input.Line.IsVisibleInTree()) return;
+		Container.Input.Line.GrabFocus();
+	}
 
 	public static Console Instance { get; } = new();
+	public static ConsoleContainer Container => field ??= new ConsoleContainer { Name = "Console", Visible = false }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public IEnumerable<string> Prefixes => [.. Modules.Keys];
 	public Dictionary<string, Dictionary<string, Command>> Modules { private get; init; } = [];
