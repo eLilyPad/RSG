@@ -61,7 +61,6 @@ public static class FileManager
 		return ProjectSettings.GlobalizePath(path);
 	}
 }
-
 public sealed class PuzzleManager
 {
 	public sealed record class CurrentPuzzle
@@ -113,11 +112,53 @@ public sealed class PuzzleManager
 			}
 			return false;
 		}
+		public void WhenCodeLoaderEntered(string value)
+		{
+			RichTextLabel validation = UI.ToolsBar.CodeLoader.Control.Validation;
+			Display current = UI.Displays.CurrentTabDisplay;
+			Load(value).Switch(
+				current.Load,
+				error => validation.Text = error.Message,
+				notFound => GD.Print("Not Found")
+			);
+		}
+		public void WhenCodeLoaderEdited(string value)
+		{
+			RichTextLabel validation = UI.ToolsBar.CodeLoader.Control.Validation;
+			Code.Encode(value).Switch(
+				error => validation.Text = error.Message,
+				code => validation.Text = $"valid code of size: {code.Size}"
+			);
+		}
+		public void OnDisplayTabChanged(UI.MainMenu menu)
+		{
+			Display current = UI.Displays.CurrentTabDisplay;
+			current.Load(Current.Puzzle);
+			foreach (Display other in UI.Displays.Tabs.ToList().Except([current]))
+			{
+				if (other == current
+					|| other is not IHaveTools { Tools: PopupMenu otherTools }
+					|| !menu.HasChild(otherTools)
+				) continue;
+				menu.RemoveChild(otherTools);
+			}
+			if (current is not IHaveTools { Tools: PopupMenu currentTools }
+				|| menu.HasChild(currentTools)
+			)
+			{
+				return;
+			}
+			menu.AddChild(currentTools);
+		}
 	}
 
 	public static CurrentPuzzle Current => field ??= new();
 	private static PuzzleManager Instance => field ??= new();
 
+	public static IEnumerable<(string Name, IEnumerable<Display.Data> Data)> SelectorConfigs => [
+		("Saved Puzzles", GetSavedPuzzles()),
+		.. GetPuzzlePacks().Select(Pack.Convert)
+	];
 	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
 	public static IList<SaveData> GetSavedPuzzles() => FileManager.GetSaved();
 	public static LoadResult Load(OneOf<string, Display.Data> value)
