@@ -23,7 +23,12 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public sealed partial class PackDisplay : PanelContainer
 	{
-		public static PackDisplay Create<T>(string name, Control parent, IEnumerable<T> data)
+		public static PackDisplay Create<T>((string name, IEnumerable<T> data) config, CanvasItem root)
+		where T : Display.Data
+		{
+			return Create(config.name, root, config.data);
+		}
+		public static PackDisplay Create<T>(string name, CanvasItem root, IEnumerable<T> data)
 		where T : Display.Data
 		{
 			PackDisplay display = new PackDisplay { Name = name }
@@ -37,9 +42,9 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 				void pressed()
 				{
-					if (!IsInstanceValid(parent)) return;
+					if (!IsInstanceValid(root)) return;
 					PuzzleManager.Current.Puzzle = puzzle;
-					parent.Hide();
+					root.Hide();
 				}
 			}
 
