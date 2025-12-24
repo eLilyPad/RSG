@@ -132,4 +132,9 @@ public sealed partial class NonogramContainer : Container
 		CompletionScreen
 	);
 }
-public interface IColours { Color NonogramBackground { get; } }
+public interface IColours
+{
+	Color NonogramBackground { get; }
+	Color NonogramTileBackground2 { get; }
+	Color NonogramTileBackground1 { get; }
+}
