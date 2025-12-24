@@ -3,13 +3,22 @@ using Godot;
 namespace RSG.UI;
 
 using Nonogram;
+using static DialogueSelector;
+using static Nonogram.PuzzleSelector;
 
 public sealed partial class CoreUI : AspectRatioContainer
 {
 	public static CoreUI ConnectSignals(CoreUI container)
 	{
-		List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
-		List<PuzzleSelector.PackDisplay> _levelLoaderDisplays = [];
+		List<PackDisplay> levelSelectorDisplays = [];
+		List<PackDisplay> levelLoaderDisplays = [];
+		List<DialogueDisplay> dialogueLoaderDisplays = [];
+
+		ConsoleContainer console = Console.Container;
+		NonogramContainer nonogram = PuzzleManager.Current.UI;
+		NonogramContainer.PuzzleCompleteScreen completionScreen = nonogram.CompletionScreen;
+		PuzzleSelector puzzleSelector = container.Menu.Levels;
+		DialogueSelector dialogueSelector = container.Menu.Dialogues;
 
 		container.Menu.Buttons.Play.Pressed += container.Menu.Hide;
 		container.Menu.Buttons.Levels.Pressed += container.Menu.Levels.Show;
@@ -17,192 +26,126 @@ public sealed partial class CoreUI : AspectRatioContainer
 		container.Menu.Buttons.Settings.Pressed += container.Menu.Settings.Show;
 		container.Menu.Buttons.Quit.Pressed += () => container.GetTree().Quit();
 		container.Menu.Settings.VisibilityChanged += () => container.Menu.Buttons.Visible = !container.Menu.Settings.Visible;
-		container.Menu.Levels.VisibilityChanged += () =>
+		puzzleSelector.VisibilityChanged += () =>
 		{
-			if (!container.Menu.Levels.Visible)
+			if (!puzzleSelector.Visible)
 			{
 				container.Menu.Hide();
 				return;
 			}
-			container.Menu.Levels.Puzzles.Value.Remove(free: true, _levelSelectorDisplays);
-			IEnumerable<(string name, IEnumerable<Display.Data> data)> packConfigs = [
-				("Saved Puzzles", PuzzleManager.GetSavedPuzzles()),
-				.. PuzzleManager.GetPuzzlePacks().Select(PuzzleData.Pack.Convert)
-			];
-
-			foreach ((string name, IEnumerable<Display.Data> data) in packConfigs)
-			{
-				PuzzleSelector.PackDisplay display = PuzzleSelector.PackDisplay.Create(
-					name: name,
-					parent: container.Menu.Levels,
-					data: data
-				);
-				container.Menu.Levels.Puzzles.Value.AddChild(display);
-				_levelSelectorDisplays.Add(display);
-			}
+			Refill(
+				root: puzzleSelector,
+				parent: puzzleSelector.Puzzles.Value,
+				nodes: levelSelectorDisplays,
+				configs: PuzzleManager.SelectorConfigs,
+				create: PackDisplay.Create
+			);
 		};
-		container.Menu.Dialogues.VisibilityChanged += () =>
-		{
-			if (!container.Menu.Dialogues.Visible) return;
-			container.Menu.Dialogues.Clear();
-			container.Menu.Dialogues.Fill(Dialogues.AvailableDialogues);
-		};
-
-		container.Nonogram.ChildEnteredTree += node =>
+		dialogueSelector.VisibilityChanged += () => Refill(
+			root: dialogueSelector,
+			parent: dialogueSelector.DisplayContainer.Value,
+			nodes: dialogueLoaderDisplays,
+			configs: Dialogues.AvailableDialogues,
+			create: DialogueDisplay.Create
+		);
+		nonogram.ChildEnteredTree += node =>
 		{
 			switch (node)
 			{
 				case NonogramContainer.GameDisplay display:
-					container.Nonogram.Status.CompletionLabel.Visible = true;
+					nonogram.Status.CompletionLabel.Visible = true;
 					break;
 				case Display: break;
-				case Node when container.Nonogram.Displays.HasChild(node):
+				case Node when nonogram.Displays.HasChild(node):
 					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					container.Nonogram.Displays.RemoveChild(node);
+					nonogram.Displays.RemoveChild(node);
 					break;
 			}
 		};
-		container.Nonogram.ChildExitingTree += node =>
-		{
-			switch (node)
-			{
-				case NonogramContainer.GameDisplay display:
-					container.Nonogram.Status.CompletionLabel.Visible = false;
-					break;
-			}
-		};
-		container.Nonogram.Displays.TabChanged += OnDisplaysTabChanged;
-		container.Nonogram.CompletionScreen.Levels.Pressed += () =>
-		{
-			container.Menu.Show();
-			container.Menu.Levels.Show();
-			container.Nonogram.CompletionScreen.Hide();
-		};
-		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += value => PuzzleData.Code.Encode(value).Switch(
-			error => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			code => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = $"valid code of size: {code.Size}"
+		nonogram.ChildExitingTree += node => nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
+		nonogram.Displays.TabChanged += _ => PuzzleManager.Current.OnDisplayTabChanged(container.Menu);
+		completionScreen.Levels.Pressed += () => completionScreen.Visible = !(puzzleSelector.Visible = true);
+		nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += PuzzleManager.Current.WhenCodeLoaderEdited;
+		nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += PuzzleManager.Current.WhenCodeLoaderEntered;
+		nonogram.ToolsBar.PuzzleLoader.AboutToPopup += () => Refill(
+			root: nonogram.ToolsBar,
+			parent: nonogram.ToolsBar.PuzzleLoader.Control,
+			nodes: levelLoaderDisplays,
+			configs: PuzzleManager.SelectorConfigs,
+			create: PackDisplay.Create
 		);
-		container.Nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += value => PuzzleManager.Load(value).Switch(
-			container.Nonogram.Displays.CurrentTabDisplay.Load,
-			error => container.Nonogram.ToolsBar.CodeLoader.Control.Validation.Text = error.Message,
-			notFound => GD.Print("Not Found")
-		);
-		container.Nonogram.ToolsBar.PuzzleLoader.AboutToPopup += () =>
-		{
-			foreach (PuzzleSelector.PackDisplay pack in _levelLoaderDisplays)
-			{
-				if (!IsInstanceValid(container.Nonogram.ToolsBar.PuzzleLoader.Control)) continue;
-				if (container.Nonogram.ToolsBar.PuzzleLoader.Control.HasChild(pack))
-				{
-					container.Nonogram.ToolsBar.PuzzleLoader.Control.RemoveChild(pack);
-					pack.QueueFree();
-				}
-			}
 
-			IEnumerable<(string name, IEnumerable<Display.Data> data)> packConfigs = [
-				("Saved Puzzles", PuzzleManager.GetSavedPuzzles()),
-				.. PuzzleManager.GetPuzzlePacks().Select(PuzzleData.Pack.Convert)
-			];
-
-			foreach ((string name, IEnumerable<Display.Data> data) in packConfigs)
-			{
-				PuzzleSelector.PackDisplay display = PuzzleSelector.PackDisplay.Create(
-					name: name,
-					parent: container.Nonogram.ToolsBar,
-					data: data
-				);
-				container.Nonogram.ToolsBar.PuzzleLoader.Control.AddChild(display);
-				_levelLoaderDisplays.Add(display);
-			}
-		};
-
-		container.Console.Input.Line.TextSubmitted += input =>
+		Console.Container.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
+		Console.Container.Input.Line.TextSubmitted += input =>
 		{
 			if (input.Length == 0) return;
-			RSG.Console.Instance.Submitted(input);
-			container.Console.Log.Label.Text += input + "\n";
-			GrabConsoleInputFocus(clear: true);
+			Console.Instance.Submitted(input);
+			Console.Container.Log.Label.Text += input + "\n";
+			Console.GrabInputFocus(clearSuggestions: true);
 		};
-		container.Console.Input.Line.TextChanged += input =>
+		Console.Container.Input.Line.TextChanged += input =>
 		{
-			container.Console.Input.SuggestionDisplay.Clear();
-			IEnumerable<string> suggestions = RSG.Console.Instance.Suggestions(input);
+			Console.Container.Input.SuggestionDisplay.Clear();
+			IEnumerable<string> suggestions = Console.Instance.Suggestions(input);
 			foreach (string suggestion in suggestions)
 			{
-				container.Console.Input.SuggestionDisplay.AddItem(suggestion);
+				Console.Container.Input.SuggestionDisplay.AddItem(suggestion);
 			}
 		};
-		container.Console.Input.Line.VisibilityChanged += () => GrabConsoleInputFocus(true);
-		container.Console.Input.SuggestionDisplay.ItemSelected += index =>
+		Console.Container.Input.SuggestionDisplay.ItemSelected += index =>
 		{
-			string suggestion = container.Console.Input.SuggestionDisplay.GetItemText((int)index);
-			if (!container.Console.Input.Line.Text.EndsWith(' '))
+			string suggestion = Console.Container.Input.SuggestionDisplay.GetItemText((int)index);
+			if (!Console.Container.Input.Line.Text.EndsWith(' '))
 			{
-				container.Console.Input.Line.Text += ' ';
+				Console.Container.Input.Line.Text += ' ';
 			}
-			container.Console.Input.Line.Text += suggestion;
-			GrabConsoleInputFocus();
+			Console.Container.Input.Line.Text += suggestion;
+			Console.GrabInputFocus();
 		};
 
-		OnDisplaysTabChanged(container.Nonogram.Displays.CurrentTab);
+		PuzzleManager.Current.OnDisplayTabChanged(container.Menu);
 
 		return container;
 
-		void OnDisplaysTabChanged(long index)
+		static void Refill<TConfig, TParent, TNode>(
+			CanvasItem root,
+			TParent parent,
+			List<TNode> nodes,
+			IEnumerable<TConfig> configs,
+			Func<TConfig, CanvasItem, TNode> create
+		)
+		where TParent : Node
+		where TNode : Node
 		{
-			Display current = container.Nonogram.Displays.CurrentTabDisplay;
-			foreach (Display other in container.Nonogram.Displays.Tabs.ToList().Except([current]))
+			if (root is { Visible: false }) return;
+			parent.Remove(true, nodes);
+			nodes.Clear();
+			foreach (TConfig config in configs)
 			{
-				if (other == current
-					|| other is not NonogramContainer.IHaveTools { Tools: PopupMenu otherTools }
-					|| !container.Menu.HasChild(otherTools)
-				) continue;
-				container.Menu.RemoveChild(otherTools);
+				TNode node = create(config, root);
+				parent.AddChild(node);
+				nodes.Add(node);
 			}
-			if (current is not NonogramContainer.IHaveTools { Tools: PopupMenu currentTools }
-				|| container.Menu.HasChild(currentTools)
-			)
-			{
-				return;
-			}
-			container.Menu.AddChild(currentTools);
-		}
-		void GrabConsoleInputFocus(bool clear = false)
-		{
-			if (clear)
-			{
-				container.Console.Input.Line.Clear();
-			}
-			if (!container.Console.Input.Line.IsVisibleInTree()) return;
-			container.Console.Input.Line.GrabFocus();
 		}
 	}
 
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public NonogramContainer Nonogram { get; } = PuzzleManager.Current.UI;
 	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", Colours = Core.Colours }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public ConsoleContainer Console { get; } = new ConsoleContainer
-	{
-		Name = "Console",
-		Visible = false,
-	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-
-	public ColourPack Colours { set { Menu.Background.Color = value.NonogramBackground; } }
 
 	public override void _Ready() => this.Add(
 		PuzzleManager.Current.UI,
 		Menu,
 		Dialogues.Container,
-		Console,
+		Console.Container,
 		LoadingScreen
 	);
 	public void StepBack()
 	{
-		Menu.StepBack(Console, Menu.Settings, Menu.Levels, Menu.Dialogues);
+		Menu.StepBack(Console.Container, Menu.Settings, Menu.Levels, Menu.Dialogues);
 	}
 
-	public void ToggleConsole() => Console.Visible = !Console.Visible;
+	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;
 }
 
