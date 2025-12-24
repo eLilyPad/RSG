@@ -25,7 +25,7 @@ public sealed class Dialogues
 		public Dictionary<string, CompressedTexture2D> Profiles { get; } = [];
 	}
 	public static readonly Dialogues Instance = new();
-	public static DialogueContainer Container => field ??= new DialogueContainer { Visible = false }
+	public static DialogueContainer Container => field ??= new DialogueContainer { Name = "Dialogue Container", Visible = false }
 		.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize, 30);
 	public static DialogueResources Resources => field ??= Core.DialoguesPath.LoadOrCreateResource<DialogueResources>();
 	public static IEnumerable<string> AvailableDialogues => Instance.Speeches.Keys.Except(
