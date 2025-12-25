@@ -51,7 +51,7 @@ public abstract partial class Display : AspectRatioContainer
 	}
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
-	public const int TileSize = 31;
+	public const int TileSize = 0;
 	// [Bug] ^^ if this changes the tile becomes a rectangle, with the height being larger than the width
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 	public enum TileMode : int { Block = 2, Fill = 1, Clear = 0 }
@@ -61,31 +61,27 @@ public abstract partial class Display : AspectRatioContainer
 		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Fill
 		: TileMode.Clear;
 
-	public IColours Colours { private get; set; } = ColourPack.Default;
+	public IColours Colours { protected get; set; } = ColourPack.Default;
 
+	public MarginContainer Margin { get; } = new MarginContainer { }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public Container Spacer { get; } = new Container { Name = "Spacer" }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public Container Spacer { get; } = new AspectRatioContainer { Name = "Spacer" }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public GridContainer Grid { get; } = new GridContainer { Name = "MainContainer", Columns = 2 }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public VBoxContainer Rows { get; } = new VBoxContainer { Name = "RowHints" }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Expand)
-		.Preset(preset: LayoutPreset.CenterRight, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
-		.SizeFlags(horizontal: SizeFlags.Expand, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.CenterBottom, resizeMode: LayoutPresetMode.KeepSize);
-	public Container TilesContainer { get; } = new Container { Name = "Tiles Container" }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
 	protected Dictionary<Vector2I, Tile> Tiles { get; } = [];
 	protected Dictionary<HintPosition, Hint> Hints { get; } = [];
 
-	public override sealed void _Ready()
-	{
-		this.Add(Grid.Add(Spacer, Columns, Rows, TilesContainer.Add(TilesGrid)))
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	}
+	public override sealed void _Ready() => this.Add(
+		Margin.Add(Grid.Add(Spacer, Columns, Rows, TilesGrid))
+	);
 	public abstract void Reset();
 	public virtual void Load(Data data)
 	{
@@ -106,7 +102,7 @@ public abstract partial class Display : AspectRatioContainer
 		foreach (HintPosition position in positions)
 		{
 			if (!Hints.TryGetValue(position, out Hint? hint)) { continue; }
-			hint.Text = CalculateHintAt(position);
+			hint.Label.Text = CalculateHintAt(position);
 		}
 	}
 	public void WriteToTiles(Data data)
@@ -170,44 +166,52 @@ public abstract partial class Display : AspectRatioContainer
 		};
 	}
 	protected virtual void ResetTile(Tile button) => button.Button.Text = EmptyText;
-	protected virtual void ResetHint(Hint hint) => hint.Text = EmptyHint;
+	protected virtual void ResetHint(Hint hint) => hint.Label.Text = EmptyHint;
 }
-public sealed partial class Hint : RichTextLabel
+public sealed partial class Hint : Control
 {
 	public static Hint Create(Display.HintPosition position, IColours colours)
 	{
-		Hint hint = new()
+		Hint hint = new Hint
 		{
 			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
-			Text = Display.EmptyHint,
-			FitContent = true,
 			CustomMinimumSize = Vector2.One * Display.TileSize,
-		};
-		(hint.HorizontalAlignment, hint.VerticalAlignment) = position.Alignment();
+			Label = new RichTextLabel
+			{
+				Name = "Label",
+				Text = Display.EmptyHint,
+				FitContent = true,
+			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		(hint.Label.HorizontalAlignment, hint.Label.VerticalAlignment) = position.Alignment();
+		hint.Label.AddThemeFontSizeOverride("normal_font_size", 10);
+		hint.Background.Color = position.Index % 2 == 0 ? colours.NonogramHintBackground1 : colours.NonogramHintBackground2;
 		return hint;
 	}
+	public required RichTextLabel Label { get; init; }
+	public ColorRect Background { get; } = new ColorRect { Name = "Background" }
+		.Preset(LayoutPreset.FullRect);
 	private Hint() { }
+	public override void _Ready() => this.Add(Background, Label);
 }
-public sealed partial class Tile : AspectRatioContainer
+public sealed partial class Tile : PanelContainer
 {
 	public static Tile Create(Vector2I position, IColours colours, Action<Vector2I> pressed)
 	{
-		Tile button = new() { Name = $"Tile (X: {position.X}, Y: {position.Y})" };
-		StyleBox baseBox = button.Button.GetThemeStylebox("normal");
-		StyleBoxFlat? stylebox = baseBox.Duplicate() as StyleBoxFlat;
-		if (stylebox is not null)
-		{
-			stylebox.BgColor = position switch
-			{
-				_ when (position.X / 5 + position.Y / 5) % 2 == 0 => colours.NonogramTileBackground1,
-				_ => colours.NonogramTileBackground2
-			};
-			button.Button.AddThemeStyleboxOverride("normal", stylebox);
-		}
-		button.Button.MouseEntered += MouseEntered;
-		button.Button.ButtonDown += Pressed;
+		Tile tile = new Tile { Name = $"Tile (X: {position.X}, Y: {position.Y})" }
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		//tile.Button;
+		tile.ChangeBackground(position, colours);
+		tile.Button.AddThemeColorOverride("font_color", Colors.Transparent);
+		tile.Button.AddThemeColorOverride("font_hover_color", Colors.Transparent);
+		tile.Button.AddThemeColorOverride("font_focus_color", Colors.Transparent);
+		tile.Button.AddThemeColorOverride("font_pressed_color", Colors.Transparent);
+		tile.Button.AddThemeFontSizeOverride("font_size", 10);
+		//tile.Button.AddThemeConstantOverride("font_size", 1);
+		tile.Button.MouseEntered += MouseEntered;
+		tile.Button.ButtonDown += Pressed;
 
-		return button;
+		return tile;
 		void Pressed() => pressed(position);
 		void MouseEntered()
 		{
@@ -217,11 +221,24 @@ public sealed partial class Tile : AspectRatioContainer
 			pressed(position);
 		}
 	}
-	public Button Button { get; } = new()
-	{
-		Text = Display.EmptyText,
-		CustomMinimumSize = Vector2.One * Display.TileSize,
-		ButtonMask = MouseButtonMask.Left | MouseButtonMask.Right
-	};
+	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
+	public Button Button { get; } = new Button { Text = Display.EmptyText, ButtonMask = mask }
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 	public override void _Ready() => this.Add(Button);
+
+	public void ChangeBackground(Vector2I position, IColours colours)
+	{
+		const int chunkSize = 5;
+		StyleBox baseBox = Button.GetThemeStylebox("normal");
+		if (baseBox.Duplicate() is not StyleBoxFlat stylebox) return;
+		int chunkIndex = position.X / chunkSize + position.Y / chunkSize;
+		Color filledTile = stylebox.BgColor.Blend(colours.NonogramTileBackgroundFilled);
+		stylebox.BgColor = Button.Text switch
+		{
+			Display.FillText => filledTile,
+			Display.BlockText => stylebox.BgColor.Darkened(.4f),
+			_ => chunkIndex % 2 == 0 ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2
+		};
+		Button.AddThemeStyleboxOverride("normal", stylebox);
+	}
 }
