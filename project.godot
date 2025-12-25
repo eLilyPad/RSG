@@ -28,6 +28,9 @@ file_logging/enable_file_logging=true
 [display]
 
 window/size/resizable=false
+window/size/extend_to_title=true
+window/size/minimize_disabled=true
+window/stretch/mode="canvas_items"
 window/vsync/vsync_mode=0
 
 [dotnet]

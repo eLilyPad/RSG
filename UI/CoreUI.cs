@@ -6,7 +6,7 @@ using Nonogram;
 using static DialogueSelector;
 using static Nonogram.PuzzleSelector;
 
-public sealed partial class CoreUI : AspectRatioContainer
+public sealed partial class CoreUI : PanelContainer
 {
 	public static CoreUI ConnectSignals(CoreUI container)
 	{

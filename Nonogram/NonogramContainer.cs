@@ -4,7 +4,7 @@ namespace RSG.Nonogram;
 
 using static PuzzleManager;
 
-public sealed partial class NonogramContainer : Container
+public sealed partial class NonogramContainer : PanelContainer
 {
 	public interface IHaveTools { PopupMenu Tools { get; } }
 	public interface IHaveStatus { StatusBar Status { get; } }
@@ -67,23 +67,24 @@ public sealed partial class NonogramContainer : Container
 		}
 		public override void OnTilePressed(Vector2I position)
 		{
-			if (!Tiles.TryGetValue(position, out Tile? button)) return;
+			if (!Tiles.TryGetValue(position, out Tile? tile)) return;
 
 			TileMode input = PressedMode;
-			TileMode previousMode = button.Button.Text.FromText();
+			TileMode previousMode = tile.Button.Text.FromText();
 
 			switch (input)
 			{
 				case TileMode.Fill:
-					button.Button.Text = input == previousMode ? EmptyText : FillText;
+					tile.Button.Text = input == previousMode ? EmptyText : FillText;
 					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.FillTileClicked);
 					break;
 				case TileMode.Block:
-					button.Button.Text = input == previousMode ? EmptyText : BlockText;
+					tile.Button.Text = input == previousMode ? EmptyText : BlockText;
 					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.BlockTileClicked);
 					break;
 				case TileMode.Clear: break;
 			}
+			tile.ChangeBackground(position, Colours);
 			Current.CheckCompletion();
 			Current.SaveProgress();
 		}
@@ -122,19 +123,18 @@ public sealed partial class NonogramContainer : Container
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
+	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = false }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-	public override void _Ready() => this.Add(
-		Background,
-		Container.Add(ToolsBar, Displays, Status),
-		CompletionScreen
-	);
+	public override void _Ready() => this.Add(Background, Displays, CompletionScreen);
 }
 public interface IColours
 {
 	Color NonogramBackground { get; }
+	Color NonogramHintBackground1 { get; }
+	Color NonogramHintBackground2 { get; }
 	Color NonogramTileBackground2 { get; }
 	Color NonogramTileBackground1 { get; }
+	Color NonogramTileBackgroundFilled { get; }
 }

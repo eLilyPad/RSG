@@ -16,8 +16,8 @@ public sealed partial class Core : Node
 	public CoreUI Container => field ??= new CoreUI
 	{
 		Name = "Core UI",
-		Ratio = 16f / 9f,
-		StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
+		//Ratio = 16f / 9f,
+		//StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
 	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public override void _Ready()
@@ -54,7 +54,9 @@ public sealed partial class Core : Node
 		{
 			nonogram.Displays.Tabs.Add(display);
 			nonogram.Displays.Add(display);
-			display.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+			int marginValue = 100;
+			display.Margin.AddThemeConstantOverride("margin_top", marginValue);
+			display.Margin.AddThemeConstantOverride("margin_bottom", marginValue / 2);
 			display.Colours = Colours;
 		}
 

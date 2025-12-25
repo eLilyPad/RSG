@@ -75,8 +75,7 @@ public sealed class PuzzleManager
 			}
 		} = new SaveData();
 		public NonogramContainer UI { get; } = new NonogramContainer { Name = "Nonogram" }
-			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill)
-			.Preset(preset: Control.LayoutPreset.FullRect, resizeMode: Control.LayoutPresetMode.KeepSize, 40);
+			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 
 		/// <summary>
 		/// Updates the current puzzle from the display.
