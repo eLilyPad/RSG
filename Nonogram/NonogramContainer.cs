@@ -84,7 +84,7 @@ public sealed partial class NonogramContainer : PanelContainer
 					break;
 				case TileMode.Clear: break;
 			}
-			tile.ChangeBackground(position, Colours);
+			tile.ResetStyle(position, Colours);
 			Current.CheckCompletion();
 			Current.SaveProgress();
 		}
