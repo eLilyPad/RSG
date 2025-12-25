@@ -5,6 +5,7 @@ namespace RSG;
 
 using UI;
 using Nonogram;
+using static Nonogram.NonogramContainer;
 
 public sealed partial class Core : Node
 {
@@ -24,9 +25,9 @@ public sealed partial class Core : Node
 		Name = nameof(Core);
 		Display.Data startPuzzle = PuzzleManager.Current.Puzzle;
 		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		NonogramContainer.GameDisplay game = new() { Name = "Game", Colours = Colours, Status = nonogram.Status };
-		NonogramContainer.PaintDisplay paint = new() { Name = "Paint", Colours = Colours };
-		Display.Default defaultDisplay = new() { Name = "Puzzle Display", Colours = Colours };
+		GameDisplay game = new() { Name = "Game", Status = nonogram.Status };
+		PaintDisplay paint = new() { Name = "Paint" };
+		Display.Default defaultDisplay = new() { Name = "Puzzle Display" };
 		ReadOnlySpan<Display> displays = [game, paint, defaultDisplay];
 
 		this.Add(Container);
@@ -42,10 +43,19 @@ public sealed partial class Core : Node
 		Container.Menu.Background.Color = Colours.MainMenuBackground;
 		nonogram.Background.Color = Colours.NonogramBackground;
 
+		StyleBox baseBox = nonogram.Displays.GetThemeStylebox("normal");
+		if (baseBox.Duplicate() is StyleBoxFlat stylebox)
+		{
+			stylebox.BgColor = Colors.Transparent;
+			nonogram.Displays.AddThemeStyleboxOverride("panel", stylebox);
+		}
+
 		foreach (Display display in displays)
 		{
 			nonogram.Displays.Tabs.Add(display);
 			nonogram.Displays.Add(display);
+			display.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+			display.Colours = Colours;
 		}
 
 		nonogram.ToolsBar.PuzzleLoader.Size = nonogram.ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
