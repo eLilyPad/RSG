@@ -5,6 +5,48 @@ namespace RSG.Nonogram;
 
 public abstract partial class Display
 {
+	public readonly record struct TilePosition(Vector2I Position)
+	{
+		public static implicit operator TilePosition(Vector2I position) => new(position);
+		public static implicit operator Vector2I(TilePosition tile) => tile.Position;
+	}
+	public readonly record struct HintPosition(Side Side, int Index)
+	{
+		public static IEnumerable<HintPosition> AsRange(int length, int start = 0) => Range(start, count: length)
+			.SelectMany(i => Convert(i));
+		public static IEnumerable<HintPosition> Convert(OneOf<Vector2I, int> value) => [
+			new(Side.Row, value.Match(position => position.X, index => index)),
+			new(Side.Column, value.Match(position => position.Y, index => index))
+		];
+
+		public readonly string AsFormat() => Side switch
+		{
+			Side.Column => "\n",
+			Side.Row => "\t",
+			_ => ""
+		};
+		public readonly int IndexFrom(Vector2I position) => Side switch
+		{
+			Side.Column => position.Y,
+			Side.Row => position.X,
+			_ => -1
+		};
+		public readonly (HorizontalAlignment, VerticalAlignment) Alignment() => (
+			Side switch
+			{
+				Side.Row => HorizontalAlignment.Right,
+				Side.Column => HorizontalAlignment.Center,
+				_ => HorizontalAlignment.Fill
+			},
+			Side switch
+			{
+				Side.Row => VerticalAlignment.Center,
+				Side.Column => VerticalAlignment.Bottom,
+				_ => VerticalAlignment.Fill
+			}
+		);
+	}
+
 	public abstract record Data
 	{
 		public readonly record struct Empty(int Size);
@@ -104,4 +146,7 @@ public abstract partial class Display
 			return true;
 		}
 	}
+
+	public enum TileMode : int { Block = 2, Fill = 1, Clear = 0 }
+	public enum Side { Row, Column }
 }
