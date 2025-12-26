@@ -2,7 +2,6 @@ namespace RSG.Extensions;
 
 public static class SystemExtensions
 {
-	public static Action<Action<T>> PassOn<T>(this T value) => pass => pass(value);
 	public static T Condense<T>(this T hints, int ignoreValue = 0)
 	where T : IList<int>
 	{
@@ -18,6 +17,15 @@ public static class SystemExtensions
 			}
 		}
 		return hints;
+	}
+	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TValue> create)
+	where TKey : notnull
+	{
+		if (!dictionary.TryGetValue(key, out TValue? value))
+		{
+			return dictionary[key] = create();
+		}
+		return value;
 	}
 	public static Dictionary<TKey, TValueTo> ToDictionary<TKey, TValueFrom, TValueTo>(
 		this Dictionary<TKey, TValueFrom> dict,
