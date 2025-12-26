@@ -6,18 +6,24 @@ using static Display;
 
 public static class DisplayExtensions
 {
-	public static string CalculateHints(this Dictionary<Vector2I, Tile> buttons, HintPosition position)
+	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
 	{
-		return buttons
-		.Where(pair => position.IndexFrom(position: pair.Key) == position.Index)
-		.Select(pair => pair.Value.Button.Text is FillText ? 1 : 0)
-		.ToList()
-		.Condense()
-		.Where(i => i > 0)
-		.Aggregate(EmptyHint, (current, i) => i > 0 && current is EmptyHint
-			? position.AsFormat() + i
-			: current + position.AsFormat() + i
-		);
+		return tiles
+			.Where(pair => position.IndexFrom(position: pair.Key) == position.Index)
+			.Select(pair => pair.Value.Button.Text is FillText ? 1 : 0)
+			.ToList()
+			.Condense()
+			.Where(i => i > 0)
+			.Aggregate(EmptyHint, (current, i) => i > 0 && current is EmptyHint
+				? position.AsFormat() + i
+				: current + position.AsFormat() + i
+			);
+	}
+	public static IEnumerable<Vector2I> AllInLines<T>(this Dictionary<Vector2I, T> tiles, Vector2I position)
+	{
+		return tiles
+			.Where(pair => pair.Key.X == position.X || pair.Key.Y == position.Y)
+			.Select(pair => pair.Key);
 	}
 }
 public static class TileExtensions
