@@ -84,10 +84,6 @@ public abstract partial class Display
 			}
 			return tiles;
 		}
-		public static IImmutableDictionary<Vector2I, TileMode> AsStates(Display display) => display.Tiles.ToImmutableDictionary(
-			keySelector: pair => pair.Key,
-			elementSelector: pair => pair.Value.Button.Text is FillText ? TileMode.Fill : TileMode.Clear
-		);
 
 		public const string DefaultName = "Puzzle";
 		public const int DefaultSize = 15;
@@ -111,20 +107,19 @@ public abstract partial class Display
 				elementSelector: position => selector(position) ? TileMode.Fill : TileMode.Clear
 			);
 		}
-		public Data(Display display)
+		public Data(Dictionary<Vector2I, Tile> tiles)
 		{
-			Tiles = display.Tiles.ToDictionary(elementSelector: selector);
-			static TileMode selector(KeyValuePair<Vector2I, Tile> pair) => pair.Value.Button.Text.FromText();
+			Tiles = tiles.ToDictionary(elementSelector: pair => pair.Value.Button.Text.FromText());
 		}
 
-		public bool Matches(Display display, Vector2I position)
-		{
-			if (!States.TryGetValue(position, out TileMode state)
-				|| !display.Tiles.TryGetValue(position, out Tile? tile)
-				|| !tile.Button.Matches(state)
-			) return false;
-			return true;
-		}
+		//public bool Matches(Display display, Vector2I position)
+		//{
+		//	if (!States.TryGetValue(position, out TileMode state)
+		//		|| !display.Tiles.TryGetValue(position, out Tile? tile)
+		//		|| !tile.Button.Matches(state)
+		//	) return false;
+		//	return true;
+		//}
 		public bool Matches(Data expected)
 		{
 			foreach ((Vector2I position, TileMode state) in States)
@@ -135,16 +130,16 @@ public abstract partial class Display
 			}
 			return true;
 		}
-		public virtual bool Matches(Display display)
-		{
-			foreach ((Vector2I position, TileMode state) in States)
-			{
-				if (!display.Tiles.TryGetValue(position, out Tile? tile)
-					|| !tile.Button.Matches(state)
-				) return false;
-			}
-			return true;
-		}
+		//public virtual bool Matches(Display display)
+		//{
+		//	foreach ((Vector2I position, TileMode state) in States)
+		//	{
+		//		if (!display.Tiles.TryGetValue(position, out Tile? tile)
+		//			|| !tile.Button.Matches(state)
+		//		) return false;
+		//	}
+		//	return true;
+		//}
 	}
 
 	public enum TileMode : int { Block = 2, Fill = 1, Clear = 0 }
