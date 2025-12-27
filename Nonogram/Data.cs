@@ -79,7 +79,6 @@ public abstract partial class Display
 					GD.PrintErr($"Error parsing value in JSON: {element}");
 					continue;
 				}
-				//tiles[position] = valueProp.GetInt32().ToTileMode();
 				tiles[position] = valueProp.TryGetInt32(out int value) ? value.ToTileMode() : TileMode.Clear;
 			}
 			return tiles;
@@ -112,14 +111,6 @@ public abstract partial class Display
 			Tiles = tiles.ToDictionary(elementSelector: pair => pair.Value.Button.Text.FromText());
 		}
 
-		//public bool Matches(Display display, Vector2I position)
-		//{
-		//	if (!States.TryGetValue(position, out TileMode state)
-		//		|| !display.Tiles.TryGetValue(position, out Tile? tile)
-		//		|| !tile.Button.Matches(state)
-		//	) return false;
-		//	return true;
-		//}
 		public bool Matches(Data expected)
 		{
 			foreach ((Vector2I position, TileMode state) in States)
@@ -130,16 +121,6 @@ public abstract partial class Display
 			}
 			return true;
 		}
-		//public virtual bool Matches(Display display)
-		//{
-		//	foreach ((Vector2I position, TileMode state) in States)
-		//	{
-		//		if (!display.Tiles.TryGetValue(position, out Tile? tile)
-		//			|| !tile.Button.Matches(state)
-		//		) return false;
-		//	}
-		//	return true;
-		//}
 	}
 
 	public enum TileMode : int { Block = 2, Fill = 1, Clear = 0 }
