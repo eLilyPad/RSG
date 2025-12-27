@@ -18,12 +18,12 @@ public static class SystemExtensions
 		}
 		return hints;
 	}
-	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TValue> create)
+	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> create)
 	where TKey : notnull
 	{
 		if (!dictionary.TryGetValue(key, out TValue? value))
 		{
-			return dictionary[key] = create();
+			return dictionary[key] = create(key);
 		}
 		return value;
 	}
