@@ -23,65 +23,44 @@ public sealed partial class Core : Node
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		Display.Data startPuzzle = PuzzleManager.Current.Puzzle;
 		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		GameDisplay game = new() { Name = "Game", Status = nonogram.Status };
-		PaintDisplay paint = new() { Name = "Paint" };
-		Display.Default defaultDisplay = new() { Name = "Puzzle Display" };
-		ReadOnlySpan<Display> displays = [game, paint, defaultDisplay];
 
 		this.Add(Container);
 		Dialogues.Instance.BuildDialogues();
 
 		Input.Bind(
 			(Key.Escape, Container.StepBack, "Toggle Main Menu"),
-			(Key.Slash, CoreUI.ToggleConsole, "Toggle Console")
+			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
-
 		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
 
 		Container.Menu.Background.Color = Colours.MainMenuBackground;
-		nonogram.Background.Color = Colours.NonogramBackground;
-
-		StyleBox baseBox = nonogram.Displays.GetThemeStylebox("normal");
-		if (baseBox.Duplicate() is StyleBoxFlat stylebox)
-		{
-			stylebox.BgColor = Colors.Transparent;
-			nonogram.Displays.AddThemeStyleboxOverride("panel", stylebox);
-		}
-
-		foreach (Display display in displays)
-		{
-			nonogram.Displays.Tabs.Add(display);
-			nonogram.Displays.Add(display);
-			int marginValue = 100;
-			display.Margin.AddThemeConstantOverride("margin_top", marginValue);
-			display.Margin.AddThemeConstantOverride("margin_bottom", marginValue / 2);
-			display.Colours = Colours;
-		}
-
-		nonogram.ToolsBar.PuzzleLoader.Size = nonogram.ToolsBar.CodeLoader.Size = GetTree().Root.Size / 2;
-		nonogram.ToolsBar.Saver.SetItems(clear: true, ("Save Puzzle", Key.None, SavePuzzlePressed));
-		nonogram.ToolsBar.Loader.SetItems(
-			false,
-			("Load Puzzle", Key.None, () => nonogram.ToolsBar.PuzzleLoader.PopupCentered()),
-			("Load From Code", Key.None, () => nonogram.ToolsBar.CodeLoader.PopupCentered())
-		//("Load Current", Key.None, () => LoadCurrent(Displays.CurrentTabDisplay))
-		);
-		nonogram.Displays.CurrentTabDisplay.Load(PuzzleManager.Current.Puzzle);
+		PuzzleManager.Current.UI.Background.Color = Colours.NonogramBackground;
 
 		CoreUI.ConnectSignals(Container);
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
-		Console.Add("/", ("quit", new Console.Command { Default = () => GetTree().Quit() }));
+		Console.Add("/", ("quit", new Console.Command { Default = () => GetTree().Quit() }),
+			("nonogram", new Console.Command
+			{
+				Default = () => Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
+				Flags = new()
+				{
+					["game"] = () => ChangeDisplayType(Display.DisplayType.Game),
+					["paint"] = () => ChangeDisplayType(Display.DisplayType.Paint),
+					["display"] = () => ChangeDisplayType(Display.DisplayType.Display),
+				}
+			}
+			)
+		);
 
-		void SavePuzzlePressed()
+		PuzzleManager.Current.Type = Display.DisplayType.Game;
+
+		static void ChangeDisplayType(Display.DisplayType type)
 		{
-			SaveData.Create(nonogram.Displays).Switch(
-				save => PuzzleManager.Save(save),
-				notFound => GD.Print("No current puzzle found")
-			);
+			PuzzleManager.Current.Type = type;
+			Console.Log($"Display changed too {type.AsName()}");
 		}
 	}
 	public override void _Input(InputEvent input)
