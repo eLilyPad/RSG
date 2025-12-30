@@ -14,30 +14,11 @@ public abstract partial class Display
 	{
 		public static IEnumerable<HintPosition> AsRange(int length, int start = 0) => Range(start, count: length)
 			.SelectMany(i => Convert(i));
-
 		public static IEnumerable<HintPosition> Convert(OneOf<Vector2I, int> value) => [
 			new(Side.Row, value.Match(position => position.X, index => index)),
 			new(Side.Column, value.Match(position => position.Y, index => index))
 		];
 
-		public readonly string AsFormat() => Side switch
-		{
-			Side.Column => "\n",
-			Side.Row => " ",
-			_ => ""
-		};
-		public readonly int IndexFrom(Vector2I position) => Side switch
-		{
-			Side.Column => position.Y,
-			Side.Row => position.X,
-			_ => throw new ArgumentOutOfRangeException(nameof(position))
-		};
-		public readonly int OrderFrom(Vector2I position) => Side switch
-		{
-			Side.Column => position.X,
-			Side.Row => position.Y,
-			_ => throw new ArgumentOutOfRangeException(nameof(position))
-		};
 		public readonly (HorizontalAlignment, VerticalAlignment) Alignment() => (
 			Side switch
 			{
@@ -110,7 +91,7 @@ public abstract partial class Display
 		{
 			Name = name;
 			Tiles = (Vector2I.One * size).GridRange().ToDictionary(
-				elementSelector: position => selector(position) ? TileMode.Fill : TileMode.Clear
+				elementSelector: position => selector(position) ? TileMode.Filled : TileMode.Clear
 			);
 		}
 		public Data(Dictionary<Vector2I, Tile> tiles)
@@ -122,13 +103,13 @@ public abstract partial class Display
 			foreach ((Vector2I position, TileMode state) in States)
 			{
 				if (!expected.Tiles.TryGetValue(position, out TileMode tile)) return false;
-				if (tile is not TileMode.Fill) continue;
+				if (tile is not TileMode.Filled) continue;
 				if (tile != state) return false;
 			}
 			return true;
 		}
 	}
 
-	public enum TileMode : int { Block = 2, Fill = 1, Clear = 0 }
+	public enum TileMode : int { Blocked = 2, Filled = 1, Clear = 0 }
 	public enum Side { Row, Column }
 }
