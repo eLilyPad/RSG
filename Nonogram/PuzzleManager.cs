@@ -58,7 +58,6 @@ public sealed class PuzzleManager
 		public NonogramContainer UI => field ??= new NonogramContainer { Name = "Nonogram" }
 			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 
-
 		private readonly Tiles _tiles;
 		private readonly Hints _hints;
 		internal CurrentPuzzle()
@@ -66,85 +65,6 @@ public sealed class PuzzleManager
 			_tiles = new(Provider: this, Colours: Core.Colours);
 			_hints = new(Provider: this, Colours: Core.Colours);
 		}
-
-		///// <summary>
-		///// Updates the current puzzle from the display.
-		/////  - saves the changes to puzzle.
-		/////  - Writes to game display
-		///// Checks if the display has StatusBar then  
-		///// </summary>
-		//public void SaveProgress()
-		//{
-		//	SaveData data = new(Puzzle, Tiles);
-		//	Save(data);
-		//	Puzzle = data;
-		//}
-		//public bool CheckCompletion()
-		//{
-		//	switch (UI.Displays.CurrentTabDisplay)
-		//	{
-		//		case GameDisplay game when Puzzle is SaveData save:
-		//			if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
-		//			{
-		//				UI.CompletionScreen.Show();
-		//				game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
-		//				if (save.Expected.DialogueName is string dialogueName)
-		//				{
-		//					GD.Print("starting dialogue " + dialogueName);
-		//					Dialogues.Start(dialogueName, true);
-		//				}
-		//				return true;
-		//			}
-
-		//			game.Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
-		//			break;
-		//	}
-		//	return false;
-		//}
-		//public void Reset()
-		//{
-		//	Vector2 tileSize = Tiles.First().Value.Size;
-		//	switch (Type)
-		//	{
-		//		case DisplayType.Game:
-		//			foreach ((Vector2I _, Tile tile) in Tiles)
-		//			{
-		//				tile.Button.Text = EmptyText;
-		//			}
-		//			break;
-		//		case DisplayType.Paint:
-		//			foreach ((Vector2I _, Tile tile) in Tiles)
-		//			{
-		//				tile.Button.Text = EmptyText;
-		//			}
-		//			foreach ((HintPosition _, Hint hint) in Hints)
-		//			{
-		//				hint.Label.Text = EmptyHint;
-		//				hint.CustomMinimumSize = tileSize;
-		//			}
-		//			break;
-		//	}
-		//}
-		//public void OnDisplayTabChanged(UI.MainMenu menu)
-		//{
-		//	Display current = UI.Display;
-		//	Current.Puzzle = Current.Puzzle;
-		//	foreach (Display other in UI.Displays.Tabs.ToList().Except([current]))
-		//	{
-		//		if (other == current
-		//			|| other is not IHaveTools { Tools: PopupMenu otherTools }
-		//			|| !menu.HasChild(otherTools)
-		//		) continue;
-		//		menu.RemoveChild(otherTools);
-		//	}
-		//	if (current is not IHaveTools { Tools: PopupMenu currentTools }
-		//		|| menu.HasChild(currentTools)
-		//	)
-		//	{
-		//		return;
-		//	}
-		//	menu.AddChild(currentTools);
-		//}
 
 		public void WhenCodeLoaderEntered(string value)
 		{
@@ -164,32 +84,19 @@ public sealed class PuzzleManager
 			);
 		}
 
-		public Node HintsParent(HintPosition position)
+		Node Hints.IProvider.Parent(HintPosition position)
 		{
 			Display display = UI.Display;
 			return position.Side switch { Side.Row => display.Rows, Side.Column => display.Columns, _ => display };
 		}
-		public string HintsText(HintPosition position)
+		string Hints.IProvider.Text(HintPosition position) => Type switch
 		{
-			string hints = Type switch
-			{
-				_ when Puzzle is SaveData save => save.Expected.States.CalculateHints(position),
-				_ => Puzzle.States.CalculateHints(position)
-			};
-			return position.Side is Side.Row ? hints + " " : hints;
-		}
-		public Node TilesParent() => UI.Display.TilesGrid;
-		public string TilesText(Vector2I position)
-		{
-			return Current.Puzzle switch
-			{
-				//SaveData save when Current.Type is not Type.Game => save.Expected.States.AsText(position),
-				//SaveData save => save.States.AsText(position),
-				//PuzzleData puzzle => puzzle.States.AsText(position),
-				_ => Current.Puzzle.States.AsText(position)
-			};
-		}
-		public void TileInput(Vector2I position, Tile tile)
+			Type.Paint => Puzzle.States.CalculateHints(position),
+			_ => Puzzle.Expected.States.CalculateHints(position)
+		};
+		Node Tiles.IProvider.Parent() => UI.Display.TilesGrid;
+		string Tiles.IProvider.Text(Vector2I position) => Current.Puzzle.States.AsText(position);
+		void Tiles.IProvider.Activate(Vector2I position, Tile tile)
 		{
 			TileMode input = PressedMode;
 			if (input is TileMode.Clear) return;
@@ -227,7 +134,7 @@ public sealed class PuzzleManager
 	}
 
 	public static CurrentPuzzle Current => field ??= new();
-	private static PuzzleManager Instance => field ??= new();
+	internal static PuzzleManager Instance => field ??= new();
 
 	public static IEnumerable<(string Name, IEnumerable<SaveData> Data)> SelectorConfigs => [
 		("Saved Puzzles", GetSavedPuzzles()),
