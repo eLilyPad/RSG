@@ -23,18 +23,16 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public sealed partial class PackDisplay : PanelContainer
 	{
-		public static PackDisplay Create<T>((string name, IEnumerable<T> data) config, CanvasItem root)
-		where T : Display.Data
+		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
 		{
 			return Create(config.name, root, config.data);
 		}
-		public static PackDisplay Create<T>(string name, CanvasItem root, IEnumerable<T> data)
-		where T : Display.Data
+		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
 			PackDisplay display = new PackDisplay { Name = name }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 			display.Puzzles.Label.Text = name;
-			foreach (Display.Data puzzle in data)
+			foreach (SaveData puzzle in data)
 			{
 				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
 				puzzleDisplay.Button.Pressed += pressed;
