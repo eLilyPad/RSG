@@ -47,17 +47,17 @@ public sealed partial class Core : Node
 				Default = () => Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
 				Flags = new()
 				{
-					["game"] = () => ChangeDisplayType(Display.DisplayType.Game),
-					["paint"] = () => ChangeDisplayType(Display.DisplayType.Paint),
-					["display"] = () => ChangeDisplayType(Display.DisplayType.Display),
+					["game"] = () => ChangeDisplayType(Display.Type.Game),
+					["paint"] = () => ChangeDisplayType(Display.Type.Paint),
+					["display"] = () => ChangeDisplayType(Display.Type.Display),
 				}
 			}
 			)
 		);
 
-		PuzzleManager.Current.Type = Display.DisplayType.Game;
+		PuzzleManager.Current.Type = Display.Type.Game;
 
-		static void ChangeDisplayType(Display.DisplayType type)
+		static void ChangeDisplayType(Display.Type type)
 		{
 			PuzzleManager.Current.Type = type;
 			Console.Log($"Display changed too {type.AsName()}");

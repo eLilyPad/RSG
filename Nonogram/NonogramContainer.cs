@@ -2,8 +2,6 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static PuzzleManager;
-
 public sealed partial class NonogramContainer : PanelContainer
 {
 	public interface IHaveTools { PopupMenu Tools { get; } }
@@ -58,55 +56,10 @@ public sealed partial class NonogramContainer : PanelContainer
 		public PopupMenu Tools { get; } = new() { Name = "Game" };
 		public required StatusBar Status { get; init; }
 
-		public override void Load(Data data)
-		{
-			base.Load(data);
-			Reset();
-			if (data is not SaveData save) return;
-			WriteToTiles(save);
-		}
-		public override void OnTilePressed(Vector2I position)
-		{
-			if (!Tiles.TryGetValue(position, out Tile? tile)) return;
-
-			TileMode input = PressedMode;
-			TileMode previousMode = tile.Button.Text.FromText();
-
-			switch (input)
-			{
-				case TileMode.Fill:
-					tile.Button.Text = input == previousMode ? EmptyText : FillText;
-					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.FillTileClicked);
-					break;
-				case TileMode.Block:
-					tile.Button.Text = input == previousMode ? EmptyText : BlockText;
-					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.BlockTileClicked);
-					break;
-				case TileMode.Clear: break;
-			}
-			tile.ResetStyle(position, Colours);
-			Current.CheckCompletion();
-			Current.SaveProgress();
-		}
-		public override void Reset()
-		{
-			foreach (Tile button in Tiles.Values) ResetTile(button);
-		}
 	}
 	public sealed partial class PaintDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Paint" };
-
-		public override void OnTilePressed(Vector2I position)
-		{
-			base.OnTilePressed(position);
-			WriteToHints(positions: HintPosition.Convert(position));
-		}
-		public override void Reset()
-		{
-			foreach (Tile button in Tiles.Values) ResetTile(button);
-			foreach (Hint label in Hints.Values) ResetHint(label);
-		}
 	}
 
 	public PuzzleCompleteScreen CompletionScreen { get; } = new PuzzleCompleteScreen
@@ -123,18 +76,11 @@ public sealed partial class NonogramContainer : PanelContainer
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public Display.Default Display { get; } = new Display.Default { }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = false }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
-	public override void _Ready() => this.Add(Background, Displays, CompletionScreen);
-}
-public interface IColours
-{
-	Color NonogramBackground { get; }
-	Color NonogramHintBackground1 { get; }
-	Color NonogramHintBackground2 { get; }
-	Color NonogramTileBackground2 { get; }
-	Color NonogramTileBackground1 { get; }
-	Color NonogramTileBackgroundFilled { get; }
+	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }

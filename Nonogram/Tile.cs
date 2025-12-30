@@ -2,56 +2,70 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-public sealed partial class Tile : PanelContainer
+using static Display;
+
+sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
 {
-	public static Tile Create(Vector2I position, IColours colours, Action<Vector2I> pressed, Action<bool> mouseState)
+	internal interface IProvider
+	{
+		Node TilesParent();
+		string TilesText(Vector2I position);
+		void TileInput(Vector2I position, Tile tile);
+	}
+	public override Tile GetOrCreate(Vector2I position) => _nodes.GetOrCreate(key: position, create: Create);
+	public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.TilesParent(), exceptions);
+	public void ApplyText(Vector2I position, Tile tile, TileMode? input = null)
+	{
+		string text = input switch
+		{
+			TileMode mode when mode == tile.Button.Text.FromText() => EmptyText,
+			TileMode mode => mode.AsText(),
+			_ => Provider.TilesText(position),
+		};
+		tile.Button.Text = text;
+		tile.Button.StyleTileBackground(position, colours: Colours, mode: input);
+	}
+	private Tile Create(Vector2I position)
 	{
 		Tile tile = new Tile { Name = $"Tile (X: {position.X}, Y: {position.Y})" }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-		tile.ResetStyle(position, colours);
-		tile.Button.AddThemeColorOverride("font_color", Colors.Transparent);
-		tile.Button.AddThemeColorOverride("font_hover_color", Colors.Transparent);
-		tile.Button.AddThemeColorOverride("font_focus_color", Colors.Transparent);
-		tile.Button.AddThemeColorOverride("font_pressed_color", Colors.Transparent);
-		tile.Button.AddThemeFontSizeOverride("font_size", 10);
-		tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 3;
-		tile.Button.MouseExited += () => mouseState(false);
-		tile.Button.ButtonDown += () => pressed(position);
-		tile.Button.MouseEntered += () =>
+			.SizeFlags(Control.SizeFlags.ExpandFill, Control.SizeFlags.ExpandFill);
+		Provider.TilesParent().AddChild(tile);
+		if (tile.Button.GetThemeStylebox("normal").Duplicate() is StyleBoxFlat style)
 		{
-			mouseState(true);
-			bool fill = Input.IsMouseButtonPressed(Display.FillButton);
-			bool block = Input.IsMouseButtonPressed(Display.BlockButton);
-			if (!fill && !block) { return; }
-			pressed(position);
-		};
-
+			style.CornerDetail = 1;
+			style.SetCornerRadiusAll(0);
+			tile.Button.StyleTileBackground(position, Colours, style);
+		}
+		tile.Button.AddAllFontThemeOverride(Colors.Transparent);
+		tile.Button.AddThemeFontSizeOverride("font_size", 10);
+		tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
+		tile.Button.ButtonDown += () => Provider.TileInput(position, tile);
+		tile.Button.MouseExited += () => HoverTile(position, tile, false);
+		tile.Button.MouseEntered += () => HoverTile(position, tile, true);
 		return tile;
 	}
-	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
-	public Button Button { get; } = new Button { Text = Display.EmptyText, ButtonMask = mask }
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-	public override void _Ready() => this.Add(Button);
 
-	public void ResetStyle(Vector2I position, IColours colours)
+	private void HoverTile(Vector2I position, Tile tile, bool hovering)
 	{
-		const int chunkSize = 5;
-		StyleBox baseBox = Button.GetThemeStylebox("normal");
-		if (baseBox.Duplicate() is not StyleBoxFlat style) return;
-		int chunkIndex = position.X / chunkSize + position.Y / chunkSize;
-		Color filledTile = colours.NonogramTileBackgroundFilled;
-		Color background = chunkIndex % 2 == 0 ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2;
-		Color blocked = background.Darkened(.4f);
-
-		style.BgColor = Button.Text switch
+		Vector2 scale;
+		if (hovering)
 		{
-			Display.FillText => filledTile,
-			Display.BlockText => blocked,
-			_ => background
-		};
-		style.CornerDetail = 1;
-		style.SetCornerRadiusAll(0);
+			Provider.TileInput(position, tile);
+			scale = Vector2.One * .9f;
+		}
+		else scale = Vector2.One * 1;
 
-		Button.AddThemeStyleboxOverride("normal", style);
+		foreach ((Vector2I _, Tile other) in _nodes.AllInLines(position))
+		{
+			other.Button.Scale = scale;
+		}
 	}
+}
+public sealed partial class Tile : PanelContainer
+{
+	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
+	public Button Button { get; } = new Button { Text = EmptyText, ButtonMask = mask }
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+	public override void _Ready() => this.Add(Button);
 }
