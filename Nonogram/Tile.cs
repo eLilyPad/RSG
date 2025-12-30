@@ -16,13 +16,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 	public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
 	public void ApplyText(Vector2I position, Tile tile, TileMode? input = null)
 	{
-		string text = input switch
-		{
-			TileMode mode when mode == tile.Button.Text.FromText() => EmptyText,
-			TileMode mode => mode.AsText(),
-			_ => Provider.Text(position),
-		};
-		tile.Button.Text = text;
+		tile.Button.Text = Provider.Text(position);
 		tile.Button.StyleTileBackground(position, colours: Colours, mode: input);
 	}
 	private Tile Create(Vector2I position)
