@@ -2,19 +2,41 @@ using Godot;
 
 namespace RSG.Nonogram;
 
+using static Display;
+
+sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPosition, Hint>
+{
+	internal interface IProvider
+	{
+		Node HintsParent(HintPosition position);
+		string HintsText(HintPosition position);
+	}
+	public Vector2 TileSize { get; set; } = Vector2.Zero;
+	public override Hint GetOrCreate(HintPosition position)
+	{
+		Hint hint = _nodes.GetOrCreate(key: position, create: Create);
+		hint.CustomMinimumSize = TileSize;
+		return hint;
+	}
+	public override void Clear(IEnumerable<HintPosition> exceptions) => Clear(parent: Provider.HintsParent, exceptions);
+	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.HintsText(position);
+	private Hint Create(HintPosition position)
+	{
+		Hint hint = Hint.Create(position, Colours);
+		Provider.HintsParent(position).AddChild(hint);
+		return hint;
+	}
+}
+
 public sealed partial class Hint : PanelContainer
 {
-	public static Hint Create(Display.HintPosition position, IColours colours)
+	public static Hint Create(HintPosition position, IColours colours)
 	{
 		Hint hint = new Hint
 		{
 			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
-			Label = new RichTextLabel
-			{
-				Name = "Label",
-				Text = Display.EmptyHint,
-				FitContent = true,
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+			Label = new RichTextLabel { Name = "Label", Text = EmptyHint, FitContent = true }
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 		(hint.Label.HorizontalAlignment, hint.Label.VerticalAlignment) = position.Alignment();
 		hint.Label.AddThemeFontSizeOverride("normal_font_size", 15);
