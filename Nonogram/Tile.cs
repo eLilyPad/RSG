@@ -8,19 +8,19 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 {
 	internal interface IProvider
 	{
-		Node TilesParent();
-		string TilesText(Vector2I position);
-		void TileInput(Vector2I position, Tile tile);
+		Node Parent();
+		string Text(Vector2I position);
+		void Activate(Vector2I position, Tile tile);
 	}
 	public override Tile GetOrCreate(Vector2I position) => _nodes.GetOrCreate(key: position, create: Create);
-	public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.TilesParent(), exceptions);
+	public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
 	public void ApplyText(Vector2I position, Tile tile, TileMode? input = null)
 	{
 		string text = input switch
 		{
 			TileMode mode when mode == tile.Button.Text.FromText() => EmptyText,
 			TileMode mode => mode.AsText(),
-			_ => Provider.TilesText(position),
+			_ => Provider.Text(position),
 		};
 		tile.Button.Text = text;
 		tile.Button.StyleTileBackground(position, colours: Colours, mode: input);
@@ -29,7 +29,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 	{
 		Tile tile = new Tile { Name = $"Tile (X: {position.X}, Y: {position.Y})" }
 			.SizeFlags(Control.SizeFlags.ExpandFill, Control.SizeFlags.ExpandFill);
-		Provider.TilesParent().AddChild(tile);
+		Provider.Parent().AddChild(tile);
 		if (tile.Button.GetThemeStylebox("normal").Duplicate() is StyleBoxFlat style)
 		{
 			style.CornerDetail = 1;
@@ -39,7 +39,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 		tile.Button.AddAllFontThemeOverride(Colors.Transparent);
 		tile.Button.AddThemeFontSizeOverride("font_size", 10);
 		tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
-		tile.Button.ButtonDown += () => Provider.TileInput(position, tile);
+		tile.Button.ButtonDown += () => Provider.Activate(position, tile);
 		tile.Button.MouseExited += () => HoverTile(position, tile, false);
 		tile.Button.MouseEntered += () => HoverTile(position, tile, true);
 		return tile;
@@ -50,7 +50,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 		Vector2 scale;
 		if (hovering)
 		{
-			Provider.TileInput(position, tile);
+			Provider.Activate(position, tile);
 			scale = Vector2.One * .9f;
 		}
 		else scale = Vector2.One * 1;

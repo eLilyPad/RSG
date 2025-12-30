@@ -8,8 +8,8 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 {
 	internal interface IProvider
 	{
-		Node HintsParent(HintPosition position);
-		string HintsText(HintPosition position);
+		Node Parent(HintPosition position);
+		string Text(HintPosition position);
 	}
 	public Vector2 TileSize { get; set; } = Vector2.Zero;
 	public override Hint GetOrCreate(HintPosition position)
@@ -18,12 +18,12 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 		hint.CustomMinimumSize = TileSize;
 		return hint;
 	}
-	public override void Clear(IEnumerable<HintPosition> exceptions) => Clear(parent: Provider.HintsParent, exceptions);
-	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.HintsText(position);
+	public override void Clear(IEnumerable<HintPosition> exceptions) => Clear(parent: Provider.Parent, exceptions);
+	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
 	private Hint Create(HintPosition position)
 	{
 		Hint hint = Hint.Create(position, Colours);
-		Provider.HintsParent(position).AddChild(hint);
+		Provider.Parent(position).AddChild(hint);
 		return hint;
 	}
 }
