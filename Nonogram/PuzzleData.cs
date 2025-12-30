@@ -124,17 +124,6 @@ public sealed record SaveData : Display.Data
 			writer.WriteEndObject();
 		}
 	}
-	//public sealed record 
-
-	public static OneOf<SaveData, NotFound> Create(NonogramContainer.DisplayContainer displays)
-	{
-		return PuzzleManager.Current.Puzzle switch
-		{
-			PuzzleData puzzle => (OneOf<SaveData, NotFound>)new SaveData(expected: puzzle, display: displays.CurrentTabDisplay),
-			SaveData save => (OneOf<SaveData, NotFound>)new SaveData(save, display: displays.CurrentTabDisplay),
-			_ => new NotFound()
-		};
-	}
 
 	public PuzzleData Expected { get; init; } = new();
 	public override string Name => Expected.Name;
@@ -142,9 +131,8 @@ public sealed record SaveData : Display.Data
 	public bool IsComplete => Matches(expected: Expected);
 
 	public SaveData() { }
-	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
-	public SaveData(PuzzleData expected, Display display) : base(display) => Expected = expected;
-	public SaveData(Display.Data data, Display display) : base(display)
+	public SaveData(PuzzleData expected) => Expected = expected;
+	public SaveData(Display.Data data, Dictionary<Vector2I, Tile> tiles) : base(tiles)
 	{
 		Expected = data switch
 		{
@@ -152,6 +140,11 @@ public sealed record SaveData : Display.Data
 			PuzzleData puzzle => puzzle,
 			_ => throw new NotImplementedException()
 		};
+	}
+	public void ChangeState(Vector2I position, Display.TileMode mode)
+	{
+		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
+		Tiles[position] = mode;
 	}
 }
 public sealed record PuzzleData : Display.Data
@@ -366,18 +359,21 @@ public sealed record PuzzleData : Display.Data
 				static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
 			}
 		}
-		public static (string Name, IEnumerable<Display.Data> Puzzles) Convert(Pack pack) => (pack.Name, pack.Puzzles);
+		public static (string Name, IEnumerable<SaveData> Puzzles) Convert(Pack pack)
+		{
+			return (pack.Name, pack.Puzzles.Select(puzzle => new SaveData(expected: puzzle)));
+		}
 
 		public string Name { get; init; } = "Pack";
 		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
 
-	public static explicit operator SaveData(PuzzleData puzzle) => new() { Expected = puzzle };
+	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
 
 	public string? DialogueName { get; init; } = null;
 
 	public PuzzleData(Empty empty) : base(empty.Size) { }
-	public PuzzleData(Display display) : base(display) { }
+	public PuzzleData(Dictionary<Vector2I, Tile> tiles) : base(tiles) { }
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 
