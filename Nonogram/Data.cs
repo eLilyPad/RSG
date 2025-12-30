@@ -14,6 +14,7 @@ public abstract partial class Display
 	{
 		public static IEnumerable<HintPosition> AsRange(int length, int start = 0) => Range(start, count: length)
 			.SelectMany(i => Convert(i));
+
 		public static IEnumerable<HintPosition> Convert(OneOf<Vector2I, int> value) => [
 			new(Side.Row, value.Match(position => position.X, index => index)),
 			new(Side.Column, value.Match(position => position.Y, index => index))
@@ -29,7 +30,13 @@ public abstract partial class Display
 		{
 			Side.Column => position.Y,
 			Side.Row => position.X,
-			_ => -1
+			_ => throw new ArgumentOutOfRangeException(nameof(position))
+		};
+		public readonly int OrderFrom(Vector2I position) => Side switch
+		{
+			Side.Column => position.X,
+			Side.Row => position.Y,
+			_ => throw new ArgumentOutOfRangeException(nameof(position))
 		};
 		public readonly (HorizontalAlignment, VerticalAlignment) Alignment() => (
 			Side switch
@@ -110,7 +117,6 @@ public abstract partial class Display
 		{
 			Tiles = tiles.ToDictionary(elementSelector: pair => pair.Value.Button.Text.FromText());
 		}
-
 		public bool Matches(Data expected)
 		{
 			foreach ((Vector2I position, TileMode state) in States)
