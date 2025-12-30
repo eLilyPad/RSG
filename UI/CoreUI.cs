@@ -63,7 +63,6 @@ public sealed partial class CoreUI : PanelContainer
 			}
 		};
 		nonogram.ChildExitingTree += node => nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
-		nonogram.Displays.TabChanged += _ => PuzzleManager.Current.OnDisplayTabChanged(container.Menu);
 		completionScreen.Levels.Pressed += () => completionScreen.Visible = !(puzzleSelector.Visible = true);
 		nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += PuzzleManager.Current.WhenCodeLoaderEdited;
 		nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += PuzzleManager.Current.WhenCodeLoaderEntered;
@@ -76,13 +75,7 @@ public sealed partial class CoreUI : PanelContainer
 		);
 
 		Console.Container.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
-		Console.Container.Input.Line.TextSubmitted += input =>
-		{
-			if (input.Length == 0) return;
-			Console.Instance.Submitted(input);
-			Console.Container.Log.Label.Text += input + "\n";
-			Console.GrabInputFocus(clearSuggestions: true);
-		};
+		Console.Container.Input.Line.TextSubmitted += Console.Instance.Submitted;
 		Console.Container.Input.Line.TextChanged += input =>
 		{
 			Console.Container.Input.SuggestionDisplay.Clear();
@@ -102,8 +95,6 @@ public sealed partial class CoreUI : PanelContainer
 			Console.Container.Input.Line.Text += suggestion;
 			Console.GrabInputFocus();
 		};
-
-		PuzzleManager.Current.OnDisplayTabChanged(container.Menu);
 
 		return container;
 
