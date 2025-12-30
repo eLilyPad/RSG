@@ -5,6 +5,27 @@ namespace RSG.Nonogram;
 
 using static Display;
 
+public static class HintExtensions
+{
+	public static string AsFormat(this Side side) => side switch
+	{
+		Side.Column => "\n",
+		Side.Row => " ",
+		_ => ""
+	};
+	public static int IndexFrom(this Side side, Vector2I position) => side switch
+	{
+		Side.Column => position.Y,
+		Side.Row => position.X,
+		_ => throw new ArgumentOutOfRangeException(nameof(position))
+	};
+	public static int OrderFrom(this Side side, Vector2I position) => side switch
+	{
+		Side.Column => position.X,
+		Side.Row => position.Y,
+		_ => throw new ArgumentOutOfRangeException(nameof(position))
+	};
+}
 public static class DisplayExtensions
 {
 	public static string AsName(this Type type) => type switch
@@ -18,8 +39,8 @@ public static class DisplayExtensions
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		HintPosition position
 	) => tiles
-		.Where(pair => position.IndexFrom(pair.Key) == position.Index)
-		.OrderBy(pair => position.OrderFrom(pair.Key));
+		.Where(pair => position.Side.IndexFrom(pair.Key) == position.Index)
+		.OrderBy(pair => position.Side.OrderFrom(pair.Key));
 	public static IEnumerable<KeyValuePair<Vector2I, T>> AllInLines<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position
@@ -27,9 +48,19 @@ public static class DisplayExtensions
 	{
 		return tiles.Where(pair => pair.Key.EitherEqual(position));
 	}
+	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> AllInLine<T>(
+		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
+		Vector2I position,
+		Side side
+	)
+	{
+		return tiles
+			.Where(pair => side.IndexFrom(pair.Key) == side.IndexFrom(position))
+			.OrderBy(pair => side.OrderFrom(pair.Key));
+	}
 	public static string CalculateHints(this IImmutableDictionary<Vector2I, TileMode> tiles, HintPosition position)
 	{
-		return tiles.CalculateHints(position, selector: value => value is TileMode.Fill ? 1 : 0);
+		return tiles.CalculateHints(position, selector: value => value is TileMode.Filled ? 1 : 0);
 	}
 	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
 	{
@@ -44,23 +75,25 @@ public static class DisplayExtensions
 		StringBuilder builder = new();
 		int run = 0;
 
-		foreach ((Vector2I coord, TValue? value) in tiles.OrderedLine(position))
+		foreach ((Vector2I _, TValue? value) in tiles.OrderedLine(position))
 		{
-			if (selector(value) > 0) run++;
-			else builder.FlushRun(position, ref run);
+			if (selector(value) > 0)
+			{
+				run++;
+				continue;
+			}
+			builder.FlushRun(position.Side, ref run);
 		}
-		builder.FlushRun(position, ref run);
-		return builder.Length switch
-		{
-			> 0 => builder.ToString(),
-			_ => EmptyHint + position.AsFormat(),
-		};
+		builder.FlushRun(position.Side, ref run);
+		return builder.Length > 0
+			? builder.ToString()
+			: EmptyHint + position.Side.AsFormat();
 	}
-	private static void FlushRun(this StringBuilder builder, HintPosition position, ref int run)
+	private static void FlushRun(this StringBuilder builder, Side side, ref int run)
 	{
 		if (run <= 0) return;
 		builder.Append(run);
-		builder.Append(position.AsFormat());
+		builder.Append(side.AsFormat());
 		run = 0;
 	}
 }
@@ -84,33 +117,33 @@ public static class TileExtensions
 		Color blocked = background.Darkened(.4f);
 		style.BgColor = mode switch
 		{
-			TileMode.Fill => filledTile,
-			TileMode.Block => blocked,
+			TileMode.Filled => filledTile,
+			TileMode.Blocked => blocked,
 			_ => background
 		};
 		button.AddThemeStyleboxOverride(themeName, style);
 	}
 	public static bool Matches(this Button button, TileMode state)
 	{
-		return (button.Text is FillText && state is TileMode.Fill)
-			|| (button.Text is EmptyText && state is TileMode.Clear or TileMode.Block);
+		return (button.Text is FillText && state is TileMode.Filled)
+			|| (button.Text is EmptyText && state is TileMode.Clear or TileMode.Blocked);
 	}
 	public static double ToDouble(this TileMode mode) => mode switch
 	{
-		TileMode.Block => 2,
-		TileMode.Fill => 1,
+		TileMode.Blocked => 2,
+		TileMode.Filled => 1,
 		_ => 0,
 	};
 	public static TileMode ToTileMode(this int mode) => mode switch
 	{
-		2 => TileMode.Block,
-		1 => TileMode.Fill,
+		2 => TileMode.Blocked,
+		1 => TileMode.Filled,
 		_ => 0,
 	};
 	public static TileMode FromText(this string mode) => mode switch
 	{
-		BlockText => TileMode.Block,
-		FillText => TileMode.Fill,
+		BlockText => TileMode.Blocked,
+		FillText => TileMode.Filled,
 		_ => TileMode.Clear
 	};
 	public static void PlayAudio(this TileMode mode)
@@ -119,8 +152,8 @@ public static class TileExtensions
 	}
 	public static AudioStream? AsAudioStream(this TileMode mode) => mode switch
 	{
-		TileMode.Fill => Audio.NonogramSounds.FillTileClicked,
-		TileMode.Block => Audio.NonogramSounds.BlockTileClicked,
+		TileMode.Filled => Audio.NonogramSounds.FillTileClicked,
+		TileMode.Blocked => Audio.NonogramSounds.BlockTileClicked,
 		_ => null
 	};
 	public static string AsText<T>(this IImmutableDictionary<T, TileMode> modes, T position) where T : notnull
@@ -129,8 +162,8 @@ public static class TileExtensions
 	}
 	public static string AsText(this TileMode mode) => mode switch
 	{
-		TileMode.Block => BlockText,
-		TileMode.Fill => FillText,
+		TileMode.Blocked => BlockText,
+		TileMode.Filled => FillText,
 		_ => EmptyText,
 	};
 }
