@@ -98,16 +98,36 @@ public sealed class PuzzleManager
 		string Tiles.IProvider.Text(Vector2I position) => Current.Puzzle.States.AsText(position);
 		void Tiles.IProvider.Activate(Vector2I position, Tile tile)
 		{
-			TileMode input = PressedMode;
-			if (input is TileMode.Clear) return;
+			if (PressedMode is not TileMode input) return;
+			input = input switch
+			{
+				TileMode mode when mode == tile.Button.Text.FromText() => TileMode.Clear,
+				TileMode mode => mode
+			};
 			switch (Type)
 			{
 				case Type.Game:
+					Puzzle.ChangeState(position, mode: input);
+					if (Settings is { CompleteLineWhenComplete: true })
+					{
+						foreach (Side side in Enum.GetValues<Side>())
+						{
+							if (!Puzzle.IsLineComplete(position, side)) { continue; }
+							foreach ((Vector2I coord, TileMode mode) in Puzzle.States.AllInLine(position, side))
+							{
+								if (mode == TileMode.Filled) continue;
+								Puzzle.ChangeState(position: coord, mode: TileMode.Blocked);
+								_tiles.ApplyText(
+									position: coord,
+									tile: _tiles.GetOrCreate(coord),
+									input: TileMode.Blocked
+								);
+							}
+						}
+					}
 					_tiles.ApplyText(position, tile, input);
 					input.PlayAudio();
-					Puzzle.ChangeState(position, input);
 					Save(Puzzle);
-					GD.Print("saving");
 					if (Puzzle is { IsComplete: true })
 					{
 						//Instance.PuzzlesCompleted[PuzzleManager.Current.Puzzle.Name] = true;

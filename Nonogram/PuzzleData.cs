@@ -141,6 +141,17 @@ public sealed record SaveData : Display.Data
 			_ => throw new NotImplementedException()
 		};
 	}
+	public bool IsLineComplete(Vector2I position, Display.Side side)
+	{
+		foreach ((Vector2I expectedPosition, Display.TileMode expectedMode) in Expected.States.AllInLine(position, side))
+		{
+			if (!Tiles.TryGetValue(expectedPosition, out Display.TileMode currentMode)) return false;
+			if (expectedMode is Display.TileMode.Clear && currentMode is Display.TileMode.Blocked) continue;
+			if (expectedMode != currentMode) return false;
+		}
+		GD.Print("Line Complete");
+		return true;
+	}
 	public void ChangeState(Vector2I position, Display.TileMode mode)
 	{
 		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
@@ -231,7 +242,7 @@ public sealed record PuzzleData : Display.Data
 			code += value.Size + SizeBarrier;
 			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
-				code += state is Display.TileMode.Fill ? FillToken : BlankToken;
+				code += state is Display.TileMode.Filled ? FillToken : BlankToken;
 			}
 			return new()
 			{
