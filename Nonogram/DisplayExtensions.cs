@@ -14,10 +14,19 @@ public static class DisplayExtensions
 		_ => "Puzzle Display"
 	};
 
-	public static IEnumerable<KeyValuePair<Vector2I, TValue>> AllInLines<TValue>(
-		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
+	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> OrderedLine<T>(
+		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
+		HintPosition position
+	) => tiles
+		.Where(pair => position.IndexFrom(pair.Key) == position.Index)
+		.OrderBy(pair => position.OrderFrom(pair.Key));
+	public static IEnumerable<KeyValuePair<Vector2I, T>> AllInLines<T>(
+		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position
-	) => tiles.Where(pair => pair.Key.X == position.X || pair.Key.Y == position.Y);
+	)
+	{
+		return tiles.Where(pair => pair.Key.EitherEqual(position));
+	}
 	public static string CalculateHints(this IImmutableDictionary<Vector2I, TileMode> tiles, HintPosition position)
 	{
 		return tiles.CalculateHints(position, selector: value => value is TileMode.Fill ? 1 : 0);
@@ -32,25 +41,26 @@ public static class DisplayExtensions
 		Func<TValue, int> selector
 	)
 	{
-		IOrderedEnumerable<KeyValuePair<Vector2I, TValue>> line = tiles
-			.Where(pair => position.IndexFrom(pair.Key) == position.Index)
-			.OrderBy(pair => position.OrderFrom(pair.Key));
 		StringBuilder builder = new();
 		int run = 0;
 
-		foreach ((Vector2I coord, TValue? value) in line)
+		foreach ((Vector2I coord, TValue? value) in tiles.OrderedLine(position))
 		{
 			if (selector(value) > 0) run++;
 			else builder.FlushRun(position, ref run);
 		}
 		builder.FlushRun(position, ref run);
-		return builder.Length > 0 ? builder.ToString() : EmptyHint;
+		return builder.Length switch
+		{
+			> 0 => builder.ToString(),
+			_ => EmptyHint + position.AsFormat(),
+		};
 	}
 	private static void FlushRun(this StringBuilder builder, HintPosition position, ref int run)
 	{
 		if (run <= 0) return;
-		builder.Append(position.AsFormat());
 		builder.Append(run);
+		builder.Append(position.AsFormat());
 		run = 0;
 	}
 }
