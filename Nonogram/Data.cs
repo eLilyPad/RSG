@@ -23,7 +23,7 @@ public abstract partial class Display
 		public readonly string AsFormat() => Side switch
 		{
 			Side.Column => "\n",
-			Side.Row => "\t",
+			Side.Row => " ",
 			_ => ""
 		};
 		public readonly int IndexFrom(Vector2I position) => Side switch
