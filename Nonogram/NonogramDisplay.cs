@@ -10,9 +10,9 @@ public abstract partial class Display : AspectRatioContainer
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 	public enum Type { Game, Display, Paint }
 
-	public static TileMode PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Block
-		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Fill
-		: TileMode.Clear;
+	public static TileMode? PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Blocked
+		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Filled
+		: null;
 
 	public MarginContainer Margin { get; } = new MarginContainer { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
