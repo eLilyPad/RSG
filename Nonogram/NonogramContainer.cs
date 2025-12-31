@@ -7,11 +7,6 @@ public sealed partial class NonogramContainer : PanelContainer
 	public interface IHaveTools { PopupMenu Tools { get; } }
 	public interface IHaveStatus { StatusBar Status { get; } }
 
-	public sealed partial class DisplayContainer : TabContainer
-	{
-		public List<Display> Tabs { internal get; init; } = [];
-		public Display CurrentTabDisplay => GetCurrentTabControl() is not Display display ? Tabs.First() : display;
-	}
 	public sealed partial class StatusBar : HBoxContainer
 	{
 		public const string PuzzleComplete = "Puzzle is complete", PuzzleIncomplete = "Puzzle is incomplete";
@@ -78,9 +73,6 @@ public sealed partial class NonogramContainer : PanelContainer
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Display.Default Display { get; } = new Display.Default { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = false }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }

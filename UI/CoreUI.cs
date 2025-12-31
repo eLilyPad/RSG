@@ -56,10 +56,6 @@ public sealed partial class CoreUI : PanelContainer
 					nonogram.Status.CompletionLabel.Visible = true;
 					break;
 				case Display: break;
-				case Node when nonogram.Displays.HasChild(node):
-					GD.PushWarning($"Child Added is not of type {typeof(Display)}, removing child {nameof(node)}");
-					nonogram.Displays.RemoveChild(node);
-					break;
 			}
 		};
 		nonogram.ChildExitingTree += node => nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
