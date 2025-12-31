@@ -61,7 +61,14 @@ public sealed class PuzzleManager
 		{
 			_tiles = new(Provider: this, Colours: Core.Colours);
 			_hints = new(Provider: this, Colours: Core.Colours);
-			Timer = new() { TimeChanged = text => UI.Display.Timer.Time.Text = text };
+			Timer = new()
+			{
+				TimeChanged = text =>
+				{
+					Puzzle.TimeTaken = Timer?.Elapsed ?? TimeSpan.Zero;
+					UI.Display.Timer.Time.Text = text;
+				}
+			};
 		}
 
 		public void WhenCodeLoaderEntered(string value)
@@ -108,9 +115,9 @@ public sealed class PuzzleManager
 						{
 							if (!Puzzle.IsLineComplete(position, side)) { continue; }
 							var line = Puzzle.States.AllInLine(position, side, without: TileMode.Filled);
-							foreach ((Vector2I coord, TileMode mode) in line)
+							foreach ((Vector2I coord, TileMode _) in line)
 							{
-								ChangeState(position: coord, mode);
+								ChangeState(position: coord, mode: TileMode.Blocked);
 							}
 						}
 					}
@@ -163,7 +170,7 @@ public sealed class PuzzleManager
 		{
 			save = save with { Name = save.Name + " save" };
 			FileManager.Save(save);
-			Instance.Puzzles[save.Name] = save.Expected;
+			Instance.Puzzles[save.Name] = save;
 		}
 		static void Puzzle(PuzzleData data)
 		{

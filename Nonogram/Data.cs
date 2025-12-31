@@ -40,7 +40,7 @@ public abstract partial class Display
 		public readonly record struct Empty(int Size);
 		public static class PropertyNames
 		{
-			public const string Tiles = "Tiles", Name = "Name", Position = "Position", Value = "Value";
+			public const string Tiles = "Tiles", Name = "Name", Position = "Position", Value = "Value", TimeTaken = "Time Taken";
 		}
 		public static string ReadName(JsonElement root)
 		{

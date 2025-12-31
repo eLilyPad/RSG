@@ -14,7 +14,13 @@ public sealed record SaveData : Display.Data
 
 		public override SaveData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
-			JsonElement root = JsonDocument.ParseValue(ref reader).RootElement;
+			using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+			JsonElement root = doc.RootElement;
+			if (root.ValueKind != JsonValueKind.Object)
+			{
+				GD.PrintErr("SaveData root is not an object");
+				return null;
+			}
 			if (!root.TryGetProperty(ExpectedProp, out JsonElement expectedProp))
 			{
 				GD.PrintErr($"Missing property in JSON: {ExpectedProp}");
@@ -26,13 +32,33 @@ public sealed record SaveData : Display.Data
 			}
 			if (!expectedProp.TryGetProperty(PropertyNames.Tiles, out JsonElement expectedTilesProp))
 			{
-				GD.PrintErr($"Missing property in JSON: {ExpectedProp}");
+				GD.PrintErr($"Missing property in JSON: Expected.{PropertyNames.Tiles}");
 				return null;
 			}
+
+			TimeSpan timeTaken = TimeSpan.Zero;
+			if (root.TryGetProperty(PropertyNames.TimeTaken, out JsonElement timeProp))
+			{
+				try
+				{
+					timeTaken = timeProp.ValueKind switch
+					{
+						JsonValueKind.String => timeProp.Deserialize<TimeSpan>(options),
+						JsonValueKind.Number => TimeSpan.FromSeconds(timeProp.GetDouble()),
+						_ => TimeSpan.Zero
+					};
+				}
+				catch (Exception e)
+				{
+					GD.PrintErr($"Invalid TimeTaken value: {e.Message}");
+				}
+			}
+
 			string name = ReadName(expectedProp);
 			return new SaveData
 			{
 				Name = name,
+				TimeTaken = timeTaken,
 				Tiles = ReadTiles(tilesProp),
 				Expected = new() { Name = name, Tiles = ReadTiles(expectedTilesProp) }
 			};
@@ -40,8 +66,11 @@ public sealed record SaveData : Display.Data
 		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
 		{
 			writer.WriteStartObject();
+			//writer.Wr
 			writer.WritePropertyName(ExpectedProp);
 			Serialize(writer, value.Expected, PuzzleData.Converter.Options);
+			writer.WritePropertyName(PropertyNames.TimeTaken);
+			Serialize(writer, value.TimeTaken, options);
 			writer.WritePropertyName(PropertyNames.Tiles);
 			writer.WriteStartArray();
 			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
@@ -81,7 +110,6 @@ public sealed record SaveData : Display.Data
 			if (expectedMode is Display.TileMode.Clear && currentMode is Display.TileMode.Blocked) continue;
 			if (expectedMode != currentMode) return false;
 		}
-		GD.Print("Line Complete");
 		return true;
 	}
 	public void ChangeState(Vector2I position, Display.TileMode mode)
