@@ -10,15 +10,17 @@ public abstract partial class Display : AspectRatioContainer
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 	public enum Type { Game, Display, Paint }
 
-	public static TileMode? PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Blocked
+	public static TileMode PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Blocked
 		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Filled
-		: null;
+		: TileMode.NULL;
 
 	public MarginContainer Margin { get; } = new MarginContainer { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public Container Spacer { get; } = new AspectRatioContainer { Name = "Spacer" }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public TimerContainer Timer { get; } = new TimerContainer { Name = "Timer" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public GridContainer Grid { get; } = new GridContainer { Name = "MainContainer", Columns = 2 }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
@@ -28,7 +30,7 @@ public abstract partial class Display : AspectRatioContainer
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
 	public override sealed void _Ready() => this.Add(
-		Margin.Add(Grid.Add(Spacer, Columns, Rows, TilesGrid))
+		Margin.Add(Grid.Add(Spacer.Add(Timer), Columns, Rows, TilesGrid))
 	);
 	public void ResetTheme()
 	{

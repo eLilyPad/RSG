@@ -110,6 +110,6 @@ public abstract partial class Display
 		}
 	}
 
-	public enum TileMode : int { Blocked = 2, Filled = 1, Clear = 0 }
+	public enum TileMode : byte { NULL = 0, Clear = 1, Filled = 2, Blocked = 3 }
 	public enum Side { Row, Column }
 }

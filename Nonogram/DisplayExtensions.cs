@@ -48,6 +48,20 @@ public static class DisplayExtensions
 	{
 		return tiles.Where(pair => pair.Key.EitherEqual(position));
 	}
+	public static IOrderedEnumerable<KeyValuePair<Vector2I, TileMode>> AllInLine(
+		this IEnumerable<KeyValuePair<Vector2I, TileMode>> tiles,
+		Vector2I position,
+		Side side,
+		TileMode without = TileMode.NULL
+	)
+	{
+		return tiles
+			.Where(
+				pair => side.IndexFrom(pair.Key) == side.IndexFrom(position)
+				&& pair.Value != without
+			)
+			.OrderBy(pair => side.OrderFrom(pair.Key));
+	}
 	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> AllInLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position,
@@ -134,6 +148,12 @@ public static class TileExtensions
 		TileMode.Filled => 1,
 		_ => 0,
 	};
+	public static TileMode Change(this TileMode input, TileMode currents) => input switch
+	{
+		TileMode.NULL => input,
+		TileMode mode when mode == currents => TileMode.Clear,
+		TileMode mode => mode
+	};
 	public static TileMode ToTileMode(this int mode) => mode switch
 	{
 		2 => TileMode.Blocked,
@@ -144,7 +164,8 @@ public static class TileExtensions
 	{
 		BlockText => TileMode.Blocked,
 		FillText => TileMode.Filled,
-		_ => TileMode.Clear
+		EmptyText => TileMode.Clear,
+		_ => TileMode.NULL
 	};
 	public static void PlayAudio(this TileMode mode)
 	{
