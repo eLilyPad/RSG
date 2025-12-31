@@ -5,7 +5,6 @@ namespace RSG;
 
 using UI;
 using Nonogram;
-using static Nonogram.NonogramContainer;
 
 public sealed partial class Core : Node
 {
@@ -13,12 +12,8 @@ public sealed partial class Core : Node
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
-	public CoreUI Container => field ??= new CoreUI
-	{
-		Name = "Core UI",
-		//Ratio = 16f / 9f,
-		//StretchMode = AspectRatioContainer.StretchModeEnum.Fit,
-	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public CoreUI Container => field ??= new CoreUI { Name = "Core UI" }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public override void _Ready()
 	{
@@ -63,6 +58,11 @@ public sealed partial class Core : Node
 			Console.Log($"Display changed too {type.AsName()}");
 		}
 	}
+	public override void _Process(double delta)
+	{
+		PuzzleManager.Current.Timer.Tick(delta);
+	}
+
 	public override void _Input(InputEvent input)
 	{
 		if (!input.IsPressed()) return;

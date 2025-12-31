@@ -5,40 +5,34 @@ namespace RSG.Nonogram;
 using static PuzzleData;
 
 using static Display;
-
-//using LoadResult = OneOf<Display.Data, PuzzleData.Code.ConversionError, NotFound>;
-
 public sealed class PuzzleManager
 {
 	public sealed record class Settings
 	{
-		public bool CompleteLineWhenComplete { get; set; } = true;
+		public bool LineCompleteBlockRest { get; set; } = true;
+		public bool HaveTimer { get; set; } = true;
 	}
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tiles.IProvider
 	{
 		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
 		public Settings Settings { get; set; } = new Settings();
+		public PuzzleTimer Timer { get; }
 		public SaveData Puzzle
 		{
-			get; set
+			private get; set
 			{
 				if (value is null) { return; }
-				Instance.Puzzles[value.Name] = field = value;
 				Display display = UI.Display;
+				Instance.Puzzles[value.Name] = field = value;
 				IEnumerable<HintPosition> hintValues = HintPosition.AsRange(display.TilesGrid.Columns = value.Size);
 				IEnumerable<Vector2I> tileValues = (Vector2I.One * value.Size).GridRange();
 				for (int i = 0; i < tileValues.Count(); i++)
 				{
 					Vector2I position = tileValues.ElementAt(i);
 					Tile tile = _tiles.GetOrCreate(position);
-					if (value.States.TryGetValue(position, out TileMode state))
-					{
-						_tiles.ApplyText(position, tile, input: state);
-					}
-					else
-					{
-						_tiles.ApplyText(position, tile);
-					}
+					TileMode state = value.States.GetValueOrDefault(key: position, defaultValue: TileMode.NULL);
+					_tiles.ApplyText(position, tile, input: state);
+
 					if (i == 0) _hints.TileSize = tile.Size;
 				}
 				foreach (HintPosition position in hintValues)
@@ -49,9 +43,12 @@ public sealed class PuzzleManager
 				_tiles.Clear(exceptions: tileValues);
 				_hints.Clear(exceptions: hintValues);
 
+				Timer.Elapsed = value.TimeTaken;
+
 				float scale = value.Size * value.Size / value.Size;
 				display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(scale) * _hints.TileSize;
 				display.ResetTheme();
+
 			}
 		} = new SaveData();
 
@@ -64,6 +61,7 @@ public sealed class PuzzleManager
 		{
 			_tiles = new(Provider: this, Colours: Core.Colours);
 			_hints = new(Provider: this, Colours: Core.Colours);
+			Timer = new() { TimeChanged = text => UI.Display.Timer.Time.Text = text };
 		}
 
 		public void WhenCodeLoaderEntered(string value)
@@ -98,34 +96,25 @@ public sealed class PuzzleManager
 		string Tiles.IProvider.Text(Vector2I position) => Current.Puzzle.States.AsText(position);
 		void Tiles.IProvider.Activate(Vector2I position, Tile tile)
 		{
-			if (PressedMode is not TileMode input) return;
-			input = input switch
-			{
-				TileMode mode when mode == tile.Button.Text.FromText() => TileMode.Clear,
-				TileMode mode => mode
-			};
+			TileMode input = PressedMode.Change(tile.Button.Text.FromText());
+			if (input is TileMode.NULL) return;
 			switch (Type)
 			{
 				case Type.Game:
-					Puzzle.ChangeState(position, mode: input);
-					if (Settings is { CompleteLineWhenComplete: true })
+					ChangeState(position, mode: input, tile);
+					if (Settings.LineCompleteBlockRest)
 					{
-						foreach (Side side in Enum.GetValues<Side>())
+						foreach (Side side in stackalloc[] { Side.Row, Side.Column })
 						{
 							if (!Puzzle.IsLineComplete(position, side)) { continue; }
-							foreach ((Vector2I coord, TileMode mode) in Puzzle.States.AllInLine(position, side))
+							var line = Puzzle.States.AllInLine(position, side, without: TileMode.Filled);
+							foreach ((Vector2I coord, TileMode mode) in line)
 							{
-								if (mode == TileMode.Filled) continue;
-								Puzzle.ChangeState(position: coord, mode: TileMode.Blocked);
-								_tiles.ApplyText(
-									position: coord,
-									tile: _tiles.GetOrCreate(coord),
-									input: TileMode.Blocked
-								);
+								ChangeState(position: coord, mode);
 							}
 						}
 					}
-					_tiles.ApplyText(position, tile, input);
+					if (Settings.HaveTimer && input is TileMode.Filled && !Timer.Running) Timer.Running = true;
 					input.PlayAudio();
 					Save(Puzzle);
 					if (Puzzle is { IsComplete: true })
@@ -149,6 +138,11 @@ public sealed class PuzzleManager
 					//}
 					break;
 				default: break;
+			}
+			void ChangeState(Vector2I position, TileMode mode, Tile? tile = null)
+			{
+				Puzzle.ChangeState(position, mode);
+				_tiles.ApplyText(position, tile ?? _tiles.GetOrCreate(position), input: mode);
 			}
 		}
 	}
