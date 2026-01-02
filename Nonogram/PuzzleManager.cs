@@ -31,7 +31,7 @@ public sealed class PuzzleManager
 					Vector2I position = tileValues.ElementAt(i);
 					Tile tile = _tiles.GetOrCreate(position);
 					TileMode state = value.States.GetValueOrDefault(key: position, defaultValue: TileMode.NULL);
-					_tiles.ApplyText(position, tile, input: state);
+					_tiles.ChangeMode(position, tile, input: state);
 
 					if (i == 0) _hints.TileSize = tile.Size;
 				}
@@ -149,7 +149,7 @@ public sealed class PuzzleManager
 			void ChangeState(Vector2I position, TileMode mode, Tile? tile = null)
 			{
 				Puzzle.ChangeState(position, mode);
-				_tiles.ApplyText(position, tile ?? _tiles.GetOrCreate(position), input: mode);
+				_tiles.ChangeMode(position, tile ?? _tiles.GetOrCreate(position), input: mode);
 			}
 		}
 	}
@@ -188,4 +188,8 @@ public sealed class PuzzleManager
 	};
 
 	private PuzzleManager() { }
+	public void AddPuzzle(SaveData save)
+	{
+		Puzzles[save.Name] = save;
+	}
 }
