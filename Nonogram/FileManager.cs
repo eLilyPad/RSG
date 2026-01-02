@@ -3,7 +3,6 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static PuzzleData;
 using static Display;
 
 public static class FileManager
@@ -29,7 +28,7 @@ public static class FileManager
 			foreach (string path in Directory.EnumerateFiles(globalPath))
 			{
 				string json = File.ReadAllText(path);
-				if (Deserialize<SaveData>(json, options: Converter.Options) is not SaveData data) continue;
+				if (Deserialize(json, SaveJsonContext.Default.SaveData) is not SaveData data) continue;
 				puzzles.Add(data);
 			}
 		}
@@ -46,8 +45,8 @@ public static class FileManager
 		Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
 		string contents = data switch
 		{
-			SaveData save => Serialize(save, Converter.Options),
-			PuzzleData puzzle => Serialize(puzzle, Converter.Options),
+			SaveData save => Serialize(save, SaveJsonContext.Default.SaveData),
+			PuzzleData puzzle => Serialize(puzzle, SaveJsonContext.Default.PuzzleData),
 			_ => ""
 		};
 		File.WriteAllText(path, contents);

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using static System.Text.Json.JsonSerializer;
 using System.Text.Json;
 using Godot;
 
@@ -9,39 +10,46 @@ public sealed record PuzzleData : Display.Data
 {
 	public sealed class Converter : JsonConverter<PuzzleData>
 	{
-		public static JsonSerializerOptions Options { get; } = new()
-		{
-			WriteIndented = true,
-			Converters = { new Converter(), new SaveData.Converter() }
-		};
 		public override PuzzleData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
-			using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-			JsonElement root = doc.RootElement;
-			if (!root.TryGetProperty(PropertyNames.Tiles, out JsonElement tilesProp))
+			if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException("Expected PuzzleData object.");
+
+			string name = DefaultName;
+			Dictionary<Vector2I, Display.TileMode> tiles = [];
+
+			while (reader.Read())
 			{
-				return null;
+				if (reader.TokenType == JsonTokenType.EndObject) break;
+				if (reader.TokenType != JsonTokenType.PropertyName) throw new JsonException();
+
+				string? prop = reader.GetString();
+				reader.Read();
+
+				switch (prop)
+				{
+					case PropertyNames.Name when reader.GetString() is string readName:
+						name = readName;
+						break;
+					case PropertyNames.Tiles:
+						tiles = Deserialize<Dictionary<Vector2I, Display.TileMode>>(ref reader, options) ?? [];
+						break;
+					default:
+						reader.Skip();
+						break;
+				}
 			}
-			return new PuzzleData
-			{
-				Name = ReadName(root),
-				Tiles = ReadTiles(tilesProp)
-			};
+			if (tiles is null) return null;
+			return new PuzzleData { Name = name, Tiles = tiles };
 		}
 		public override void Write(Utf8JsonWriter writer, PuzzleData value, JsonSerializerOptions options)
 		{
 			writer.WriteStartObject();
-			writer.WriteString(PropertyNames.Name, value.Name);
-			writer.WritePropertyName(PropertyNames.Tiles);
-			writer.WriteStartArray();
-			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
+			if (!string.IsNullOrEmpty(value.Name))
 			{
-				writer.WriteStartObject();
-				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteNumber(PropertyNames.Value, (double)state);
-				writer.WriteEndObject();
+				writer.WriteString(PropertyNames.Name, value.Name);
 			}
-			writer.WriteEndArray();
+			writer.WritePropertyName(PropertyNames.Tiles);
+			Serialize(writer, value.Tiles, options);
 			writer.WriteEndObject();
 		}
 	}
@@ -229,9 +237,10 @@ public sealed record PuzzleData : Display.Data
 	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
 
 	public string? DialogueName { get; init; } = null;
+	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
+	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
+		.GridRange().ToDictionary(elementSelector: _ => Display.TileMode.Clear);
 
-	public PuzzleData(Empty empty) : base(empty.Size) { }
-	public PuzzleData(Dictionary<Vector2I, Tile> tiles) : base(tiles) { }
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 

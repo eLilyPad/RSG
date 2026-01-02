@@ -13,78 +13,94 @@ public sealed record SaveData : Display.Data
 
 		public override SaveData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
-			using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-			JsonElement root = doc.RootElement;
-			if (root.ValueKind != JsonValueKind.Object)
+			if (reader.TokenType != JsonTokenType.StartObject)
 			{
 				GD.PrintErr("SaveData root is not an object");
 				return null;
 			}
-			if (!root.TryGetProperty(ExpectedProp, out JsonElement expectedProp))
+			PuzzleData? expected = null;
+			Dictionary<Vector2I, Display.TileMode>? tiles = null;
+			TimeSpan timeTaken = TimeSpan.Zero;
+
+			while (reader.Read())
+			{
+				if (reader.TokenType == JsonTokenType.EndObject) break;
+
+				if (reader.TokenType != JsonTokenType.PropertyName) throw new JsonException();
+
+				string prop = reader.GetString()!;
+				reader.Read();
+
+				switch (prop)
+				{
+					case ExpectedProp:
+						expected = Deserialize<PuzzleData>(ref reader, options);
+						break;
+					case PropertyNames.Tiles:
+						tiles = Deserialize<Dictionary<Vector2I, Display.TileMode>>(ref reader, options);
+						break;
+					case PropertyNames.TimeTaken:
+						timeTaken = ReadTimeSpan(ref reader, options);
+						break;
+					default:
+						reader.Skip();
+						break;
+				}
+			}
+
+			if (expected is null)
 			{
 				GD.PrintErr($"Missing property in JSON: {ExpectedProp}");
 				return null;
 			}
-			if (!root.TryGetProperty(PropertyNames.Tiles, out JsonElement tilesProp))
-			{
-				return null;
-			}
-			if (!expectedProp.TryGetProperty(PropertyNames.Tiles, out JsonElement expectedTilesProp))
-			{
-				GD.PrintErr($"Missing property in JSON: Expected.{PropertyNames.Tiles}");
-				return null;
-			}
+			if (tiles is null) return null;
 
-			TimeSpan timeTaken = TimeSpan.Zero;
-			if (root.TryGetProperty(PropertyNames.TimeTaken, out JsonElement timeProp))
-			{
-				try
-				{
-					timeTaken = timeProp.ValueKind switch
-					{
-						JsonValueKind.String => timeProp.Deserialize<TimeSpan>(options),
-						JsonValueKind.Number => TimeSpan.FromSeconds(timeProp.GetDouble()),
-						_ => TimeSpan.Zero
-					};
-				}
-				catch (Exception e)
-				{
-					GD.PrintErr($"Invalid TimeTaken value: {e.Message}");
-				}
-			}
-
-			string name = ReadName(expectedProp);
 			return new SaveData
 			{
-				Name = name,
-				TimeTaken = timeTaken,
-				Tiles = ReadTiles(tilesProp),
-				Expected = new() { Name = name, Tiles = ReadTiles(expectedTilesProp) }
+				Name = expected.Name,
+				Expected = expected,
+				Tiles = tiles,
+				TimeTaken = timeTaken
 			};
 		}
 		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
 		{
 			writer.WriteStartObject();
 			writer.WritePropertyName(ExpectedProp);
-			Serialize(writer, value.Expected, PuzzleData.Converter.Options);
+			Serialize(writer, value.Expected, options);
 			writer.WritePropertyName(PropertyNames.TimeTaken);
 			Serialize(writer, value.TimeTaken, options);
 			writer.WritePropertyName(PropertyNames.Tiles);
-			writer.WriteStartArray();
-			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
-			{
-				writer.WriteStartObject();
-				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteNumber(PropertyNames.Value, state.ToDouble());
-				writer.WriteEndObject();
-			}
-			writer.WriteEndArray();
+			Serialize(writer, value.Tiles, options);
 			writer.WriteEndObject();
+		}
+		private static TimeSpan ReadTimeSpan(ref Utf8JsonReader reader, JsonSerializerOptions options)
+		{
+			try
+			{
+				return reader.TokenType switch
+				{
+					JsonTokenType.String =>
+						Deserialize<TimeSpan>(ref reader, options),
+
+					JsonTokenType.Number =>
+						TimeSpan.FromSeconds(reader.GetDouble()),
+
+					_ => TimeSpan.Zero
+				};
+			}
+			catch (Exception e)
+			{
+				GD.PrintErr($"Invalid TimeTaken value: {e.Message}");
+				return TimeSpan.Zero;
+			}
 		}
 	}
 
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
+	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
+	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = CreateTiles(DefaultSize);
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
