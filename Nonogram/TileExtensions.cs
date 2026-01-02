@@ -19,8 +19,9 @@ public static class TileExtensions
 		style ??= button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat;
 		if (style is null) return;
 		int chunkIndex = position.X / chunkSize + position.Y / chunkSize;
-		Color filledTile = colours.NonogramTileBackgroundFilled;
-		Color background = chunkIndex % 2 == 0 ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2;
+		bool isOther = chunkIndex % 2 == 0;
+		Color filledTile = isOther ? colours.NonogramTileBackgroundFilled : colours.NonogramTileBackgroundFilled.Darkened(.2f);
+		Color background = isOther ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2;
 		Color blocked = background.Darkened(.4f);
 		style.BgColor = mode switch
 		{
@@ -30,11 +31,13 @@ public static class TileExtensions
 		};
 		button.AddThemeStyleboxOverride(themeName, style);
 	}
-	public static bool Matches(this Button button, TileMode state)
-	{
-		return (button.Text is FillText && state is TileMode.Filled)
-			|| (button.Text is EmptyText && state is TileMode.Clear or TileMode.Blocked);
-	}
+	public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
+		expected == current
+		&& !(newValue is TileMode.Blocked && current is TileMode.Clear);
+	public static bool Matches(this TileMode current, TileMode expected) =>
+		expected == current
+		|| (expected == TileMode.Clear && current == TileMode.Blocked);
+
 	public static double ToDouble(this TileMode mode) => mode switch
 	{
 		TileMode.Blocked => 2,

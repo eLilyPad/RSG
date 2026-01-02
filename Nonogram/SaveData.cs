@@ -111,21 +111,28 @@ public sealed record SaveData : Display.Data
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
-	public bool Matches(Vector2I position, Display.TileMode? current = null, Display.TileMode? expected = null)
-	{
-		expected ??= Expected.States.GetValueOrDefault(position, defaultValue: Display.TileMode.NULL);
-		current ??= States.GetValueOrDefault(position, defaultValue: Display.TileMode.NULL);
-		return expected == current;
-	}
 	public bool IsLineComplete(Vector2I position, Display.Side side)
 	{
 		foreach ((Vector2I expectedPosition, Display.TileMode expectedMode) in Expected.States.AllInLine(position, side))
 		{
 			if (!Tiles.TryGetValue(expectedPosition, out Display.TileMode currentMode)) return false;
-			if (expectedMode is Display.TileMode.Clear && currentMode is Display.TileMode.Blocked) continue;
-			if (!Matches(expectedPosition, currentMode, expectedMode)) return false;
+			if (!currentMode.Matches(expectedMode)) return false;
 		}
 		return true;
+	}
+
+	internal void FillLines(Vector2I position)
+	{
+		foreach (Display.Side side in stackalloc[] { Display.Side.Row, Display.Side.Column })
+		{
+			GD.Print(IsLineComplete(position, side));
+			if (!IsLineComplete(position, side)) { continue; }
+			var line = States.AllInLine(position, side, without: Display.TileMode.Filled);
+			foreach ((Vector2I coord, Display.TileMode _) in line)
+			{
+				ChangeState(position: coord, mode: Display.TileMode.Blocked);
+			}
+		}
 	}
 	internal void ChangeState(Vector2I position, Display.TileMode mode)
 	{
