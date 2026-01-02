@@ -14,7 +14,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 	}
 	public override Tile GetOrCreate(Vector2I position) => _nodes.GetOrCreate(key: position, create: Create);
 	public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
-	public void ApplyText(Vector2I position, Tile? tile = null, TileMode input = TileMode.NULL)
+	public void ChangeMode(Vector2I position, Tile? tile = null, TileMode input = TileMode.NULL)
 	{
 		tile ??= GetOrCreate(position);
 		tile.Button.Text = Provider.Text(position);
