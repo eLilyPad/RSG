@@ -1,11 +1,9 @@
 using Godot;
-using System.Linq;
 
 namespace RSG.Nonogram;
 
 using static PuzzleData;
 using static PuzzleManager;
-
 using static Display;
 
 public static class PuzzleExtensions
@@ -71,11 +69,12 @@ class TilesProvider(CurrentPuzzle current) : Tiles.IProvider
 	public void Activate(Vector2I position, Tile tile)
 	{
 		SaveData save = current.Puzzle;
-		TileMode input = PressedMode switch
-		{
-			TileMode mode when mode == CurrentMode(position) => TileMode.Clear,
-			TileMode mode => mode
-		};
+		TileMode input = PressedMode.Change(tile.Button.Text.FromText());
+		//TileMode input = PressedMode switch
+		//{
+		//	TileMode mode when mode == CurrentMode(position) => TileMode.Clear,
+		//	TileMode mode => mode
+		//};
 		if (input is TileMode.NULL) return;
 		switch (current.Type)
 		{
@@ -152,11 +151,12 @@ public sealed record class CurrentPuzzle
 	private readonly Dictionary<Vector2I, bool> _lockedTiles = [];
 	internal CurrentPuzzle()
 	{
+		IColours colours = Core.Colours;
 		UI = new NonogramContainer { Name = "Nonogram" }
 			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 
-		_tiles = new(Provider: new TilesProvider(this), Colours: Core.Colours);
-		_hints = new(Provider: new HintsProvider(this), Colours: Core.Colours);
+		_tiles = new(Provider: new TilesProvider(this), Colours: colours);
+		_hints = new(Provider: new HintsProvider(this), Colours: colours);
 		Timer = new()
 		{
 			TimeChanged = text =>
