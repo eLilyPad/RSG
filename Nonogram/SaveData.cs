@@ -65,7 +65,6 @@ public sealed record SaveData : Display.Data
 		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
 		{
 			writer.WriteStartObject();
-			//writer.Wr
 			writer.WritePropertyName(ExpectedProp);
 			Serialize(writer, value.Expected, PuzzleData.Converter.Options);
 			writer.WritePropertyName(PropertyNames.TimeTaken);
@@ -90,18 +89,11 @@ public sealed record SaveData : Display.Data
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
 	public bool IsComplete => Matches(expected: Expected);
+	public IEnumerable<Vector2I> TileKeys => (Vector2I.One * Size).GridRange();
+	public IEnumerable<Display.HintPosition> HintKeys => Display.HintPosition.AsRange(Size);
 
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
-	public SaveData(Display.Data data, Dictionary<Vector2I, Tile> tiles) : base(tiles)
-	{
-		Expected = data switch
-		{
-			SaveData save => save.Expected,
-			PuzzleData puzzle => puzzle,
-			_ => throw new NotImplementedException()
-		};
-	}
 
 	public bool Matches(Vector2I position, Display.TileMode? current = null, Display.TileMode? expected = null)
 	{
@@ -119,7 +111,7 @@ public sealed record SaveData : Display.Data
 		}
 		return true;
 	}
-	public void ChangeState(Vector2I position, Display.TileMode mode)
+	internal void ChangeState(Vector2I position, Display.TileMode mode)
 	{
 		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
 		Tiles[position] = mode;
