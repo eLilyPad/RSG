@@ -7,9 +7,10 @@ using static PuzzleData;
 using static Display;
 public sealed class PuzzleManager
 {
-	public readonly record struct Settings(bool LineCompleteBlockRest, bool HaveTimer)
+	public readonly record struct Settings()
 	{
-
+		public bool LineCompleteBlockRest { get; init; } = true;
+		public bool HaveTimer { get; init; } = true;
 	}
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tiles.IProvider
 	{
@@ -100,7 +101,7 @@ public sealed class PuzzleManager
 							}
 						}
 					}
-					if (Settings.HaveTimer && input is TileMode.Filled && !Timer.Running)
+					if (Settings.HaveTimer && !Timer.Running && input is TileMode.Filled)
 					{
 						Timer.Running = true;
 					}
