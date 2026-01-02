@@ -115,8 +115,7 @@ public abstract partial class Display
 		NULL = 0,
 		Clear = 1,
 		Filled = 2,
-		Locked = 3,
-		Blocked = 4
+		Blocked = 3
 	}
 	public enum Side { Row, Column }
 }
