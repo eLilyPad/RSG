@@ -55,10 +55,8 @@ public static class GDX
 		return resource;
 	}
 
-	public static int Squared(this Vector2I value)
-	{
-		return value.X * value.X + value.Y * value.Y;
-	}
+	public static bool EitherEqual(this Vector2I position, Vector2I other) => other.X == position.X || other.Y == position.Y;
+	public static int Squared(this Vector2I value) => value.X * value.X + value.Y * value.Y;
 	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
 	{
 		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
@@ -86,6 +84,7 @@ public static class GDX
 		{
 			//if (!parent.HasChild(node)) { continue; }
 			if (node.IsAncestorOf(parent)) { continue; }
+			if (!GodotObject.IsInstanceValid(parent)) { continue; }
 			if (!GodotObject.IsInstanceValid(node)) { continue; }
 			parent.RemoveChild(node);
 			if (free) node.QueueFree();

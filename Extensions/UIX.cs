@@ -22,6 +22,13 @@ public static class UIX
 		(control.SizeFlagsHorizontal, control.SizeFlagsVertical) = (horizontal, vertical);
 		return control;
 	}
+	public static void AddAllFontThemeOverride(this Button button, Color color)
+	{
+		button.AddThemeColorOverride("font_color", color);
+		button.AddThemeColorOverride("font_hover_color", color);
+		button.AddThemeColorOverride("font_focus_color", color);
+		button.AddThemeColorOverride("font_pressed_color", color);
+	}
 	public static T UniformPadding<T>(this T node, int margin) where T : Control
 	{
 		node.OffsetTop = node.OffsetBottom = node.OffsetLeft = node.OffsetRight = margin;

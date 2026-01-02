@@ -1,148 +1,157 @@
-using static System.Text.Json.JsonSerializer;
 using Godot;
 
 namespace RSG.Nonogram;
 
 using static PuzzleData;
-using static NonogramContainer;
 
-using LoadResult = OneOf<Display.Data, PuzzleData.Code.ConversionError, NotFound>;
-
-public static class FileManager
-{
-	public static class Paths
-	{
-		public const string
-		Project = "res://",
-		User = "user://",
-		FileType = ".json",
-		Save = "Saves";
-	}
-
-	public static string SavePath => (OS.HasFeature("editor") ? Paths.Project : OS.GetUserDataDir()) + "/" + Paths.Save;
-
-	public static IList<SaveData> GetSaved()
-	{
-		IList<SaveData> puzzles = [];
-		string globalPath = ProjectSettings.GlobalizePath(SavePath);
-		try
-		{
-			if (!Directory.Exists(globalPath)) { return puzzles; }
-			foreach (string path in Directory.EnumerateFiles(globalPath))
-			{
-				string json = File.ReadAllText(path);
-				if (Deserialize<SaveData>(json, options: Converter.Options) is not SaveData data) continue;
-				puzzles.Add(data);
-			}
-		}
-		catch (Exception exception)
-		{
-			GD.PrintErr(exception);
-			return puzzles;
-		}
-		return puzzles;
-	}
-	public static void Save(Display.Data data)
-	{
-		string path = SavedPuzzlesPath(data.Name);
-		Directory.CreateDirectory(Path.GetDirectoryName(path) ?? "");
-		string contents = data switch
-		{
-			SaveData save => Serialize(save, Converter.Options),
-			PuzzleData puzzle => Serialize(puzzle, Converter.Options),
-			_ => ""
-		};
-		File.WriteAllText(path, contents);
-	}
-
-	private static string SavedPuzzlesPath(string name)
-	{
-		string path = $"{SavePath}/{name}{Paths.FileType}";
-		return ProjectSettings.GlobalizePath(path);
-	}
-}
-
+using static Display;
 public sealed class PuzzleManager
 {
-	public sealed record class CurrentPuzzle
+	public readonly record struct Settings()
 	{
-		public Display.Data Puzzle
+		public bool LineCompleteBlockRest { get; init; } = true;
+		public bool HaveTimer { get; init; } = true;
+	}
+	public sealed record class CurrentPuzzle : Hints.IProvider, Tiles.IProvider
+	{
+		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
+		public Settings Settings { get; set; } = new Settings();
+		public PuzzleTimer Timer { get; }
+		public SaveData Puzzle
 		{
-			get; set
+			private get; set
 			{
 				if (value is null) { return; }
-				field = Instance.Puzzles[value.Name] = value;
-				CheckCompletion();
-				Display.Load(value);
+				Display display = UI.Display;
+				Instance.Puzzles[value.Name] = field = value;
+				Timer.Elapsed = field.TimeTaken;
+
+				display.UpdateView(field, _tiles, _hints);
+				display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(field.Size) * _hints.TileSize;
 			}
 		} = new SaveData();
-		public Display Display { private get; set => (field = value).Load(Puzzle); } = Display.Default;
 
-		/// <summary>
-		/// Updates the current puzzle from the display.
-		///  - saves the changes to puzzle.
-		///  - Writes to game display
-		/// Checks if the display has StatusBar then  
-		/// </summary>
-		public void SaveProgress()
+		public NonogramContainer UI => field ??= new NonogramContainer { Name = "Nonogram" }
+			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
+
+		private readonly Tiles _tiles;
+		private readonly Hints _hints;
+		internal CurrentPuzzle()
 		{
-			SaveData data = new(Puzzle, Display);
-			Save(data);
-			Puzzle = data;
-		}
-		public bool CheckCompletion()
-		{
-			switch (Display)
+			_tiles = new(Provider: this, Colours: Core.Colours);
+			_hints = new(Provider: this, Colours: Core.Colours);
+			Timer = new()
 			{
-				case GameDisplay game when Puzzle is SaveData save:
-					if (Instance.PuzzlesCompleted[Current.Puzzle.Name] = save.IsComplete)
+				TimeChanged = text =>
+				{
+					Puzzle.TimeTaken = Timer?.Elapsed ?? TimeSpan.Zero;
+					UI.Display.Timer.Time.Text = text;
+				}
+			};
+		}
+
+		public void WhenCodeLoaderEntered(string value)
+		{
+			RichTextLabel validation = UI.ToolsBar.CodeLoader.Control.Validation;
+			//Load(value).Switch(
+			//	data => Puzzle = data as SaveData,
+			//	error => validation.Text = error.Message,
+			//	notFound => GD.Print("Not Found")
+			//);
+		}
+		public void WhenCodeLoaderEdited(string value)
+		{
+			RichTextLabel validation = UI.ToolsBar.CodeLoader.Control.Validation;
+			Code.Encode(value).Switch(
+				error => validation.Text = error.Message,
+				code => validation.Text = $"valid code of size: {code.Size}"
+			);
+		}
+
+		Node Hints.IProvider.Parent(HintPosition position)
+		{
+			Display display = UI.Display;
+			return position.Side switch { Side.Row => display.Rows, Side.Column => display.Columns, _ => display };
+		}
+		string Hints.IProvider.Text(HintPosition position) => Type switch
+		{
+			Type.Paint => Puzzle.States.CalculateHints(position),
+			_ => Puzzle.Expected.States.CalculateHints(position)
+		};
+		Node Tiles.IProvider.Parent() => UI.Display.TilesGrid;
+		string Tiles.IProvider.Text(Vector2I position) => Current.Puzzle.States.AsText(position);
+		void Tiles.IProvider.Activate(Vector2I position, Tile tile)
+		{
+			TileMode input = PressedMode.Change(tile.Button.Text.FromText());
+			if (input is TileMode.NULL) return;
+			switch (Type)
+			{
+				case Type.Game:
+					ChangeState(position, mode: input, tile);
+					input.PlayAudio();
+					if (Settings.LineCompleteBlockRest)
 					{
-						game.CompletionScreen.Show();
-						game.Status.CompletionLabel.Text = StatusBar.PuzzleComplete;
-						if (save.Expected.DialogueName is string dialogueName)
+						foreach (Side side in stackalloc[] { Side.Row, Side.Column })
 						{
-							GD.Print("starting dialogue " + dialogueName);
+							if (!Puzzle.IsLineComplete(position, side)) { continue; }
+							var line = Puzzle.States.AllInLine(position, side, without: TileMode.Filled);
+							foreach ((Vector2I coord, TileMode _) in line)
+							{
+								ChangeState(position: coord, mode: TileMode.Blocked);
+							}
+						}
+					}
+					if (Settings.HaveTimer && !Timer.Running && input is TileMode.Filled)
+					{
+						Timer.Running = true;
+					}
+					Save(Puzzle);
+					if (Puzzle.IsComplete)
+					{
+						//Instance.PuzzlesCompleted[PuzzleManager.Current.Puzzle.Name] = true;
+						UI.CompletionScreen.Show();
+						if (Puzzle.Expected.DialogueName is string dialogueName)
+						{
 							Dialogues.Start(dialogueName, true);
 						}
-						return true;
 					}
-
-					game.Status.CompletionLabel.Text = StatusBar.PuzzleIncomplete;
 					break;
+				case Type.Paint:
+					//tile.Button.Text = input == previousMode ? EmptyText : input.AsText();
+					//foreach (HintPosition hintPosition in HintPosition.Convert(position))
+					//{
+					//	if (!Hints.TryGetValue(hintPosition, out Hint? hint)) { continue; }
+					//	string hints = Tiles.CalculateHints(hintPosition);
+					//	hint.Label.Text = hintPosition.Side is Side.Row ? hints + " " : hints;
+					//}
+					break;
+				default: break;
 			}
-			return false;
+			void ChangeState(Vector2I position, TileMode mode, Tile? tile = null)
+			{
+				Puzzle.ChangeState(position, mode);
+				_tiles.ChangeMode(position, tile ?? _tiles.GetOrCreate(position), input: mode);
+			}
 		}
 	}
 
 	public static CurrentPuzzle Current => field ??= new();
-	private static PuzzleManager Instance => field ??= new();
+	internal static PuzzleManager Instance => field ??= new();
 
+	public static IEnumerable<(string Name, IEnumerable<SaveData> Data)> SelectorConfigs => [
+		("Saved Puzzles", GetSavedPuzzles()),
+		.. GetPuzzlePacks().Select(Pack.Convert)
+	];
 	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
 	public static IList<SaveData> GetSavedPuzzles() => FileManager.GetSaved();
-	public static LoadResult Load(OneOf<string, Display.Data> value)
-	{
-		return value.Match(LoadCode, LoadData);
-		static LoadResult LoadData(Display.Data data) => Instance.Puzzles[data.Name] = data switch
-		{
-			SaveData save => save.Expected,
-			_ => data
-		};
-		static LoadResult LoadCode(string code) => Code.Encode(code).Match<LoadResult>(
-			error => error,
-			code =>
-			{
-				PuzzleData data = code.Decode();
-				return Instance.Puzzles[data.Name] = data;
-			}
-		);
-	}
 	public static void Save(OneOf<PuzzleData, SaveData> puzzle)
 	{
 		puzzle.Switch(Puzzle, Savable);
 		static void Savable(SaveData save)
 		{
+			save = save with { Name = save.Name + " save" };
 			FileManager.Save(save);
-			Instance.Puzzles[save.Name] = save.Expected;
+			Instance.Puzzles[save.Name] = save;
 		}
 		static void Puzzle(PuzzleData data)
 		{
@@ -153,10 +162,8 @@ public sealed class PuzzleManager
 
 	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];
 	public Dictionary<string, bool> PuzzlesCompleted { private get; init; } = [];
-	public Dictionary<string, Display.Data> Puzzles { private get; init; } = new()
-	{
-		[Display.Data.DefaultName] = new PuzzleData()
-	};
+	public Dictionary<string, string> CompletionDialogues { private get; init; } = [];
+	public Dictionary<string, Data> Puzzles { private get; init; } = new() { [Data.DefaultName] = new PuzzleData() };
 
 	private PuzzleManager() { }
 }

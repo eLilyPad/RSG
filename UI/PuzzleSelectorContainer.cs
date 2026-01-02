@@ -18,70 +18,34 @@ public sealed partial class PuzzleSelector : PanelContainer
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	}
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	private readonly List<PackDisplay> _packDisplays = [];
 
 	public override void _Ready() => this.Add(Background, Scroll.Add(Puzzles));
 
-	public void ClearPacks()
+	public sealed partial class PackDisplay : PanelContainer
 	{
-		foreach (PackDisplay pack in _packDisplays)
+		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
 		{
-			if (!IsInstanceValid(Puzzles.Value)) continue;
-			if (Puzzles.Value.HasChild(pack))
-			{
-				Puzzles.Value.RemoveChild(pack);
-				pack.QueueFree();
-			}
+			return Create(config.name, root, config.data);
 		}
-	}
-	public void Fill(UI.MainMenu menu, IEnumerable<PuzzleData.Pack> packs)
-	{
-		foreach (PuzzleData.Pack pack in packs)
-		{
-			PackDisplay display = PackDisplay.Create(pack.Name, this, menu, pack.Puzzles);
-			_packDisplays.Add(display);
-		}
-	}
-	public void Fill(UI.MainMenu menu, IEnumerable<SaveData> saves)
-	{
-		PackDisplay display = PackDisplay.Create("Saved Puzzles", this, menu, saves);
-		_packDisplays.Add(display);
-	}
-
-	sealed partial class PackDisplay : PanelContainer
-	{
-		public static PackDisplay Create(string name, PuzzleSelector parent, Control menu, IEnumerable<Display.Data> data)
+		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
 			PackDisplay display = new PackDisplay { Name = name }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 			display.Puzzles.Label.Text = name;
-			foreach (Display.Data puzzle in data)
+			foreach (SaveData puzzle in data)
 			{
-				Color statusColor = puzzle switch
-				{
-					SaveData { IsComplete: true } save => Colors.Green,
-					_ => Colors.Black
-				};
-				PuzzleDisplay puzzleDisplay = new PuzzleDisplay
-				{
-					Name = puzzle.Name + " Display",
-					Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
-					Background = new ColorRect { Name = "Background", Color = statusColor }
-						.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-				}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
 				puzzleDisplay.Button.Pressed += pressed;
 				display.Puzzles.Value.Add(puzzleDisplay);
 
 				void pressed()
 				{
-					if (!IsInstanceValid(parent)) return;
+					if (!IsInstanceValid(root)) return;
 					PuzzleManager.Current.Puzzle = puzzle;
-					parent.Hide();
-					if (!IsInstanceValid(menu)) return;
-					menu.Hide();
+					root.Hide();
 				}
 			}
-			parent.Puzzles.Value.AddChild(display);
+
 			return display;
 		}
 
@@ -95,14 +59,27 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Vertical = true
 		}
 			.Preset(LayoutPreset.FullRect);
-		private readonly List<PuzzleDisplay> _displays = [];
 		internal PackDisplay() { }
-		public override void _Ready() => this
-			.Add(Puzzles)
-			.LinkToParent(_displays);
+		public override void _Ready() => this.Add(Puzzles);
 	}
-	sealed partial class PuzzleDisplay : BoxContainer
+	public sealed partial class PuzzleDisplay : BoxContainer
 	{
+		public static PuzzleDisplay Create(Display.Data puzzle)
+		{
+			Color statusColor = puzzle switch
+			{
+				SaveData { IsComplete: true } => Colors.Green,
+				_ => Colors.Black
+			};
+			PuzzleDisplay display = new PuzzleDisplay
+			{
+				Name = puzzle.Name + " Display",
+				Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+				Background = new ColorRect { Name = "Background", Color = statusColor }
+					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			return display;
+		}
 		public required ColorRect Background { get; init; }
 		public required Button Button { get; init; }
 		public override void _Ready() => this.Add(Background, Button);

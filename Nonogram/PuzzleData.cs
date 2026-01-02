@@ -1,196 +1,55 @@
-using static System.Text.Json.JsonSerializer;
 using System.Text.Json.Serialization;
+using static System.Text.Json.JsonSerializer;
 using System.Text.Json;
 using Godot;
 
 namespace RSG.Nonogram;
 
 using static PuzzleBuilder;
-
-public static class PuzzleBuilder
-{
-	public enum Shape { Circle, Diamond }
-
-	public static bool IsOverNoiseThreshold(this Vector2I position, float threshold)
-	{
-		(int x, int y) = position;
-		FastNoiseLite noise = new()
-		{
-			NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
-			Frequency = 0.1f,
-			Seed = 1
-		};
-		return noise.GetNoise2D(x, y) > threshold;
-	}
-	public static bool IsInLines(this Vector2I position, int thickness = 1, params ReadOnlySpan<(Vector2I start, Vector2I stop)> values)
-	{
-		foreach ((Vector2I start, Vector2I stop) in values)
-		{
-			if (start == stop)
-			{
-				return position.DistanceTo(start) <= thickness * .5f;
-			}
-			Vector2
-			pos = position,
-			ab = stop - start,
-			ap = position - start;
-
-			float t = ap.Dot(ab) / ab.LengthSquared();
-			t = Mathf.Clamp(t, 0, 1);
-
-			Vector2 closest = start + ab * t;
-			float maxDistance = thickness * 0.5f;
-			if (pos.DistanceTo(closest) <= maxDistance) return true;
-		}
-		return false;
-	}
-	public static bool IsInSpiral(this Vector2I position, Vector2I center, int a, int b, int thickness = 0)
-	{
-		Vector2I offset = center - position;
-		return Mathf.Abs(offset.Squared() - (a + b * Mathf.Atan2(offset.Y, offset.X))) <= thickness;
-	}
-	public static bool IsInCircle(this Vector2I position, Vector2I center, int radius, int thickness = 0)
-	{
-		Vector2I offset = center - position;
-		int
-		innerRadius = radius - thickness,
-		offsetSquared = offset.Squared();
-		return thickness < 0 ? In(radius) : In(radius) && !In(innerRadius);
-
-		bool In(int size) => size * size >= offsetSquared;
-	}
-	public static bool IsIn(this Vector2I position, Vector2I center, int radius, Shape shape, int thickness = 0)
-	{
-		Vector2I offset = center - position;
-		return shape switch
-		{
-			Shape.Circle when thickness > 0 => InCircle(radius) && !InCircle(radius - thickness),
-			Shape.Circle => InCircle(radius),
-			Shape.Diamond when thickness > 0 => InDiamond(radius) && !InDiamond(radius - thickness),
-			Shape.Diamond => InDiamond(radius),
-			_ => false
-		};
-
-		bool InCircle(int size) => size * size >= offset.Squared();
-		bool InDiamond(int size) => Mathf.Abs(offset.X) + Mathf.Abs(offset.Y) <= size;
-	}
-}
-public sealed record SaveData : Display.Data
-{
-	public sealed class Converter : JsonConverter<SaveData>
-	{
-		public const string ExpectedProp = "Expected";
-
-		public override SaveData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-		{
-			JsonElement root = JsonDocument.ParseValue(ref reader).RootElement;
-			if (!root.TryGetProperty(ExpectedProp, out JsonElement expectedProp))
-			{
-				GD.PrintErr($"Missing property in JSON: {ExpectedProp}");
-				return null;
-			}
-			if (!root.TryGetProperty(PropertyNames.Tiles, out JsonElement tilesProp))
-			{
-				return null;
-			}
-			if (!expectedProp.TryGetProperty(PropertyNames.Tiles, out JsonElement expectedTilesProp))
-			{
-				GD.PrintErr($"Missing property in JSON: {ExpectedProp}");
-				return null;
-			}
-			string name = ReadName(expectedProp);
-			return new SaveData
-			{
-				Name = name,
-				Tiles = ReadTiles(tilesProp),
-				Expected = new() { Name = name, Tiles = ReadTiles(expectedTilesProp) }
-			};
-		}
-		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
-		{
-			writer.WriteStartObject();
-			writer.WritePropertyName(ExpectedProp);
-			Serialize(writer, value.Expected, PuzzleData.Converter.Options);
-			writer.WritePropertyName(PropertyNames.Tiles);
-			writer.WriteStartArray();
-			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
-			{
-				writer.WriteStartObject();
-				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteNumber(PropertyNames.Value, state.ToDouble());
-				writer.WriteEndObject();
-			}
-			writer.WriteEndArray();
-			writer.WriteEndObject();
-		}
-	}
-	//public sealed record 
-
-	public static OneOf<SaveData, NotFound> Create(NonogramContainer.DisplayContainer displays)
-	{
-		return PuzzleManager.Current.Puzzle switch
-		{
-			PuzzleData puzzle => (OneOf<SaveData, NotFound>)new SaveData(expected: puzzle, display: displays.CurrentTabDisplay),
-			SaveData save => (OneOf<SaveData, NotFound>)new SaveData(save, display: displays.CurrentTabDisplay),
-			_ => new NotFound()
-		};
-	}
-
-	public PuzzleData Expected { get; init; } = new();
-	public override string Name => Expected.Name;
-	public override int Size => Expected.Size;
-	public bool IsComplete => Matches(expected: Expected);
-
-	public SaveData() { }
-	public SaveData(SaveData save, Display display) : base(display) => Expected = save.Expected;
-	public SaveData(PuzzleData expected, Display display) : base(display) => Expected = expected;
-	public SaveData(Display.Data data, Display display) : base(display)
-	{
-		Expected = data switch
-		{
-			SaveData save => save.Expected,
-			PuzzleData puzzle => puzzle,
-			_ => throw new NotImplementedException()
-		};
-	}
-}
 public sealed record PuzzleData : Display.Data
 {
 	public sealed class Converter : JsonConverter<PuzzleData>
 	{
-		public static JsonSerializerOptions Options { get; } = new()
-		{
-			WriteIndented = true,
-			Converters = { new Converter(), new SaveData.Converter() }
-		};
 		public override PuzzleData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
-			using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-			JsonElement root = doc.RootElement;
-			if (!root.TryGetProperty(PropertyNames.Tiles, out JsonElement tilesProp))
+			if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException("Expected PuzzleData object.");
+
+			string name = DefaultName;
+			Dictionary<Vector2I, Display.TileMode> tiles = [];
+
+			while (reader.Read())
 			{
-				return null;
+				if (reader.TokenType == JsonTokenType.EndObject) break;
+				if (reader.TokenType != JsonTokenType.PropertyName) throw new JsonException();
+
+				string? prop = reader.GetString();
+				reader.Read();
+
+				switch (prop)
+				{
+					case PropertyNames.Name when reader.GetString() is string readName:
+						name = readName;
+						break;
+					case PropertyNames.Tiles:
+						tiles = Deserialize<Dictionary<Vector2I, Display.TileMode>>(ref reader, options) ?? [];
+						break;
+					default:
+						reader.Skip();
+						break;
+				}
 			}
-			return new PuzzleData
-			{
-				Name = ReadName(root),
-				Tiles = ReadTiles(tilesProp)
-			};
+			if (tiles is null) return null;
+			return new PuzzleData { Name = name, Tiles = tiles };
 		}
 		public override void Write(Utf8JsonWriter writer, PuzzleData value, JsonSerializerOptions options)
 		{
 			writer.WriteStartObject();
-			writer.WriteString(PropertyNames.Name, value.Name);
-			writer.WritePropertyName(PropertyNames.Tiles);
-			writer.WriteStartArray();
-			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
+			if (!string.IsNullOrEmpty(value.Name))
 			{
-				writer.WriteStartObject();
-				writer.WriteString(PropertyNames.Position, $"({position.X},{position.Y})");
-				writer.WriteNumber(PropertyNames.Value, (double)state);
-				writer.WriteEndObject();
+				writer.WriteString(PropertyNames.Name, value.Name);
 			}
-			writer.WriteEndArray();
+			writer.WritePropertyName(PropertyNames.Tiles);
+			Serialize(writer, value.Tiles, options);
 			writer.WriteEndObject();
 		}
 	}
@@ -238,7 +97,7 @@ public sealed record PuzzleData : Display.Data
 			code += value.Size + SizeBarrier;
 			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
 			{
-				code += state is Display.TileMode.Fill ? FillToken : BlankToken;
+				code += state is Display.TileMode.Filled ? FillToken : BlankToken;
 			}
 			return new()
 			{
@@ -366,16 +225,22 @@ public sealed record PuzzleData : Display.Data
 				static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
 			}
 		}
+		public static (string Name, IEnumerable<SaveData> Puzzles) Convert(Pack pack)
+		{
+			return (pack.Name, pack.Puzzles.Select(puzzle => new SaveData(expected: puzzle)));
+		}
+
 		public string Name { get; init; } = "Pack";
 		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
 
-	public static explicit operator SaveData(PuzzleData puzzle) => new() { Expected = puzzle };
+	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
 
 	public string? DialogueName { get; init; } = null;
+	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
+	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
+		.GridRange().ToDictionary(elementSelector: _ => Display.TileMode.Clear);
 
-	public PuzzleData(Empty empty) : base(empty.Size) { }
-	public PuzzleData(Display display) : base(display) { }
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
 

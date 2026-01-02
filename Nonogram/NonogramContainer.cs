@@ -2,18 +2,11 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static PuzzleManager;
-
-public sealed partial class NonogramContainer : Container
+public sealed partial class NonogramContainer : PanelContainer
 {
 	public interface IHaveTools { PopupMenu Tools { get; } }
 	public interface IHaveStatus { StatusBar Status { get; } }
 
-	public sealed partial class DisplayContainer : TabContainer
-	{
-		public List<Display> Tabs { internal get; init; } = [];
-		public Display CurrentTabDisplay => GetCurrentTabControl() is not Display display ? Tabs.First() : display;
-	}
 	public sealed partial class StatusBar : HBoxContainer
 	{
 		public const string PuzzleComplete = "Puzzle is complete", PuzzleIncomplete = "Puzzle is incomplete";
@@ -28,12 +21,13 @@ public sealed partial class NonogramContainer : Container
 	}
 	public sealed partial class PuzzleCompleteScreen : PanelContainer
 	{
-		public ColorRect Background { get; } = new ColorRect
-		{
-			Name = "Background",
-			Color = Colors.DarkGray,
-		}
+		public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkGray }
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Completion Container" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public HBoxContainer Options { get; } = new HBoxContainer { Name = "Options Container" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public Button Levels { get; } = new() { Name = "LevelsButton", Text = "Levels" };
 		public RichTextLabel CompletionTitle { get; } = new RichTextLabel
 		{
 			Name = "Completion Title",
@@ -44,11 +38,6 @@ public sealed partial class NonogramContainer : Container
 			FitContent = true,
 		}
 			.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
-		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Completion Container" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public HBoxContainer Options { get; } = new HBoxContainer { Name = "Options Container" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public Button Levels { get; } = new() { Name = "LevelsButton", Text = "Levels" };
 		public override void _Ready()
 		{
 			this.Add(
@@ -60,59 +49,21 @@ public sealed partial class NonogramContainer : Container
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Game" };
-		public required PuzzleCompleteScreen CompletionScreen { get; init; }
 		public required StatusBar Status { get; init; }
 
-		public override void Load(Data data)
-		{
-			base.Load(data);
-			Reset();
-			if (data is not SaveData save) return;
-			WriteToTiles(save);
-		}
-		public override void OnTilePressed(Vector2I position)
-		{
-			if (!Tiles.TryGetValue(position, out Tile? button)) return;
-
-			TileMode input = PressedMode;
-			TileMode previousMode = button.Button.Text.FromText();
-
-			switch (input)
-			{
-				case TileMode.Fill:
-					button.Button.Text = input == previousMode ? EmptyText : FillText;
-					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.FillTileClicked);
-					break;
-				case TileMode.Block:
-					button.Button.Text = input == previousMode ? EmptyText : BlockText;
-					Audio.Buses.SoundEffects.Play(Audio.NonogramSounds.BlockTileClicked);
-					break;
-				case TileMode.Clear: break;
-			}
-			Current.SaveProgress();
-		}
-		public override void Reset()
-		{
-			foreach (Tile button in Tiles.Values) ResetTile(button);
-		}
 	}
 	public sealed partial class PaintDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Paint" };
-
-		public override void OnTilePressed(Vector2I position)
-		{
-			base.OnTilePressed(position);
-			WriteToHints(positions: HintPosition.Convert(position));
-		}
-		public override void Reset()
-		{
-			foreach (Tile button in Tiles.Values) ResetTile(button);
-			foreach (Hint label in Hints.Values) ResetHint(label);
-		}
 	}
 
-	public Menu ToolsBar { get; } = new() { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f };
+	public PuzzleCompleteScreen CompletionScreen { get; } = new PuzzleCompleteScreen
+	{
+		Name = "PuzzleCompleteScreen",
+		Visible = false
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public Menu ToolsBar { get; } = new Menu { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 		.Preset(LayoutPreset.BottomWide, LayoutPresetMode.KeepWidth);
@@ -120,10 +71,8 @@ public sealed partial class NonogramContainer : Container
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public DisplayContainer Displays => field ??= new DisplayContainer { Name = $"{typeof(Display)} Tabs", TabsVisible = true }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public Display.Default Display { get; } = new Display.Default { }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
-	public override void _Ready() => this.Add(Background, Container.Add(ToolsBar, Displays, Status));
+	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }
-public interface IColours { Color NonogramBackground { get; } }

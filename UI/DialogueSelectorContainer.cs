@@ -2,12 +2,26 @@ using Godot;
 
 namespace RSG;
 
-using static Dialogue;
-
 public sealed partial class DialogueSelector : PanelContainer
 {
-	sealed partial class DialogueDisplay : BoxContainer
+	public sealed partial class DialogueDisplay : BoxContainer
 	{
+		public static DialogueDisplay Create(string name, CanvasItem parent)
+		{
+			DialogueDisplay display = new DialogueDisplay
+			{
+				Button = new() { Name = name + " Button", Text = name },
+				Background = new ColorRect { Name = "Background", Color = Colors.Beige }
+					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			display.Button.Connect(BaseButton.SignalName.Pressed, Callable.From(Pressed));
+			void Pressed()
+			{
+				Dialogues.Start(name);
+				parent.Hide();
+			}
+			return display;
+		}
 		public required ColorRect Background { get; init; }
 		public required Button Button { get; init; }
 		public override void _Ready() => this.Add(Background, Button);
@@ -27,29 +41,6 @@ public sealed partial class DialogueSelector : PanelContainer
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	}
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	private readonly List<DialogueDisplay> _displays = [];
-	public override void _Ready() => this
-		.Add(Background, Scroll.Add(DisplayContainer))
-		.LinkToParent(_displays);
-	public void Clear() => DisplayContainer.Value.RemoveChildren(true);
-	public void Fill(params IEnumerable<string> speeches)
-	{
-		foreach (string name in speeches)
-		{
-			DialogueDisplay display = new DialogueDisplay
-			{
-				Button = new() { Name = name + " Button", Text = name },
-				Background = new ColorRect { Name = "Background", Color = Colors.Beige }
-					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-			display.Button.Pressed += Pressed;
-			DisplayContainer.Value.Add(display);
+	public override void _Ready() => this.Add(Background, Scroll.Add(DisplayContainer));
 
-			void Pressed()
-			{
-				Dialogues.Start(name);
-				Hide();
-			}
-		}
-	}
 }
