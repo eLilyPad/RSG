@@ -1,15 +1,10 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 using Godot;
 
 namespace RSG.Nonogram;
 
 public abstract partial class Display
 {
-	public readonly record struct TilePosition(Vector2I Position)
-	{
-		public static implicit operator TilePosition(Vector2I position) => new(position);
-		public static implicit operator Vector2I(TilePosition tile) => tile.Position;
-	}
 	public readonly record struct HintPosition(Side Side, int Index)
 	{
 		public static IEnumerable<HintPosition> AsRange(int length, int start = 0) => Range(start, count: length)
@@ -37,56 +32,30 @@ public abstract partial class Display
 
 	public abstract record Data
 	{
-		public readonly record struct Empty(int Size);
 		public static class PropertyNames
 		{
-			public const string Tiles = "Tiles", Name = "Name", Position = "Position", Value = "Value", TimeTaken = "Time Taken";
+			public const string
+			Tiles = "Tiles",
+			Name = "Name",
+			Position = "Position",
+			Value = "Value",
+			TimeTaken = "TimeTaken";
 		}
-		public static string ReadName(JsonElement root)
-		{
-			if (!root.TryGetProperty(PropertyNames.Name, out JsonElement nameProp))
-			{
-				return DefaultName;
-			}
-			return nameProp.GetString() ?? DefaultName;
-		}
-		public static Dictionary<Vector2I, TileMode> ReadTiles(JsonElement tilesProp)
-		{
-			Dictionary<Vector2I, TileMode> tiles = [];
-			foreach (JsonElement element in tilesProp.EnumerateArray())
-			{
-				if (!element.TryGetProperty(PropertyNames.Position, out JsonElement positionProp)
-					|| !positionProp.GetString().TryParse(out Vector2I position)
-				)
-				{
-					GD.PrintErr($"Error parsing position in JSON: {element}");
-					continue;
-				}
-				if (!element.TryGetProperty(PropertyNames.Value, out JsonElement valueProp))
-				{
-					GD.PrintErr($"Error parsing value in JSON: {element}");
-					continue;
-				}
-				tiles[position] = valueProp.TryGetInt32(out int value) ? value.ToTileMode() : TileMode.Clear;
-			}
-			return tiles;
-		}
+		public static Dictionary<Vector2I, TileMode> CreateTiles(int size) => (Vector2I.One * size)
+			.GridRange().ToDictionary(elementSelector: _ => TileMode.Clear);
 
 		public const string DefaultName = "Puzzle";
 		public const int DefaultSize = 15;
 		public virtual string Name { get; set; } = DefaultName;
+		public abstract Dictionary<Vector2I, TileMode> Tiles { protected get; init; }
+
 		public IImmutableDictionary<Vector2I, TileMode> States => Tiles.ToImmutableDictionary();
 		public IEnumerable<HintPosition> HintPositions => Tiles.Keys.SelectMany(
 			key => HintPosition.Convert(key)
 		);
-		public Dictionary<Vector2I, TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
-			.GridRange()
-			.ToDictionary(elementSelector: _ => TileMode.Clear);
 		public virtual int Size => (int)Mathf.Sqrt(Tiles.Count);
-		public Data(int size = DefaultSize)
-		{
-			Tiles = (Vector2I.One * size).GridRange().ToDictionary(elementSelector: _ => TileMode.Clear);
-		}
+
+		public Data(int size = DefaultSize) { Tiles = CreateTiles(size); }
 		public Data(string name, Func<Vector2I, bool> selector, int size)
 		{
 			Name = name;
@@ -94,13 +63,9 @@ public abstract partial class Display
 				elementSelector: position => selector(position) ? TileMode.Filled : TileMode.Clear
 			);
 		}
-		public Data(Dictionary<Vector2I, Tile> tiles)
-		{
-			Tiles = tiles.ToDictionary(elementSelector: pair => pair.Value.Button.Text.FromText());
-		}
 		public bool Matches(Data expected)
 		{
-			foreach ((Vector2I position, TileMode state) in States)
+			foreach ((Vector2I position, TileMode state) in Tiles)
 			{
 				if (!expected.Tiles.TryGetValue(position, out TileMode tile)) return false;
 				if (tile is not TileMode.Filled) continue;
@@ -110,7 +75,8 @@ public abstract partial class Display
 		}
 	}
 
-	public enum TileMode : byte
+	[JsonConverter(typeof(JsonStringEnumConverter<TileMode>))]
+	public enum TileMode
 	{
 		NULL = 0,
 		Clear = 1,
