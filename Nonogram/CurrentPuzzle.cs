@@ -1,5 +1,4 @@
 using Godot;
-using System.Linq;
 
 namespace RSG.Nonogram;
 
@@ -19,14 +18,12 @@ public static class PuzzleExtensions
 		{
 			Tile tile = tiles.GetOrCreate(position);
 			TileMode state = save.States.GetValueOrDefault(key: position, defaultValue: TileMode.NULL);
-
+			tiles.ChangeMode(position, tile, input: state);
 			if (firstTile)
 			{
 				hints.TileSize = tile.Size;
 				firstTile = false;
 			}
-
-			tiles.ChangeMode(position, tile, input: state);
 		}
 		foreach (HintPosition position in hintValues)
 		{

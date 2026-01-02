@@ -76,10 +76,6 @@ public static class DisplayExtensions
 	{
 		return tiles.CalculateHints(position, selector: value => value is TileMode.Filled ? 1 : 0);
 	}
-	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value.Button.Text is FillText ? 1 : 0);
-	}
 	private static string CalculateHints<TValue>(
 		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
 		HintPosition position,
@@ -111,48 +107,13 @@ public static class DisplayExtensions
 		run = 0;
 	}
 }
-public static class TileExtensions
+public static class TileModeExtensions
 {
-	public static void StyleTileBackground(
-		this Button button,
-		Vector2I position,
-		IColours colours,
-		StyleBoxFlat? style = null,
-		TileMode? mode = null
-	)
-	{
-		const int chunkSize = 5;
-		const string themeName = "normal";
-		style ??= button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat;
-		if (style is null) return;
-		int chunkIndex = position.X / chunkSize + position.Y / chunkSize;
-		Color filledTile = colours.NonogramTileBackgroundFilled;
-		Color background = chunkIndex % 2 == 0 ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2;
-		Color blocked = background.Darkened(.4f);
-		style.BgColor = mode switch
-		{
-			TileMode.Filled => filledTile,
-			TileMode.Blocked => blocked,
-			_ => background
-		};
-		button.AddThemeStyleboxOverride(themeName, style);
-	}
-	public static bool Matches(this Button button, TileMode state)
-	{
-		return (button.Text is FillText && state is TileMode.Filled)
-			|| (button.Text is EmptyText && state is TileMode.Clear or TileMode.Blocked);
-	}
 	public static double ToDouble(this TileMode mode) => mode switch
 	{
 		TileMode.Blocked => 2,
 		TileMode.Filled => 1,
 		_ => 0,
-	};
-	public static TileMode Change(this TileMode input, TileMode currents) => input switch
-	{
-		TileMode.NULL => input,
-		TileMode mode when mode == currents => TileMode.Clear,
-		TileMode mode => mode
 	};
 	public static TileMode ToTileMode(this int mode) => mode switch
 	{
@@ -187,4 +148,39 @@ public static class TileExtensions
 		TileMode.Filled => FillText,
 		_ => EmptyText,
 	};
+}
+public static class TileExtensions
+{
+	public static void StyleTileBackground<T>(
+		this T button,
+		Vector2I position,
+		IColours colours,
+		bool locked = false,
+		StyleBoxFlat? style = null,
+		TileMode? mode = null
+	)
+	where T : Control
+	{
+		const int chunkSize = 5;
+		const string themeName = "normal";
+		style ??= button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat;
+		if (style is null) return;
+		int chunkIndex = position.X / chunkSize + position.Y / chunkSize;
+		Color filled = colours.NonogramTileBackgroundFilled;
+		Color background = chunkIndex % 2 == 0 ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2;
+		Color blocked = background.Darkened(.4f);
+		style.BgColor = mode switch
+		{
+			TileMode.Filled => locked ? filled.Darkened(.3f) : filled,
+			TileMode.Blocked => blocked,
+			_ => background
+		};
+		button.AddThemeStyleboxOverride(themeName, style);
+	}
+	public static bool Matches(this Button button, TileMode state)
+	{
+		return (button.Text is FillText && state is TileMode.Filled)
+			|| (button.Text is EmptyText && state is TileMode.Clear or TileMode.Blocked);
+	}
+
 }

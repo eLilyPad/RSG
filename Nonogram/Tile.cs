@@ -9,16 +9,18 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 	internal interface IProvider
 	{
 		Node Parent();
+		bool Locked(Vector2I position);
 		string Text(Vector2I position);
 		void Activate(Vector2I position, Tile tile);
 	}
 	public override Tile GetOrCreate(Vector2I position) => _nodes.GetOrCreate(key: position, create: Create);
 	public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
-	public void ApplyText(Vector2I position, Tile? tile = null, TileMode input = TileMode.NULL)
+
+	public void ChangeMode(Vector2I position, Tile? tile = null, TileMode input = TileMode.NULL)
 	{
 		tile ??= GetOrCreate(position);
 		tile.Button.Text = Provider.Text(position);
-		tile.Button.StyleTileBackground(position, colours: Colours, mode: input);
+		tile.Button.StyleTileBackground(position, colours: Colours, locked: Provider.Locked(position), mode: input);
 	}
 	private Tile Create(Vector2I position)
 	{
@@ -29,7 +31,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 		{
 			style.CornerDetail = 1;
 			style.SetCornerRadiusAll(0);
-			tile.Button.StyleTileBackground(position, Colours, style);
+			tile.Button.StyleTileBackground(position, colours: Colours, locked: Provider.Locked(position), style);
 		}
 		tile.Button.AddAllFontThemeOverride(Colors.Transparent);
 		tile.Button.AddThemeFontSizeOverride("font_size", 10);
