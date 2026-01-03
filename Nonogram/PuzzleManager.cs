@@ -45,7 +45,7 @@ public sealed class PuzzleManager
 				TimeChanged = text =>
 				{
 					Puzzle.TimeTaken = Timer?.Elapsed ?? TimeSpan.Zero;
-					UI.Display.Timer.Time.Text = text;
+					UI.Display.Timer.Time.Text = "[font_size=30]" + text;
 				}
 			};
 		}
