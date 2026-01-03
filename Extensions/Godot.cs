@@ -2,7 +2,61 @@ using Godot;
 
 namespace RSG.Extensions;
 
-public static class GDX
+public static class VectorExtensions
+{
+	public static bool EitherEqual(this Vector2I position, Vector2I other) => other.X == position.X || other.Y == position.Y;
+	public static int Squared(this Vector2I value) => value.X * value.X + value.Y * value.Y;
+	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
+	{
+		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
+		for (int x = start.X; x < size.X; x++)
+		{
+			for (int y = start.Y; y < size.Y; y++)
+			{
+				yield return new Vector2I(x, y);
+			}
+		}
+	}
+	public static bool IsInBorder(this Vector2I size, Vector2I position, int thickness = 1)
+	{
+		if (thickness <= 0) return false;
+
+		// Optional safety check
+		if (position.X < 0 || position.Y < 0 || position.X >= size.X || position.Y >= size.Y) return false;
+
+		return position.X < thickness
+			|| position.Y < thickness
+			|| position.X >= size.X - thickness
+			|| position.Y >= size.Y - thickness;
+	}
+	public static bool IsCorner(this Vector2I size, Vector2I position)
+	{
+		return (position.X == 0 && position.Y == 0)
+			|| (position.X == size.X - 1 && position.Y == 0)
+			|| (position.X == 0 && position.Y == size.Y - 1)
+			|| (position.X == size.X - 1 && position.Y == size.Y - 1);
+	}
+	public static bool TryParse(this string? value, out Vector2I result)
+	{
+		result = Vector2I.Zero;
+		if (string.IsNullOrEmpty(value)) { return false; }
+		foreach ((int index, string part) in value.Trim('(', ')').Split(',').Index())
+		{
+			if (!int.TryParse(part, out int number))
+			{
+				GD.PrintErr($"Error parsing int from string part: {part}");
+				return false;
+			}
+			switch (index)
+			{
+				case 0: result.X = number; break;
+				case 1: result.Y = number; break;
+			}
+		}
+		return true;
+	}
+}
+public static class ImageExtensions
 {
 	public static void SetPixel(this Image image, int x, int y, Color color, int size)
 	{
@@ -15,13 +69,20 @@ public static class GDX
 				int px = x + dx;
 				int py = y + dy;
 
-				if (px >= 0 && py >= 0 && px < image.GetWidth() && py < image.GetHeight())
+				if (image.PixelInImage(px, py))
 				{
 					image.SetPixel(px, py, color);
 				}
 			}
 		}
 	}
+	public static bool PixelInImage(this Image image, int x, int y)
+	{
+		return x >= 0 && y >= 0 && x < image.GetWidth() && y < image.GetHeight();
+	}
+}
+public static class GDX
+{
 	public static void LinkToParent<T>(this Node node, List<T> list) where T : Node
 	{
 		node.ChildEnteredTree += OnChildEnteredTree;
@@ -55,19 +116,7 @@ public static class GDX
 		return resource;
 	}
 
-	public static bool EitherEqual(this Vector2I position, Vector2I other) => other.X == position.X || other.Y == position.Y;
-	public static int Squared(this Vector2I value) => value.X * value.X + value.Y * value.Y;
-	public static IEnumerable<Vector2I> GridRange(this Vector2I size, Vector2I? startAt = null)
-	{
-		if (startAt is not Vector2I start) { start = Vector2I.Zero; }
-		for (int x = start.X; x < size.X; x++)
-		{
-			for (int y = start.Y; y < size.Y; y++)
-			{
-				yield return new Vector2I(x, y);
-			}
-		}
-	}
+
 	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children) { parent.AddChild(node); }
@@ -131,25 +180,7 @@ public static class GDX
 			&& parent.IsInsideTree()
 			&& parent.HasNode(child.GetPath());
 	}
-	public static bool TryParse(this string? value, out Vector2I result)
-	{
-		result = Vector2I.Zero;
-		if (string.IsNullOrEmpty(value)) { return false; }
-		foreach ((int index, string part) in value.Trim('(', ')').Split(',').Index())
-		{
-			if (!int.TryParse(part, out int number))
-			{
-				GD.PrintErr($"Error parsing int from string part: {part}");
-				return false;
-			}
-			switch (index)
-			{
-				case 0: result.X = number; break;
-				case 1: result.Y = number; break;
-			}
-		}
-		return true;
-	}
+
 	/// <summary>
 	/// Hides the control if visible, unless there is a control in steps that is visible. 
 	/// The visible step instead will be hidden 
