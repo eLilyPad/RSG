@@ -70,27 +70,29 @@ public sealed partial class CoreUI : PanelContainer
 			create: PackDisplay.Create
 		);
 
-		Console.Container.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
-		Console.Container.Input.Line.TextSubmitted += Console.Instance.Submitted;
-		Console.Container.Input.Line.TextChanged += input =>
+		console.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
+		console.Input.Line.TextSubmitted += Console.Instance.Submitted;
+		console.Input.Line.TextChanged += input =>
 		{
-			Console.Container.Input.SuggestionDisplay.Clear();
+			console.Input.SuggestionDisplay.Clear();
 			IEnumerable<string> suggestions = Console.Instance.Suggestions(input);
 			foreach (string suggestion in suggestions)
 			{
-				Console.Container.Input.SuggestionDisplay.AddItem(suggestion);
+				console.Input.SuggestionDisplay.AddItem(suggestion);
 			}
 		};
-		Console.Container.Input.SuggestionDisplay.ItemSelected += index =>
+		console.Input.SuggestionDisplay.ItemSelected += index =>
 		{
-			string suggestion = Console.Container.Input.SuggestionDisplay.GetItemText((int)index);
-			if (!Console.Container.Input.Line.Text.EndsWith(' '))
+			string suggestion = console.Input.SuggestionDisplay.GetItemText((int)index);
+			if (!console.Input.Line.Text.EndsWith(' '))
 			{
-				Console.Container.Input.Line.Text += ' ';
+				console.Input.Line.Text += ' ';
 			}
-			Console.Container.Input.Line.Text += suggestion;
+			console.Input.Line.Text += suggestion;
 			Console.GrabInputFocus();
 		};
+
+		nonogram.Resized += () => nonogram.Background.Border.DrawBorder((Vector2I)nonogram.Size);
 
 		return container;
 

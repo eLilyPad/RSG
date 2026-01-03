@@ -18,7 +18,7 @@ public abstract partial class Display : AspectRatioContainer
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public Container Spacer { get; } = new AspectRatioContainer { Name = "Spacer" }
+	public Container Spacer { get; } = new PanelContainer { Name = "Spacer" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public TimerContainer Timer { get; } = new TimerContainer { Name = "Timer" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
