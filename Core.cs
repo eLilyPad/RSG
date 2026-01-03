@@ -31,6 +31,7 @@ public sealed partial class Core : Node
 
 		Container.Menu.Background.Color = Colours.MainMenuBackground;
 		nonogram.Background.ColorBackground.Color = Colours.NonogramBackground;
+		nonogram.Display.Timer.Background.Color = Colours.NonogramTimerBackground;
 
 		CoreUI.ConnectSignals(Container);
 
