@@ -30,7 +30,7 @@ public sealed partial class Core : Node
 		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
 
 		Container.Menu.Background.Color = Colours.MainMenuBackground;
-		PuzzleManager.Current.UI.Background.Color = Colours.NonogramBackground;
+		nonogram.Background.ColorBackground.Color = Colours.NonogramBackground;
 
 		CoreUI.ConnectSignals(Container);
 
