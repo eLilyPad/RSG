@@ -39,6 +39,7 @@ public abstract partial class Display
 			Name = "Name",
 			Position = "Position",
 			Value = "Value",
+			DialogueName = "CompletionDialogueName",
 			TimeTaken = "TimeTaken";
 		}
 		public static Dictionary<Vector2I, TileMode> CreateTiles(int size) => (Vector2I.One * size)
