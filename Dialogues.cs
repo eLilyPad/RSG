@@ -35,6 +35,7 @@ public sealed class Dialogues
 	private static readonly CurrentDialogue Current = new();
 	public static void Start(string name, bool? enable = null)
 	{
+		if (string.IsNullOrEmpty(name)) return;
 		if (!Instance.Speeches.TryGetValue(name, out Speech speech)) return;
 		(Current.Speech, Current.SpeechIndex, Current.Name) = (speech, 0, name);
 		DisplayCurrent();
