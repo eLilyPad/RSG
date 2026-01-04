@@ -19,33 +19,6 @@ public sealed partial class NonogramContainer : PanelContainer
 		}.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		public override void _Ready() => this.Add(CompletionLabel);
 	}
-	public sealed partial class PuzzleCompleteScreen : PanelContainer
-	{
-		public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkGray }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Completion Container" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public HBoxContainer Options { get; } = new HBoxContainer { Name = "Options Container" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-		public Button Levels { get; } = new() { Name = "LevelsButton", Text = "Levels" };
-		public RichTextLabel CompletionTitle { get; } = new RichTextLabel
-		{
-			Name = "Completion Title",
-			BbcodeEnabled = true,
-			Text = "[color=black][font_size=60] Puzzle Complete",
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Center,
-			FitContent = true,
-		}
-			.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
-		public override void _Ready()
-		{
-			this.Add(
-				Background,
-				Container.Add(CompletionTitle, Options.Add(Levels))
-			);
-		}
-	}
 	public sealed partial class GameDisplay : Display, IHaveTools
 	{
 		public PopupMenu Tools { get; } = new() { Name = "Game" };

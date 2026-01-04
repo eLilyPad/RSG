@@ -6,13 +6,13 @@ namespace RSG;
 using UI;
 using Nonogram;
 
-public sealed partial class Core : Node
+public sealed partial class Core : Node, PuzzleManager.CurrentPuzzle.IPuzzleEvent
 {
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
-	public CoreUI Container => field ??= new CoreUI { Name = "Core UI" }
+	public CoreUI Container => field ??= new CoreUI { Name = "Core UI", Colours = Colours }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public override void _Ready()
@@ -28,10 +28,6 @@ public sealed partial class Core : Node
 			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
 		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
-
-		Container.Menu.Background.Color = Colours.MainMenuBackground;
-		nonogram.Background.ColorBackground.Color = Colours.NonogramBackground;
-		nonogram.Display.Timer.Background.Color = Colours.NonogramTimerBackground;
 
 		CoreUI.ConnectSignals(Container);
 
@@ -52,7 +48,7 @@ public sealed partial class Core : Node
 		);
 
 		PuzzleManager.Current.Type = Display.Type.Game;
-
+		PuzzleManager.Current.EventHandler = this;
 		static void ChangeDisplayType(Display.Type type)
 		{
 			PuzzleManager.Current.Type = type;
@@ -79,5 +75,12 @@ public sealed partial class Core : Node
 		}
 		Input.RunEvent(input);
 	}
+
+	void PuzzleManager.CurrentPuzzle.IPuzzleEvent.Completed()
+	{
+		string dialogueName = PuzzleManager.Current.Puzzle.Expected.DialogueName;
+		Dialogues.Enable(dialogueName);
+	}
+
 }
 

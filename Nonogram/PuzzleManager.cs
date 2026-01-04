@@ -14,12 +14,14 @@ public sealed class PuzzleManager
 	}
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tiles.IProvider
 	{
+		public interface IPuzzleEvent { void Completed(); }
+		public IPuzzleEvent? EventHandler { get; set; }
 		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
 		public Settings Settings { get; set; } = new Settings();
 		public PuzzleTimer Timer { get; }
 		public SaveData Puzzle
 		{
-			private get; set
+			internal get; set
 			{
 				if (value is null) { return; }
 				Display display = UI.Display;
@@ -88,34 +90,28 @@ public sealed class PuzzleManager
 			{
 				case Type.Game:
 					ChangeState(position, mode: input, tile);
+					input.PlayAudio();
 					if (Settings.LineCompleteBlockRest)
 					{
-						foreach (Display.Side side in stackalloc[] { Display.Side.Row, Display.Side.Column })
+						foreach (Side side in stackalloc[] { Side.Row, Side.Column })
 						{
-							GD.Print(Puzzle.IsLineComplete(position, side));
 							if (!Puzzle.IsLineComplete(position, side)) { continue; }
-							var line = Puzzle.States.AllInLine(position, side, without: Display.TileMode.Filled);
-							foreach ((Vector2I coord, Display.TileMode _) in line)
+							var line = Puzzle.States.AllInLine(position, side, without: TileMode.Filled);
+							foreach ((Vector2I coord, TileMode _) in line)
 							{
-								ChangeState(position: coord, mode: Display.TileMode.Blocked);
+								ChangeState(position: coord, mode: TileMode.Blocked);
 							}
 						}
 					}
 					if (Settings.HaveTimer && !Timer.Running && input is TileMode.Filled) Timer.Running = true;
-					Save(Puzzle);
-					if (Puzzle.IsComplete)
-					{
-						UI.CompletionScreen.Show();
-						if (Puzzle.Expected.DialogueName is string dialogueName)
-						{
-							Dialogues.Start(dialogueName, true);
-						}
-					}
-					input.PlayAudio();
+
+					bool puzzleComplete = UI.CompletionScreen.Visible = Puzzle.IsComplete;
+					if (puzzleComplete) { EventHandler?.Completed(); }
 					break;
 				case Type.Paint: break;
 				default: break;
 			}
+			Save(Puzzle);
 			void ChangeState(Vector2I position, TileMode mode, Tile? tile = null)
 			{
 				TileMode expected = Puzzle.Expected.States.GetValueOrDefault(position, defaultValue: TileMode.NULL);
