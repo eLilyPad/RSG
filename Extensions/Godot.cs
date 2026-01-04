@@ -180,7 +180,6 @@ public static class GDX
 			&& parent.IsInsideTree()
 			&& parent.HasNode(child.GetPath());
 	}
-
 	/// <summary>
 	/// Hides the control if visible, unless there is a control in steps that is visible. 
 	/// The visible step instead will be hidden 
