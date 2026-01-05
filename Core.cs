@@ -30,6 +30,7 @@ public sealed partial class Core : Node, PuzzleManager.CurrentPuzzle.IPuzzleEven
 		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
 
 		CoreUI.ConnectSignals(Container);
+		CoreUI.SetThemes(Container);
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
@@ -76,9 +77,10 @@ public sealed partial class Core : Node, PuzzleManager.CurrentPuzzle.IPuzzleEven
 		Input.RunEvent(input);
 	}
 
-	void PuzzleManager.CurrentPuzzle.IPuzzleEvent.Completed()
+	void PuzzleManager.CurrentPuzzle.IPuzzleEvent.Completed(SaveData puzzle)
 	{
-		string dialogueName = PuzzleManager.Current.Puzzle.Expected.DialogueName;
+		string dialogueName = puzzle.Expected.DialogueName;
+		PuzzleManager.Current.UI.CompletionScreen.Show();
 		Dialogues.Enable(dialogueName);
 	}
 

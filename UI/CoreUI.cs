@@ -8,6 +8,23 @@ using static Nonogram.PuzzleSelector;
 
 public sealed partial class CoreUI : PanelContainer
 {
+	public static CoreUI SetThemes(CoreUI container)
+	{
+		ConsoleContainer console = Console.Container;
+		NonogramContainer nonogram = PuzzleManager.Current.UI;
+		PuzzleCompleteScreen completionScreen = nonogram.CompletionScreen.Value;
+		PuzzleSelector puzzleSelector = container.Menu.Levels;
+		DialogueSelector dialogueSelector = container.Menu.Dialogues;
+
+		//completionScreen.AddThemeStyleboxOverride(dialogueSelector);
+		//int marginValue = 200;
+		//completionScreen.AddThemeConstantOverride("margin_top", marginValue);
+		//completionScreen.AddThemeConstantOverride("margin_left", marginValue);
+		//completionScreen.AddThemeConstantOverride("margin_bottom", marginValue);
+		//completionScreen.AddThemeConstantOverride("margin_right", marginValue);
+
+		return container;
+	}
 	public static CoreUI ConnectSignals(CoreUI container)
 	{
 		List<PackDisplay> levelSelectorDisplays = [];
@@ -16,7 +33,7 @@ public sealed partial class CoreUI : PanelContainer
 
 		ConsoleContainer console = Console.Container;
 		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		PuzzleCompleteScreen completionScreen = nonogram.CompletionScreen;
+		PuzzleCompleteScreen completionScreen = nonogram.CompletionScreen.Value;
 		PuzzleSelector puzzleSelector = container.Menu.Levels;
 		DialogueSelector dialogueSelector = container.Menu.Dialogues;
 
@@ -48,35 +65,33 @@ public sealed partial class CoreUI : PanelContainer
 		);
 		nonogram.ChildEnteredTree += node =>
 		{
-			switch (node)
-			{
-				case NonogramContainer.GameDisplay display:
-					nonogram.Status.CompletionLabel.Visible = true;
-					break;
-				case Display: break;
-			}
+			nonogram.Status.CompletionLabel.Visible = node is NonogramContainer.GameDisplay;
 		};
-		nonogram.ChildExitingTree += node => nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
+		nonogram.ChildExitingTree += node =>
+		{
+			nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
+		};
 		completionScreen.Options.Levels.Pressed += () =>
 		{
-			completionScreen.Hide();
-			container.Menu.Show();
-			puzzleSelector.Show();
+			HideThenShow(toHide: nonogram.CompletionScreen, container.Menu, puzzleSelector);
 		};
 		completionScreen.Options.Dialogues.Pressed += () =>
 		{
-			completionScreen.Hide();
-			container.Menu.Show();
-			dialogueSelector.Show();
+			HideThenShow(toHide: nonogram.CompletionScreen, container.Menu, dialogueSelector);
 		};
 		completionScreen.Options.PlayDialogue.Pressed += () =>
 		{
-			Dialogues.Start(name: PuzzleManager.Current.Puzzle.Expected.DialogueName);
+			Dialogues.Start(name: PuzzleManager.Current.CompletionDialogueName);
 		};
 		completionScreen.VisibilityChanged += () =>
 		{
-			bool hasDialogue = Dialogues.Contains(name: PuzzleManager.Current.Puzzle.Expected.DialogueName);
+			string name = PuzzleManager.Current.CompletionDialogueName;
+			bool hasDialogue = Dialogues.Contains(name);
 			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
+			if (hasDialogue)
+			{
+				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
+			}
 		};
 		nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += PuzzleManager.Current.WhenCodeLoaderEdited;
 		nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += PuzzleManager.Current.WhenCodeLoaderEntered;
@@ -112,6 +127,14 @@ public sealed partial class CoreUI : PanelContainer
 
 		return container;
 
+		static void HideThenShow(CanvasItem toHide, params ReadOnlySpan<CanvasItem> toShow)
+		{
+			toHide.Hide();
+			foreach (var node in toShow)
+			{
+				node.Show();
+			}
+		}
 		static void RefillPacks(CanvasItem root, Node parent, List<PackDisplay> nodes)
 		{
 			Refill(root, parent, nodes, configs: PuzzleManager.SelectorConfigs, create: PackDisplay.Create);
@@ -146,9 +169,10 @@ public sealed partial class CoreUI : PanelContainer
 	{
 		set
 		{
+			NonogramContainer puzzle = PuzzleManager.Current.UI;
 			Menu.Background.Color = value.MainMenuBackground;
-			PuzzleManager.Current.UI.Background.ColorBackground.Color = value.NonogramBackground;
-			PuzzleManager.Current.UI.Display.Timer.Background.Color = value.NonogramTimerBackground;
+			puzzle.Background.ColorBackground.Color = value.NonogramBackground;
+			puzzle.Display.Timer.Background.Color = value.NonogramTimerBackground;
 		}
 	}
 
@@ -161,7 +185,13 @@ public sealed partial class CoreUI : PanelContainer
 	);
 	public void StepBack()
 	{
-		Menu.StepBack(Console.Container, Menu.Settings, Menu.Levels, Menu.Dialogues);
+		Menu.StepBack(
+			Console.Container,
+			PuzzleManager.Current.UI.CompletionScreen,
+			Menu.Settings,
+			Menu.Levels,
+			Menu.Dialogues
+		);
 	}
 
 	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;

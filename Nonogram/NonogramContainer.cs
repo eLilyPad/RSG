@@ -30,11 +30,16 @@ public sealed partial class NonogramContainer : PanelContainer
 		public PopupMenu Tools { get; } = new() { Name = "Paint" };
 	}
 
-	public PuzzleCompleteScreen CompletionScreen { get; } = new PuzzleCompleteScreen
+	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
 		Name = "PuzzleCompleteScreen",
-		Visible = false
-	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		Visible = false,
+		Background = new ColorRect { Name = "Background", Color = Colors.SlateGray with { A = .7f } }
+			.Preset(LayoutPreset.FullRect),
+		Value = new PuzzleCompleteScreen { Name = "Value" }
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize, 250)
+	}.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.Minsize);
+
 	public Menu ToolsBar { get; } = new Menu { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public StatusBar Status { get; } = new StatusBar { Name = "Status Bar", SizeFlagsStretchRatio = 0.05f }

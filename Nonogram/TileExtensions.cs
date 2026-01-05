@@ -6,31 +6,6 @@ using static Display;
 
 public static class TileExtensions
 {
-	public static void StyleTileBackground(
-		this Button button,
-		Vector2I position,
-		IColours colours,
-		StyleBoxFlat? style = null,
-		TileMode? mode = null
-	)
-	{
-		const int chunkSize = 5;
-		const string themeName = "normal";
-		style ??= button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat;
-		if (style is null) return;
-		int chunkIndex = position.X / chunkSize + position.Y / chunkSize;
-		bool isOther = chunkIndex % 2 == 0;
-		Color filledTile = isOther ? colours.NonogramTileBackgroundFilled : colours.NonogramTileBackgroundFilled.Darkened(.2f);
-		Color background = isOther ? colours.NonogramTileBackground1 : colours.NonogramTileBackground2;
-		Color blocked = background.Darkened(.4f);
-		style.BgColor = mode switch
-		{
-			TileMode.Filled => filledTile,
-			TileMode.Blocked => blocked,
-			_ => background
-		};
-		button.AddThemeStyleboxOverride(themeName, style);
-	}
 	public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
 		expected == current
 		&& !(newValue is TileMode.Blocked && current is TileMode.Clear);
