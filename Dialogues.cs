@@ -33,14 +33,23 @@ public sealed class Dialogues
 	);
 
 	private static readonly CurrentDialogue Current = new();
-	public static void Start(string name, bool? enable = null)
+	public static bool Contains(string name) => Instance.Speeches.ContainsKey(name);
+	public static void Start(string name)
 	{
+		if (string.IsNullOrEmpty(name)) return;
 		if (!Instance.Speeches.TryGetValue(name, out Speech speech)) return;
 		(Current.Speech, Current.SpeechIndex, Current.Name) = (speech, 0, name);
 		DisplayCurrent();
-		if (enable is not bool enabled) return;
-		Instance.Enabled[name] = enabled;
 	}
+	public static void Enable(params Span<string> names)
+	{
+		foreach (string name in names)
+		{
+			if (!Instance.Speeches.ContainsKey(name)) return;
+			Instance.Enabled[name] = true;
+		}
+	}
+
 	public static void Next()
 	{
 		if (!Container.Visible) { return; }
@@ -64,15 +73,6 @@ public sealed class Dialogues
 	private Dictionary<string, Extras> SpeechExtras { get; } = [];
 	private Dictionary<string, bool> Enabled { get; } = [];
 	private Dialogues() { }
-
-	public void Enable(string name) => Enabled[name] = true;
-	public void EnableAll()
-	{
-		foreach (string name in Speeches.Keys)
-		{
-			Enabled[name] = true;
-		}
-	}
 	public Speech SingleSpeaker(in string Name, string Title, params ReadOnlySpan<SpeechTemplate> messages)
 	{
 		Assert(Instance is not null, "Instance is null");

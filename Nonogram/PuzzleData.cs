@@ -15,6 +15,7 @@ public sealed record PuzzleData : Display.Data
 			if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException("Expected PuzzleData object.");
 
 			string name = DefaultName;
+			string dialogueName = string.Empty;
 			Dictionary<Vector2I, Display.TileMode> tiles = [];
 
 			while (reader.Read())
@@ -33,13 +34,16 @@ public sealed record PuzzleData : Display.Data
 					case PropertyNames.Tiles:
 						tiles = Deserialize<Dictionary<Vector2I, Display.TileMode>>(ref reader, options) ?? [];
 						break;
+					case PropertyNames.DialogueName when reader.GetString() is string readName:
+						dialogueName = readName;
+						break;
 					default:
 						reader.Skip();
 						break;
 				}
 			}
-			if (tiles is null) return null;
-			return new PuzzleData { Name = name, Tiles = tiles };
+			if (tiles.Count == 0) return null;
+			return new PuzzleData { Name = name, Tiles = tiles, DialogueName = dialogueName };
 		}
 		public override void Write(Utf8JsonWriter writer, PuzzleData value, JsonSerializerOptions options)
 		{
@@ -48,6 +52,7 @@ public sealed record PuzzleData : Display.Data
 			{
 				writer.WriteString(PropertyNames.Name, value.Name);
 			}
+			writer.WriteString(PropertyNames.DialogueName, value.DialogueName);
 			writer.WritePropertyName(PropertyNames.Tiles);
 			Serialize(writer, value.Tiles, options);
 			writer.WriteEndObject();
@@ -236,18 +241,11 @@ public sealed record PuzzleData : Display.Data
 
 	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
 
-	public string? DialogueName { get; init; } = null;
+	public string DialogueName { get; init; } = string.Empty;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
 	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 		.GridRange().ToDictionary(elementSelector: _ => Display.TileMode.Clear);
 
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
-
-	public override string ToString()
-	{
-		string tiles = string.Join(", ", Tiles.Select(pair => $"{pair.Key}: {pair.Value}"));
-		return $"{Name} ({Tiles.Count} tiles : {tiles})";
-	}
-
 }

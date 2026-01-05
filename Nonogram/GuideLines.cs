@@ -8,6 +8,5 @@ public sealed partial class GuideLines : Container
 		.Preset(LayoutPreset.FullRect);
 	public TextureRect Lines { get; } = new TextureRect { Name = "Lines", ClipContents = true }
 		.Preset(LayoutPreset.FullRect);
-
 	public override void _Ready() => this.Add(BackGround, Lines);
 }

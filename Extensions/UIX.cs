@@ -14,20 +14,19 @@ public sealed partial class Labelled<T> : BoxContainer where T : Control
 	public required T Value { get; init; }
 	public override void _Ready() => this.Add(Label, Value);
 }
+public sealed partial class Backgrounded<T> : Container where T : Control
+{
+	public required ColorRect Background { get; init; }
+	public required T Value { get; init; }
+	public override void _Ready() => this.Add(Background, Value);
 
+}
 public static class UIX
 {
 	public static T SizeFlags<T>(this T control, SizeFlags horizontal, SizeFlags vertical) where T : Control
 	{
 		(control.SizeFlagsHorizontal, control.SizeFlagsVertical) = (horizontal, vertical);
 		return control;
-	}
-	public static void AddAllFontThemeOverride(this Button button, Color color)
-	{
-		button.AddThemeColorOverride("font_color", color);
-		button.AddThemeColorOverride("font_hover_color", color);
-		button.AddThemeColorOverride("font_focus_color", color);
-		button.AddThemeColorOverride("font_pressed_color", color);
 	}
 	public static T UniformPadding<T>(this T node, int margin) where T : Control
 	{

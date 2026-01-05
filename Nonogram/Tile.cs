@@ -18,7 +18,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 	{
 		tile ??= GetOrCreate(position);
 		tile.Button.Text = Provider.Text(position);
-		tile.Button.StyleTileBackground(position, colours: Colours, mode: input);
+		tile.Button.StyleChequeredButtons(position, getChunksColor: isOther => GetChunkColor(isOther, mode: input));
 	}
 	private Tile Create(Vector2I position)
 	{
@@ -29,7 +29,7 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 		{
 			style.CornerDetail = 1;
 			style.SetCornerRadiusAll(0);
-			tile.Button.StyleTileBackground(position, Colours, style);
+			tile.Button.StyleChequeredButtons(position, getChunksColor: isOther => GetChunkColor(isOther, null), style);
 		}
 		tile.Button.AddAllFontThemeOverride(Colors.Transparent);
 		tile.Button.AddThemeFontSizeOverride("font_size", 10);
@@ -54,6 +54,13 @@ sealed class Tiles(Tiles.IProvider Provider, IColours Colours) : NodePool<Vector
 		{
 			other.Button.Scale = scale;
 		}
+	}
+	private Color GetChunkColor(bool isOther, TileMode? mode)
+	{
+		Color background = isOther ? Colours.NonogramTileBackground1 : Colours.NonogramTileBackground2;
+		Color filledTile = isOther ? Colours.NonogramTileBackgroundFilled : Colours.NonogramTileBackgroundFilled.Darkened(.2f);
+		Color blocked = background.Darkened(.4f);
+		return mode switch { TileMode.Filled => filledTile, TileMode.Blocked => blocked, _ => background };
 	}
 }
 public sealed partial class Tile : PanelContainer
