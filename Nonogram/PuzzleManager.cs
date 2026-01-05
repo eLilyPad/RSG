@@ -14,14 +14,15 @@ public sealed class PuzzleManager
 	}
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tiles.IProvider
 	{
-		public interface IPuzzleEvent { void Completed(); }
+		public interface IPuzzleEvent { void Completed(SaveData puzzle); }
 		public IPuzzleEvent? EventHandler { get; set; }
 		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
 		public Settings Settings { get; set; } = new Settings();
 		public PuzzleTimer Timer { get; }
+		public string CompletionDialogueName => Puzzle.Expected.DialogueName;
 		public SaveData Puzzle
 		{
-			internal get; set
+			private get; set
 			{
 				if (value is null) { return; }
 				Display display = UI.Display;
@@ -89,30 +90,32 @@ public sealed class PuzzleManager
 			switch (Type)
 			{
 				case Type.Game:
-					ChangeState(position, mode: input, tile);
-					input.PlayAudio();
-					if (Settings.LineCompleteBlockRest)
-					{
-						foreach (Side side in stackalloc[] { Side.Row, Side.Column })
-						{
-							if (!Puzzle.IsLineComplete(position, side)) { continue; }
-							var line = Puzzle.States.AllInLine(position, side, without: TileMode.Filled);
-							foreach ((Vector2I coord, TileMode _) in line)
-							{
-								ChangeState(position: coord, mode: TileMode.Blocked);
-							}
-						}
-					}
+					ChangeGameState(mode: input, tile, positions: position);
+					if (Settings.LineCompleteBlockRest) FillCompletedLines(position);
 					if (Settings.HaveTimer && !Timer.Running && input is TileMode.Filled) Timer.Running = true;
-
-					bool puzzleComplete = UI.CompletionScreen.Visible = Puzzle.IsComplete;
-					if (puzzleComplete) { EventHandler?.Completed(); }
+					if (Puzzle.IsComplete) EventHandler?.Completed(Puzzle);
 					break;
 				case Type.Paint: break;
 				default: break;
 			}
+			input.PlayAudio();
 			Save(Puzzle);
-			void ChangeState(Vector2I position, TileMode mode, Tile? tile = null)
+		}
+
+		private void FillCompletedLines(Vector2I position)
+		{
+			foreach (Side side in stackalloc[] { Side.Row, Side.Column })
+			{
+				if (!Puzzle.IsLineComplete(position, side)) { continue; }
+				var linePositions = Puzzle.States
+					.AllInLine(position, side, without: TileMode.Filled)
+					.Select(p => p.Key);
+				ChangeGameState(mode: TileMode.Blocked, positions: [.. linePositions]);
+			}
+		}
+		private void ChangeGameState(TileMode mode, Tile? tile = null, params IEnumerable<Vector2I> positions)
+		{
+			foreach (Vector2I position in positions)
 			{
 				TileMode expected = Puzzle.Expected.States.GetValueOrDefault(position, defaultValue: TileMode.NULL);
 				TileMode current = Puzzle.States.GetValueOrDefault(position, defaultValue: TileMode.NULL);
