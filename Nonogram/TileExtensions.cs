@@ -9,9 +9,17 @@ public static class TileExtensions
 	public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
 		expected == current
 		&& !(newValue is TileMode.Blocked && current is TileMode.Clear);
-	public static bool Matches(this TileMode current, TileMode expected) =>
-		expected == current
-		|| (expected == TileMode.Clear && current == TileMode.Blocked);
+	public static bool IsCorrect<TKey>(this IImmutableDictionary<TKey, TileMode> tiles, TKey position, TileMode current)
+	{
+		if (!tiles.TryGetValue(position, out TileMode expected)) return false;
+		return current.IsCorrectMode(expected);
+	}
+	public static bool IsCorrectMode(this TileMode current, TileMode expected) => expected switch
+	{
+		TileMode.Filled when current is TileMode.Filled => true,
+		TileMode.Clear when current is TileMode.Clear or TileMode.Blocked => true,
+		_ => false
+	};
 
 	public static double ToDouble(this TileMode mode) => mode switch
 	{
@@ -21,7 +29,7 @@ public static class TileExtensions
 	};
 	public static TileMode Change(this TileMode input, TileMode currents) => input switch
 	{
-		TileMode.NULL => input,
+		TileMode.NULL => currents,
 		TileMode mode when mode == currents => TileMode.Clear,
 		TileMode mode => mode
 	};
