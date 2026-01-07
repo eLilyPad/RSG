@@ -62,7 +62,7 @@ public static class DisplayExtensions
 			)
 			.OrderBy(pair => side.OrderFrom(pair.Key));
 	}
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> AllInLine<T>(
+	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position,
 		Side side
