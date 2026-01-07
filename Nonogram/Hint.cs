@@ -12,18 +12,13 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 		string Text(HintPosition position);
 	}
 	public Vector2 TileSize { get; set; } = Vector2.Zero;
-	public override Hint GetOrCreate(HintPosition position)
-	{
-		Hint hint = _nodes.GetOrCreate(key: position, create: Create);
-		hint.CustomMinimumSize = TileSize;
-		return hint;
-	}
 	public override void Clear(IEnumerable<HintPosition> exceptions) => Clear(parent: Provider.Parent, exceptions);
 	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
-	private Hint Create(HintPosition position)
+	protected override Hint Create(HintPosition position)
 	{
 		Hint hint = Hint.Create(position, Colours);
 		Provider.Parent(position).AddChild(hint);
+		hint.CustomMinimumSize = TileSize;
 		return hint;
 	}
 }
