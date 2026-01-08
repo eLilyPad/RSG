@@ -50,6 +50,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 
 		PuzzleManager.Current.Type = Display.Type.Game;
 		PuzzleManager.Current.EventHandler = this;
+		PuzzleManager.Current.Settings = new();
 		static void ChangeDisplayType(Display.Type type)
 		{
 			PuzzleManager.Current.Type = type;
@@ -77,11 +78,21 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 		Input.RunEvent(input);
 	}
 
-	void PuzzleManager.IHaveEvents.Completed(SaveData puzzle)
+	public void Completed(SaveData puzzle)
 	{
 		string dialogueName = puzzle.Expected.DialogueName;
 		PuzzleManager.Current.UI.CompletionScreen.Show();
 		Dialogues.Enable(dialogueName);
+	}
+	public void SettingsChanged()
+	{
+		SettingsMenu menu = Container.Menu.Settings.Nonogram;
+		Settings settings = PuzzleManager.Current.Settings;
+
+		menu.AutoCompletion.LockFilledTiles.Value.ButtonPressed = settings.LockCompletedFilledTiles;
+		menu.AutoCompletion.LockBlockedTiles.Value.ButtonPressed = settings.LockCompletedBlockedTiles;
+		menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
+
 	}
 
 }
