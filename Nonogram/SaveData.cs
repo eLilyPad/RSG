@@ -100,6 +100,10 @@ public sealed record SaveData : Display.Data
 	}
 	internal sealed class AutoCompleter
 	{
+		public interface ICompleter : IHavePuzzleSettings
+		{
+			void BlockCompletedLine(Vector2I position, Display.Side side) { }
+		}
 		public required SaveData Save { private get; set; }
 		public required Tile.Pool Tiles { private get; init; }
 		public required Settings Settings { private get; set; }

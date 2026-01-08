@@ -2,21 +2,26 @@ namespace RSG.Nonogram;
 
 public sealed class PuzzleTimer
 {
-	public required Action<string> TimeChanged { get; init; }
-	public required Settings Settings { private get; set; }
+	public interface IProvider : IHavePuzzleSettings
+	{
+		void TimeChanged(string value) { }
+	}
+
+	public required IProvider Provider { get; init; }
+
 	public TimeSpan Elapsed
 	{
 		get; set
 		{
 			field = value;
-			TimeChanged($"{field.TotalHours:00}:{field.Minutes:00}:{field.Seconds:00}");
+			Provider.TimeChanged($"{field.TotalHours:00}:{field.Minutes:00}:{field.Seconds:00}");
 		}
 	}
 	public bool Running
 	{
-		get => field; set
+		get => Provider.Settings.HaveTimer && field; set
 		{
-			if (!Settings.HaveTimer)
+			if (!Provider.Settings.HaveTimer)
 			{
 				field = false;
 				return;

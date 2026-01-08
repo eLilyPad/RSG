@@ -5,6 +5,8 @@ namespace RSG.Nonogram;
 using static PuzzleData;
 using static Display;
 
+public interface IHavePuzzleSettings { Settings Settings { get; } }
+
 public sealed partial class PuzzleManager
 {
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tile.IProvider
