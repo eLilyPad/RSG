@@ -69,23 +69,6 @@ public sealed partial class PuzzleManager
 			};
 		}
 
-		public void WhenCodeLoaderEntered(string value)
-		{
-			RichTextLabel validation = UI.ToolsBar.CodeLoader.Control.Validation;
-			//Load(value).Switch(
-			//	data => Puzzle = data as SaveData,
-			//	error => validation.Text = error.Message,
-			//	notFound => GD.Print("Not Found")
-			//);
-		}
-		public void WhenCodeLoaderEdited(string value)
-		{
-			RichTextLabel validation = UI.ToolsBar.CodeLoader.Control.Validation;
-			Code.Encode(value).Switch(
-				error => validation.Text = error.Message,
-				code => validation.Text = $"valid code of size: {code.Size}"
-			);
-		}
 		Node Hints.IProvider.Parent(HintPosition position)
 		{
 			Display display = UI.Display;
