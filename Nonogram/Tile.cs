@@ -6,20 +6,50 @@ using static Display;
 
 public sealed partial class Tile : PanelContainer
 {
+	internal interface ILockRule { bool ShouldLock(Settings settings, TileMode current, TileMode expected); }
 	internal interface IProvider
 	{
 		Node Parent();
 		void OnActivate(Vector2I position, Tile tile);
 	}
-	internal sealed class Display(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
+	internal sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
 	{
 		public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
 		protected override Tile Create(Vector2I position)
 		{
-			Tile tile = new(position, colours: Colours, provider: Provider, lineTiles: LineTiles) { };
+			const int chunkSize = 5;
+			Tile tile = new Tile
+			{
+				Name = $"Tile (X: {position.X}, Y: {position.Y})",
+				IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0,
+				Colours = Colours,
+				Mode = TileMode.Clear,
+			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 			Provider.Parent().AddChild(tile);
+
+			tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
+			tile.Button.ButtonDown += () => Provider.OnActivate(position, tile);
+			tile.Button.MouseExited += () => HoverTile(false);
+			tile.Button.MouseEntered += () =>
+			{
+				Provider.OnActivate(position, tile);
+				HoverTile(true);
+			};
+
+			tile.Style.CornerDetail = 1;
+			tile.Style.SetCornerRadiusAll(0);
+			tile.Button.AddThemeStyleboxOverride(themeName, tile.Style);
+
+			tile.Button.AddAllFontThemeOverride(Colors.Transparent);
+			tile.Button.AddThemeFontSizeOverride("font_size", 10);
+
 			return tile;
-			IEnumerable<Tile> LineTiles() => _nodes.AllInLines(position).Select(p => p.Value);
+
+			void HoverTile(bool hovering)
+			{
+				var tiles = _nodes.AllInLines(position);
+				foreach ((Vector2I _, Tile tile) in tiles) tile.Hovering = hovering;
+			}
 		}
 	}
 	private const string themeName = "normal";
@@ -29,61 +59,53 @@ public sealed partial class Tile : PanelContainer
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 
 	public bool IsAlternative { get; private init; } = false;
-	public bool Hovering { get; set => Button.Scale = Vector2.One * ((field = value) ? .9f : 1); } = false;
-	[Export]
-	public TileMode Mode
+	[Export] public bool Locked { get; set => ChangeLocked(field = value); } = false;
+	[Export] public bool Hovering { get; set => ChangeHovering(field = value); } = false;
+	[Export] public TileMode Mode { get; set => ChangeMode(field = value); } = TileMode.NULL;
+
+	public required IColours Colours
 	{
-		get; set
+		private get; set
 		{
+			if (value is null) return;
 			field = value;
-			Style.BgColor = Background;
-			Button.AddThemeStyleboxOverride(themeName, Style);
 		}
-	} = TileMode.NULL;
+	}
 
-	public IColours Colours { private get; init; }
+	private StyleBoxFlat Style => field ??= Button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat
+		?? throw new Exception("No theme style was obtained for");
 
-	private StyleBoxFlat Style { get; init; } = new();
-	private Color Background => Mode switch
-	{
-		TileMode.Filled when IsAlternative => Colours.NonogramTileBackgroundFilled,
-		TileMode.Filled => Colours.NonogramTileBackgroundFilled.Darkened(.2f),
-		TileMode.Blocked when IsAlternative => Colours.NonogramTileBackground1.Darkened(.4f),
-		TileMode.Blocked => Colours.NonogramTileBackground2.Darkened(.4f),
-		_ when IsAlternative => Colours.NonogramTileBackground1,
-		_ => Colours.NonogramTileBackground2
-	};
-
+	private Tile() { }
 	public override void _Ready() => this.Add(Button);
-	private Tile(Vector2I position, IColours colours, IProvider provider, Func<IEnumerable<Tile>> lineTiles)
+
+	private void ChangeHovering(bool value) => Button.Scale = Vector2.One * (value ? .9f : 1);
+	private void ChangeLocked(bool value)
 	{
-		const int chunkSize = 5;
+		Style.SetBorderWidthAll(value ? 2 : 0);
+		Button.AddThemeStyleboxOverride(themeName, Style);
+	}
+	private void ChangeMode(TileMode value)
+	{
+		Style.BgColor = Background(value);
+		Style.BorderColor = LockedBorder(value);
+		Button.AddThemeStyleboxOverride(themeName, Style);
+	}
+	private Color LockedBorder(TileMode value)
+	{
+		Color filled = Colours.NonogramFilledBorder;
+		Color blocked = Colours.NonogramBlockedBorder;
+		return value switch { TileMode.Filled => filled, _ => blocked };
+	}
 
-		Name = $"Tile (X: {position.X}, Y: {position.Y})";
-		Colours = colours;
-		IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0;
-		Resized += () => Button.PivotOffset = Button.Size / 2;
-		Button.ButtonDown += () => provider.OnActivate(position, tile: this);
-		Button.MouseEntered += () => provider.OnActivate(position, tile: this);
-		Button.MouseExited += () => HoverTile(false);
-		Button.MouseEntered += () => HoverTile(true);
+	private Color Background(TileMode value)
+	{
+		Color
+		filled = Colours.NonogramTileBackgroundFilled,
+		background = IsAlternative ? Colours.NonogramTileBackground1 : Colours.NonogramTileBackground2,
+		blocked = background.Darkened(.2f);
 
-		if (Button.GetThemeStylebox(themeName).Duplicate() is StyleBoxFlat style)
-		{
-			Style = style;
-			style.CornerDetail = 1;
-			style.SetCornerRadiusAll(0);
-			style.BgColor = Background;
-			Button.AddThemeStyleboxOverride(themeName, style);
-		}
-		Button.AddAllFontThemeOverride(Colors.Transparent);
-		Button.AddThemeFontSizeOverride("font_size", 10);
+		filled = IsAlternative ? filled : filled.Darkened(.2f);
 
-		this.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-
-		void HoverTile(bool hovering)
-		{
-			foreach (Tile tile in lineTiles()) tile.Hovering = hovering;
-		}
+		return value switch { TileMode.Filled => filled, TileMode.Blocked => blocked, _ => background };
 	}
 }

@@ -80,34 +80,6 @@ public static class DisplayExtensions
 	{
 		return tiles.CalculateHints(position, selector: value => value.Button.Text is FillText ? 1 : 0);
 	}
-	internal static void UpdateView(this Display display, SaveData save, Tiles tiles, Hints hints)
-	{
-		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(display.TilesGrid.Columns = save.Size);
-		IEnumerable<Vector2I> tileValues = (Vector2I.One * save.Size).GridRange();
-
-		bool firstTile = true;
-		foreach (Vector2I position in tileValues)
-		{
-			Tile tile = tiles.GetOrCreate(position);
-			TileMode state = save.States.GetValueOrDefault(key: position, defaultValue: TileMode.NULL);
-			tiles.ChangeMode(position, tile, input: state);
-			if (firstTile)
-			{
-				hints.TileSize = tile.Size;
-				firstTile = false;
-			}
-
-		}
-		foreach (HintPosition position in hintValues)
-		{
-			Hint hint = hints.GetOrCreate(position);
-			hints.ApplyText(position, hint);
-		}
-
-		tiles.Clear(exceptions: tileValues);
-		hints.Clear(exceptions: hintValues);
-		display.ResetTheme();
-	}
 	private static string CalculateHints<TValue>(
 		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
 		HintPosition position,
