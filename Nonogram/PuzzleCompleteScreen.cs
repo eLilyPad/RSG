@@ -40,7 +40,6 @@ public sealed partial class PuzzleCompleteScreen : VBoxContainer
 	}
 		.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ShrinkCenter)
 		.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
-	//public CompletionReport Report { get; } = new CompletionReport() { SizeFlagsStretchRatio = .3f }
 	public AspectRatioContainer ReportContainer { get; } = new AspectRatioContainer { Name = "Report Container" }
 		.Preset(LayoutPreset.FullRect)
 		.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill);

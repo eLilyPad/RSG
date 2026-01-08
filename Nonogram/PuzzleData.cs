@@ -223,12 +223,11 @@ public sealed record PuzzleData : Display.Data
 
 				return isFace && !isFacialFeatures || isEar || isWhisker;
 			}
-
-			static bool BorderSelector(Vector2I position)
-			{
-				return isBorder(position.X) || isBorder(position.Y);
-				static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
-			}
+			//static bool BorderSelector(Vector2I position)
+			//{
+			//	return isBorder(position.X) || isBorder(position.Y);
+			//	static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
+			//}
 		}
 		public static (string Name, IEnumerable<SaveData> Puzzles) Convert(Pack pack)
 		{

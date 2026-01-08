@@ -5,6 +5,8 @@ using Godot;
 
 namespace RSG.Nonogram;
 
+using Mode = Display.TileMode;
+
 public sealed record SaveData : Display.Data
 {
 	public sealed class Converter : JsonConverter<SaveData>
@@ -19,7 +21,7 @@ public sealed record SaveData : Display.Data
 				return null;
 			}
 			PuzzleData? expected = null;
-			Dictionary<Vector2I, Display.TileMode>? tiles = null;
+			Dictionary<Vector2I, Mode>? tiles = null;
 			TimeSpan timeTaken = TimeSpan.Zero;
 
 			while (reader.Read())
@@ -37,7 +39,7 @@ public sealed record SaveData : Display.Data
 						expected = Deserialize<PuzzleData>(ref reader, options);
 						break;
 					case PropertyNames.Tiles:
-						tiles = Deserialize<Dictionary<Vector2I, Display.TileMode>>(ref reader, options);
+						tiles = Deserialize<Dictionary<Vector2I, Mode>>(ref reader, options);
 						break;
 					case PropertyNames.TimeTaken:
 						timeTaken = ReadTimeSpan(ref reader, options);
@@ -96,47 +98,116 @@ public sealed record SaveData : Display.Data
 			}
 		}
 	}
+	internal sealed class AutoCompleter
+	{
+		public required SaveData Save { private get; set; }
+		public required Tile.Pool Tiles { private get; init; }
+		public required Settings Settings { private get; set; }
+		public void BlockCompletedLines(Vector2I position)
+		{
+			BlockCompletedLine(position, side: Display.Side.Row);
+			BlockCompletedLine(position, side: Display.Side.Column);
+		}
+		private void BlockCompletedLine(Vector2I position, Display.Side side)
+		{
+			if (!Save.IsLineComplete(position, side)) { return; }
+			foreach ((Vector2I linePosition, Mode lineMode) in Save.Tiles.InLine(position, side))
+			{
+				if (lineMode is Mode.Filled) continue;
+				Tile tile = Tiles.GetOrCreate(linePosition);
+				if (tile.Mode is Mode.Blocked) continue;
+				Save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
+				if (Settings.LockCompletedBlockTiles) tile.Locked = true;
+			}
+		}
+	}
+	internal sealed class UserInput
+	{
+		public required SaveData Save { private get; set; }
+		public required Settings Settings { private get; set; }
+		public required AutoCompleter Completer { private get; init; }
+		public required PuzzleTimer Timer { private get; init; }
+		public required Tile.Pool Tiles { private get; init; }
+		public required Tile.Locker LockRules { private get; init; }
+
+		public void GameInput(Vector2I position, PuzzleManager.IHaveEvents? eventHandler)
+		{
+			const Mode defaultValue = Mode.NULL;
+
+			Mode input = Display.PressedMode;
+			if (input is defaultValue) return;
+			IImmutableDictionary<Vector2I, Mode> saved = Save.States;
+			Tile tile = Tiles.GetOrCreate(position);
+
+			Assert(saved.ContainsKey(position), $"No current tile in the data");
+			Mode current = saved[position];
+			Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
+
+			input = input == current ? Mode.Clear : input;
+
+			if (Mode.Clear.AllEqual(current, input)) return;
+			if (tile.Locked) return;
+			input.PlayAudio();
+			Save.ChangeState(position, mode: tile.Mode = input);
+
+			if (LockRules.ShouldLock(position)) tile.Locked = true;
+			if (Settings.LineCompleteBlockRest) Completer.BlockCompletedLines(position);
+			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
+			if (Save.IsComplete) eventHandler?.Completed(Save);
+		}
+	}
 
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
-	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
-	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = CreateTiles(DefaultSize);
+	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
+	public override Dictionary<Vector2I, Mode> Tiles { protected get; init; } = CreateTiles(DefaultSize);
+
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
-	public bool IsComplete => Matches(expected: Expected);
-	public IEnumerable<Vector2I> TileKeys => (Vector2I.One * Size).GridRange();
-	public IEnumerable<Display.HintPosition> HintKeys => Display.HintPosition.AsRange(Size);
+	public bool IsComplete => CheckComplete();
 
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
 	public bool IsLineComplete(Vector2I position, Display.Side side)
 	{
-		foreach ((Vector2I expectedPosition, Display.TileMode expectedMode) in Expected.States.AllInLine(position, side))
+		foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
 		{
-			if (!Tiles.TryGetValue(expectedPosition, out Display.TileMode currentMode)) return false;
-			if (!currentMode.Matches(expectedMode)) return false;
+			if (!Expected.States.IsCorrect(position: linePosition, current: lineMode)) return false;
 		}
 		return true;
 	}
-
-	internal void FillLines(Vector2I position)
+	public bool IsCorrectlyBlocked(Vector2I position, Mode? current = null, Mode? expected = null)
 	{
-		foreach (Display.Side side in stackalloc[] { Display.Side.Row, Display.Side.Column })
-		{
-			GD.Print(IsLineComplete(position, side));
-			if (!IsLineComplete(position, side)) { continue; }
-			var line = States.AllInLine(position, side, without: Display.TileMode.Filled);
-			foreach ((Vector2I coord, Display.TileMode _) in line)
-			{
-				ChangeState(position: coord, mode: Display.TileMode.Blocked);
-			}
-		}
+		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
+		Assert(States.ContainsKey(position), $"No current tile in the data");
+
+		return (current ?? States[position]) is Mode.Blocked
+			&& (expected ?? Expected.States[position]) is Mode.Clear;
 	}
-	internal void ChangeState(Vector2I position, Display.TileMode mode)
+	public bool IsCorrectlyFilled(Vector2I position, Mode? current = null, Mode? expected = null)
+	{
+		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
+		Assert(States.ContainsKey(position), $"No current tile in the data");
+
+		return Mode.Filled.AllEqual(
+			expected ?? Expected.States[position],
+			current ?? States[position]
+		);
+	}
+
+	private void ChangeState(Vector2I position, Mode mode)
 	{
 		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
 		Tiles[position] = mode;
+	}
+	private bool CheckComplete()
+	{
+		foreach ((Vector2I position, Mode state) in Tiles)
+		{
+			if (!Expected.States.IsCorrect(position, state)) return false;
+		}
+		return true;
 	}
 }

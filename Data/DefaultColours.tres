@@ -6,6 +6,8 @@
 script = ExtResource("1_5e87o")
 MainMenuBackground = Color(0.62, 0.48215336, 0.26040003, 1)
 NonogramBackground = Color(0.16470589, 0.24705882, 0.21960784, 1)
+NonogramFilledBorder = Color(0.47421473, 0.41270483, 0.05514218, 1)
+NonogramBlockedBorder = Color(0.29660675, 0.40208524, 0.46641195, 1)
 NonogramTimerBackground = Color(0.40672684, 0.33746308, 0.12005105, 1)
 NonogramHintBackground2 = Color(0.4, 0.36666667, 0.32000002, 1)
 NonogramHintBackground1 = Color(0.36186668, 0.4, 0.312, 1)

@@ -64,16 +64,6 @@ public abstract partial class Display
 				elementSelector: position => selector(position) ? TileMode.Filled : TileMode.Clear
 			);
 		}
-		public bool Matches(Data expected)
-		{
-			foreach ((Vector2I position, TileMode state) in Tiles)
-			{
-				if (!expected.Tiles.TryGetValue(position, out TileMode tile)) return false;
-				if (tile is not TileMode.Filled) continue;
-				if (tile != state) return false;
-			}
-			return true;
-		}
 	}
 
 	[JsonConverter(typeof(JsonStringEnumConverter<TileMode>))]

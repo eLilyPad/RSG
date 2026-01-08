@@ -6,7 +6,7 @@ namespace RSG;
 using UI;
 using Nonogram;
 
-public sealed partial class Core : Node, PuzzleManager.CurrentPuzzle.IPuzzleEvent
+public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 {
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
@@ -77,7 +77,7 @@ public sealed partial class Core : Node, PuzzleManager.CurrentPuzzle.IPuzzleEven
 		Input.RunEvent(input);
 	}
 
-	void PuzzleManager.CurrentPuzzle.IPuzzleEvent.Completed(SaveData puzzle)
+	void PuzzleManager.IHaveEvents.Completed(SaveData puzzle)
 	{
 		string dialogueName = puzzle.Expected.DialogueName;
 		PuzzleManager.Current.UI.CompletionScreen.Show();

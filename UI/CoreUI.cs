@@ -93,8 +93,6 @@ public sealed partial class CoreUI : PanelContainer
 				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
 			}
 		};
-		nonogram.ToolsBar.CodeLoader.Control.Input.TextChanged += PuzzleManager.Current.WhenCodeLoaderEdited;
-		nonogram.ToolsBar.CodeLoader.Control.Input.TextSubmitted += PuzzleManager.Current.WhenCodeLoaderEntered;
 		nonogram.ToolsBar.PuzzleLoader.AboutToPopup += () => RefillPacks(
 			root: nonogram.ToolsBar,
 			parent: nonogram.ToolsBar.PuzzleLoader.Control,

@@ -2,6 +2,14 @@ namespace RSG.Extensions;
 
 public static class SystemExtensions
 {
+	public static bool AllEqual<T>(this T expected, params ReadOnlySpan<T> values) where T : notnull
+	{
+		foreach (T value in values)
+		{
+			if (!value.Equals(expected)) return false;
+		}
+		return true;
+	}
 	public static T Condense<T>(this T hints, int ignoreValue = 0)
 	where T : IList<int>
 	{
