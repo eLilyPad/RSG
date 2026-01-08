@@ -117,7 +117,7 @@ public sealed record SaveData : Display.Data
 				Tile tile = Tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
 				Save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				if (Settings.LockCompletedBlockTiles) tile.Locked = true;
+				if (Settings.LockCompletedBlockedTiles) tile.Locked = true;
 			}
 		}
 	}
