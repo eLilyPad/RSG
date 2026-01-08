@@ -1,0 +1,62 @@
+using Godot;
+
+namespace RSG.Nonogram;
+
+public sealed partial class SettingsMenuContainer : ScrollContainer
+{
+	public static void ConnectSignals(SettingsMenuContainer menu, PuzzleManager.CurrentPuzzle current)
+	{
+		menu.AutoCompletion.LockFilledTiles.Value.Toggled += toggled =>
+		{
+			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
+		};
+		menu.AutoCompletion.LockBlockedTiles.Value.Toggled += toggled =>
+		{
+			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
+		};
+		menu.AutoCompletion.BlockCompleteLines.Value.Toggled += toggled =>
+		{
+			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
+		};
+	}
+	public sealed partial class AutoCompletionContainer : VBoxContainer
+	{
+		public RichTextLabel Title { get; } = new RichTextLabel
+		{
+			Name = "Title",
+			Text = "Assistance",
+			FitContent = true,
+		}.Preset(LayoutPreset.CenterTop, LayoutPresetMode.KeepWidth);
+		public Labelled<CheckButton> LockFilledTiles { get; } = new Labelled<CheckButton>
+		{
+			Name = "LockFilled",
+			Label = new RichTextLabel { Name = "Label", FitContent = true, Text = "Lock Correct Filled Tiles" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill),
+			Value = new CheckButton { Name = "Check" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill)
+		};
+		public Labelled<CheckButton> LockBlockedTiles { get; } = new Labelled<CheckButton>
+		{
+			Name = "LockBlocked",
+			Label = new RichTextLabel { Name = "Label", FitContent = true, Text = "Lock Correct Blocked Tiles" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill),
+			Value = new CheckButton { Name = "Check" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill)
+		};
+		public Labelled<CheckButton> BlockCompleteLines { get; } = new Labelled<CheckButton>
+		{
+			Name = "BlockCompleted",
+			Label = new RichTextLabel { Name = "Label", FitContent = true, Text = "Blocked Completed Lines" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill),
+			Value = new CheckButton { Name = "Check" }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill)
+		};
+
+		public override void _Ready() => this.Add(Title, LockFilledTiles, LockBlockedTiles, BlockCompleteLines);
+	}
+
+	public AutoCompletionContainer AutoCompletion { get; } = new AutoCompletionContainer { Name = "Auto Completion" }
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
+
+	public override void _Ready() => this.Add(AutoCompletion);
+}
