@@ -128,6 +128,7 @@ public sealed record SaveData : Display.Data
 		public required AutoCompleter Completer { private get; init; }
 		public required PuzzleTimer Timer { private get; init; }
 		public required Tile.Pool Tiles { private get; init; }
+		public required Tile.Locker LockRules { private get; init; }
 
 		public void GameInput(Vector2I position, PuzzleManager.IPuzzleEvent? eventHandler)
 		{
@@ -150,8 +151,8 @@ public sealed record SaveData : Display.Data
 			if (tile.Locked) return;
 			input.PlayAudio();
 			Save.ChangeState(position, mode: tile.Mode = input);
-			if (Settings.LockCompletedFilledTiles && Save.IsCorrectlyFilled(position, current: input, expected)) tile.Locked = true;
-			if (Settings.LockCompletedBlockTiles && Save.IsCorrectlyBlocked(position, current: input, expected)) tile.Locked = true;
+
+			if (LockRules.ShouldLock(position)) tile.Locked = true;
 			if (Settings.LineCompleteBlockRest) Completer.BlockCompletedLines(position);
 			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
 			if (Save.IsComplete) eventHandler?.Completed(Save);

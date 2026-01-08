@@ -34,11 +34,13 @@ public sealed partial class PuzzleManager
 
 		private readonly Tile.Pool _tiles;
 		private readonly Hints _hints;
+		private readonly Tile.Locker _tileLocker;
 		private readonly SaveData.AutoCompleter _autoCompleter;
 		private readonly SaveData.UserInput _playerCompleter;
 		internal CurrentPuzzle()
 		{
 			ColourPack colours = Core.Colours;
+			_tileLocker = new(puzzle: this) { };
 			Timer = new()
 			{
 				Settings = Settings,
@@ -62,6 +64,7 @@ public sealed partial class PuzzleManager
 				Settings = Settings,
 				Timer = Timer,
 				Tiles = _tiles,
+				LockRules = _tileLocker,
 				Completer = _autoCompleter,
 			};
 		}
@@ -122,18 +125,7 @@ public sealed partial class PuzzleManager
 				correctlyBlocked = current is TileMode.Blocked && expected is TileMode.Clear;
 
 				tile.Mode = current;
-				if (Settings.LockCompletedFilledTiles && save.IsCorrectlyFilled(position, current, expected))
-				{
-					tile.Locked = true;
-				}
-				else if (Settings.LockCompletedBlockTiles && save.IsCorrectlyBlocked(position, current, expected))
-				{
-					tile.Locked = true;
-				}
-				else
-				{
-					tile.Locked = false;
-				}
+				tile.Locked = _tileLocker.ShouldLock(position);
 
 				if (firstTile)
 				{
