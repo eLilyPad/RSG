@@ -37,12 +37,8 @@ public sealed partial class CoreUI : PanelContainer
 		PuzzleSelector puzzleSelector = container.Menu.Levels;
 		DialogueSelector dialogueSelector = container.Menu.Dialogues;
 
-		container.Menu.Buttons.Play.Pressed += container.Menu.Hide;
-		container.Menu.Buttons.Levels.Pressed += container.Menu.Levels.Show;
-		container.Menu.Buttons.Dialogues.Pressed += container.Menu.Dialogues.Show;
-		container.Menu.Buttons.Settings.Pressed += container.Menu.Settings.Show;
-		container.Menu.Buttons.Quit.Pressed += () => container.GetTree().Quit();
-		container.Menu.Settings.VisibilityChanged += () => container.Menu.Buttons.Visible = !container.Menu.Settings.Visible;
+		SettingsMenuContainer.ConnectSignals(menu: container.Menu.Settings.Nonogram, current: PuzzleManager.Current);
+
 		puzzleSelector.VisibilityChanged += () =>
 		{
 			if (!puzzleSelector.Visible)

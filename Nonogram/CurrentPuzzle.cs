@@ -2,75 +2,72 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static PuzzleData;
 using static Display;
 
 public interface IHavePuzzleSettings { Settings Settings { get; } }
 
 public sealed partial class PuzzleManager
 {
-	public sealed record class CurrentPuzzle : Hints.IProvider, Tile.IProvider
+	internal interface ICurrentPuzzle : Hints.IProvider, Tile.IProvider, PuzzleTimer.IProvider, SaveData.AutoCompleter.ICompleter;
+	public sealed record class CurrentPuzzle : ICurrentPuzzle
 	{
+		private static NonogramContainer Create(CurrentPuzzle puzzle)
+		{
+			ColourPack colours = Core.Colours;
+			List<Func<Vector2I, bool>> rules = [
+				(position) => puzzle.Settings.LockCompletedFilledTiles && puzzle.Puzzle.IsCorrectlyFilled(position),
+				(position) => puzzle.Settings.LockCompletedBlockedTiles && puzzle.Puzzle.IsCorrectlyBlocked(position),
+			];
+			return new NonogramContainer(
+				tiles: new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = rules } },
+				hints: new(Provider: puzzle, Colours: colours)
+			)
+			{
+				Name = "Nonogram",
+			}.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
+		}
+
 		public IHaveEvents? EventHandler { get; set; }
 		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
-		public Settings Settings { get; set => _playerCompleter.Settings = Timer.Settings = field = value; } = new Settings();
+		public Settings Settings { get; set => ChangeSettings(field = value); } = new Settings();
 		public PuzzleTimer Timer { get; }
 		public string CompletionDialogueName => Puzzle.Expected.DialogueName;
-		public SaveData Puzzle
-		{
-			internal get; set
-			{
-				if (value is null) { return; }
-				Display display = UI.Display;
-				Instance.Puzzles[value.Name] = field = value;
-				_playerCompleter.Save = _autoCompleter.Save = field;
-				Timer.Elapsed = field.TimeTaken;
+		public SaveData Puzzle { private get; set => ChangePuzzle(field = value); } = new SaveData();
 
-				UpdateView(field);
-				display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(field.Size) * _hints.TileSize;
-			}
-		} = new SaveData();
+		public NonogramContainer UI => field ??= Create(this);
 
-		public NonogramContainer UI => field ??= new NonogramContainer { Name = "Nonogram" }
-			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
-
-		private readonly Tile.Pool _tiles;
-		private readonly Hints _hints;
-		private readonly Tile.Locker _tileLocker;
 		private readonly SaveData.AutoCompleter _autoCompleter;
 		private readonly SaveData.UserInput _playerCompleter;
 		internal CurrentPuzzle()
 		{
-			ColourPack colours = Core.Colours;
-			_tileLocker = new(puzzle: this) { };
-			Timer = new()
-			{
-				Settings = Settings,
-				TimeChanged = time =>
-				{
-					Puzzle.TimeTaken = Timer?.Elapsed ?? TimeSpan.Zero;
-					UI.Display.Timer.Time.Text = "[font_size=30]" + time;
-				}
-			};
-			_tiles = new(Provider: this, Colours: colours);
-			_hints = new(Provider: this, Colours: colours);
+			UI = Create(this);
+			Timer = new() { Provider = this };
 			_autoCompleter = new()
 			{
 				Save = Puzzle,
 				Settings = Settings,
-				Tiles = _tiles,
+				Tiles = UI.Tiles,
 			};
 			_playerCompleter = new()
 			{
 				Save = Puzzle,
 				Settings = Settings,
 				Timer = Timer,
-				Tiles = _tiles,
-				LockRules = _tileLocker,
+				Tiles = UI.Tiles,
+				LockRules = UI.Tiles.LockRules,
 				Completer = _autoCompleter,
 			};
 		}
 
+		void SaveData.AutoCompleter.ICompleter.BlockCompletedLine(Vector2I position, Side side)
+		{
+
+		}
+		void PuzzleTimer.IProvider.TimeChanged(string value)
+		{
+			Puzzle.TimeTaken = Timer?.Elapsed ?? TimeSpan.Zero;
+			UI.Display.Timer.Time.Text = "[font_size=30]" + value;
+		}
 		Node Hints.IProvider.Parent(HintPosition position)
 		{
 			Display display = UI.Display;
@@ -88,45 +85,31 @@ public sealed partial class PuzzleManager
 			Save(Puzzle);
 		}
 
-		private void UpdateView(SaveData save)
+		private void ChangeSettings(Settings value)
 		{
+			_playerCompleter.Settings = value;
+			EventHandler?.SettingsChanged();
+		}
+		private void ChangePuzzle(SaveData value)
+		{
+			Assert(value is not null, "null save puzzle was given to the Puzzle manager. Unable to change puzzle");
 			Display display = UI.Display;
-			IEnumerable<HintPosition> hintValues = HintPosition.AsRange(display.TilesGrid.Columns = save.Size);
-			IEnumerable<Vector2I> tileValues = (Vector2I.One * save.Size).GridRange();
+			Tile.Pool tiles = UI.Tiles;
+			Hints hints = UI.Hints;
+			IImmutableDictionary<Vector2I, TileMode>
+			expectations = Puzzle.Expected.States,
+			saved = Puzzle.States;
+			int size = display.TilesGrid.Columns = value.Size;
 
-			bool firstTile = true;
-			foreach (Vector2I position in tileValues)
-			{
-				Tile tile = _tiles.GetOrCreate(position);
-				IImmutableDictionary<Vector2I, TileMode> expectations = Puzzle.Expected.States, saved = Puzzle.States;
+			Instance.Puzzles[value.Name] = value;
+			_playerCompleter.Save = _autoCompleter.Save = value;
+			Timer.Elapsed = value.TimeTaken;
 
-				Assert(expectations.ContainsKey(position), $"No expected tile in the data");
-				Assert(saved.ContainsKey(position), $"No current tile in the data");
-
-				TileMode expected = expectations[position], current = saved[position];
-
-				bool
-				correctlyFilled = TileMode.Filled.AllEqual(expected, current),
-				correctlyBlocked = current is TileMode.Blocked && expected is TileMode.Clear;
-
-				tile.Mode = current;
-				tile.Locked = _tileLocker.ShouldLock(position);
-
-				if (firstTile)
-				{
-					_hints.TileSize = tile.Size;
-					firstTile = false;
-				}
-			}
-			foreach (HintPosition position in hintValues)
-			{
-				Hint hint = _hints.GetOrCreate(position);
-				_hints.ApplyText(position, hint);
-			}
-
-			_tiles.Clear(exceptions: tileValues);
-			_hints.Clear(exceptions: hintValues);
+			tiles.Update(size, expectations, saved, out Vector2? tileSize);
+			hints.TileSize = tileSize ?? Vector2.One;
+			hints.Update(size);
 			display.ResetTheme();
+			display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value.Size) * UI.Hints.TileSize;
 		}
 	}
 }

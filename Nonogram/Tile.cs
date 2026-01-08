@@ -8,13 +8,8 @@ public sealed partial class Tile : PanelContainer
 {
 	public sealed class Locker
 	{
-		private readonly List<Func<Vector2I, bool>> _rules = [];
-		public Locker(PuzzleManager.CurrentPuzzle puzzle)
-		{
-			_rules.Add((position) => puzzle.Settings.LockCompletedFilledTiles && puzzle.Puzzle.IsCorrectlyFilled(position));
-			_rules.Add((position) => puzzle.Settings.LockCompletedBlockTiles && puzzle.Puzzle.IsCorrectlyBlocked(position));
-		}
-		public bool ShouldLock(Vector2I position) => _rules.Any(rule => rule(position));
+		public required List<Func<Vector2I, bool>> Rules { private get; init; }
+		public bool ShouldLock(Vector2I position) => Rules.Any(rule => rule(position));
 	}
 	internal interface IProvider
 	{
@@ -23,6 +18,42 @@ public sealed partial class Tile : PanelContainer
 	}
 	internal sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
 	{
+		public required Locker LockRules { get; init; }
+
+		public void Update(
+			int gridSize,
+			IImmutableDictionary<Vector2I, TileMode> expectations,
+			IImmutableDictionary<Vector2I, TileMode> saved,
+			out Vector2? tileSize
+		)
+		{
+			tileSize = null;
+			IEnumerable<Vector2I> tileValues = (Vector2I.One * gridSize).GridRange();
+			bool firstTile = true;
+			foreach (Vector2I position in tileValues)
+			{
+				Tile tile = GetOrCreate(position);
+				Assert(expectations.ContainsKey(position), $"No expected tile in the data");
+				Assert(saved.ContainsKey(position), $"No current tile in the data");
+				TileMode
+				expected = expectations[position],
+				current = saved[position];
+				bool
+				correctlyFilled = TileMode.Filled.AllEqual(expected, current),
+				correctlyBlocked = current is TileMode.Blocked && expected is TileMode.Clear;
+
+				tile.Mode = current;
+				tile.Locked = LockRules.ShouldLock(position);
+
+				if (firstTile)
+				{
+					tileSize = tile.Size;
+					firstTile = false;
+				}
+			}
+
+			Clear(exceptions: tileValues);
+		}
 		public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
 		protected override Tile Create(Vector2I position)
 		{

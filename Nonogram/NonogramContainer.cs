@@ -52,5 +52,13 @@ public sealed partial class NonogramContainer : PanelContainer
 	public Display.Default Display { get; } = new Display.Default { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
+	internal Tile.Pool Tiles { get; init; }
+	internal Hints Hints { get; init; }
+
+	internal NonogramContainer(Tile.Pool tiles, Hints hints)
+	{
+		Hints = hints;
+		Tiles = tiles;
+	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }
