@@ -6,7 +6,16 @@ using static Display;
 
 public sealed partial class Tile : PanelContainer
 {
-	internal interface ILockRule { bool ShouldLock(Settings settings, TileMode current, TileMode expected); }
+	public sealed class Locker
+	{
+		private readonly List<Func<Vector2I, bool>> _rules = [];
+		public Locker(PuzzleManager.CurrentPuzzle puzzle)
+		{
+			_rules.Add((position) => puzzle.Settings.LockCompletedFilledTiles && puzzle.Puzzle.IsCorrectlyFilled(position));
+			_rules.Add((position) => puzzle.Settings.LockCompletedBlockTiles && puzzle.Puzzle.IsCorrectlyBlocked(position));
+		}
+		public bool ShouldLock(Vector2I position) => _rules.Any(rule => rule(position));
+	}
 	internal interface IProvider
 	{
 		Node Parent();
