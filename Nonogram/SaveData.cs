@@ -130,7 +130,7 @@ public sealed record SaveData : Display.Data
 		public required Tile.Pool Tiles { private get; init; }
 		public required Tile.Locker LockRules { private get; init; }
 
-		public void GameInput(Vector2I position, PuzzleManager.IPuzzleEvent? eventHandler)
+		public void GameInput(Vector2I position, PuzzleManager.IHaveEvents? eventHandler)
 		{
 			const Mode defaultValue = Mode.NULL;
 

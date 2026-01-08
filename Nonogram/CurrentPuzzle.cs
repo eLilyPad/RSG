@@ -9,7 +9,7 @@ public sealed partial class PuzzleManager
 {
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tile.IProvider
 	{
-		public IPuzzleEvent? EventHandler { get; set; }
+		public IHaveEvents? EventHandler { get; set; }
 		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
 		public Settings Settings { get; set => _playerCompleter.Settings = Timer.Settings = field = value; } = new Settings();
 		public PuzzleTimer Timer { get; }
