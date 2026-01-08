@@ -136,13 +136,11 @@ public sealed record SaveData : Display.Data
 
 			Mode input = Display.PressedMode;
 			if (input is defaultValue) return;
-
+			IImmutableDictionary<Vector2I, Mode> saved = Save.States;
 			Tile tile = Tiles.GetOrCreate(position);
-			IImmutableDictionary<Vector2I, Mode> expectations = Save.Expected.States, saved = Save.States;
 
-			Assert(expectations.ContainsKey(position), $"No expected tile in the data");
 			Assert(saved.ContainsKey(position), $"No current tile in the data");
-			Mode expected = expectations[position], current = saved[position];
+			Mode current = saved[position];
 			Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
 
 			input = input == current ? Mode.Clear : input;
