@@ -86,7 +86,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 	}
 	public void SettingsChanged()
 	{
-		SettingsMenu menu = Container.Menu.Settings.Nonogram;
+		SettingsMenuContainer menu = Container.Menu.Settings.Nonogram;
 		Settings settings = PuzzleManager.Current.Settings;
 
 		menu.AutoCompletion.LockFilledTiles.Value.ButtonPressed = settings.LockCompletedFilledTiles;
