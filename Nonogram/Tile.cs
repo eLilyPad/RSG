@@ -14,40 +14,29 @@ public sealed partial class Tile : PanelContainer
 	internal interface IProvider
 	{
 		Node Parent();
-		void OnActivate(Vector2I position, Tile tile);
+		void OnActivate(Vector2I position, Tile tile) { }
+		TileMode State(Vector2I position) => TileMode.Clear;
 	}
 	internal sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
 	{
 		public required Locker LockRules { get; init; }
+		public Vector2 TileSize { get; private set; } = Vector2.One;
 
-		public void Update(
-			int gridSize,
-			IImmutableDictionary<Vector2I, TileMode> expectations,
-			IImmutableDictionary<Vector2I, TileMode> saved,
-			out Vector2? tileSize
-		)
+
+		public void Update(int size)
 		{
-			tileSize = null;
-			IEnumerable<Vector2I> tileValues = (Vector2I.One * gridSize).GridRange();
+			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
 			bool firstTile = true;
 			foreach (Vector2I position in tileValues)
 			{
 				Tile tile = GetOrCreate(position);
-				Assert(expectations.ContainsKey(position), $"No expected tile in the data");
-				Assert(saved.ContainsKey(position), $"No current tile in the data");
-				TileMode
-				expected = expectations[position],
-				current = saved[position];
-				bool
-				correctlyFilled = TileMode.Filled.AllEqual(expected, current),
-				correctlyBlocked = current is TileMode.Blocked && expected is TileMode.Clear;
 
-				tile.Mode = current;
+				tile.Mode = Provider.State(position);
 				tile.Locked = LockRules.ShouldLock(position);
 
 				if (firstTile)
 				{
-					tileSize = tile.Size;
+					TileSize = tile.Size;
 					firstTile = false;
 				}
 			}
