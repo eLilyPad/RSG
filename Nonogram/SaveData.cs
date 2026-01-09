@@ -100,15 +100,11 @@ public sealed record SaveData : Display.Data
 	}
 	internal sealed class AutoCompleter
 	{
-		public interface ICompleter : IHavePuzzleSettings
-		{
-			void BlockCompletedLine(Vector2I position, Display.Side side) { }
-		}
 		public required SaveData Save { private get; set; }
 		public required Tile.Pool Tiles { private get; init; }
-		public required Settings Settings { private get; set; }
-		public void BlockCompletedLines(Vector2I position)
+		public void BlockCompletedLines(Vector2I position, Settings settings)
 		{
+			if (!settings.LineCompleteBlockRest) return;
 			BlockCompletedLine(position, side: Display.Side.Row);
 			BlockCompletedLine(position, side: Display.Side.Column);
 		}
@@ -121,7 +117,7 @@ public sealed record SaveData : Display.Data
 				Tile tile = Tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
 				Save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				if (Settings.LockCompletedBlockedTiles) tile.Locked = true;
+				tile.Locked = Tiles.LockRules.ShouldLock(position);
 			}
 		}
 	}
@@ -132,7 +128,6 @@ public sealed record SaveData : Display.Data
 		public required AutoCompleter Completer { private get; init; }
 		public required PuzzleTimer Timer { private get; init; }
 		public required Tile.Pool Tiles { private get; init; }
-		public required Tile.Locker LockRules { private get; init; }
 
 		public void GameInput(Vector2I position, PuzzleManager.IHaveEvents? eventHandler)
 		{
@@ -153,13 +148,14 @@ public sealed record SaveData : Display.Data
 			if (tile.Locked) return;
 			input.PlayAudio();
 			Save.ChangeState(position, mode: tile.Mode = input);
+			Completer.BlockCompletedLines(position, settings: Settings);
 
-			if (LockRules.ShouldLock(position)) tile.Locked = true;
-			if (Settings.LineCompleteBlockRest) Completer.BlockCompletedLines(position);
+			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
 			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
 			if (Save.IsComplete) eventHandler?.Completed(Save);
 		}
 	}
+
 
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
