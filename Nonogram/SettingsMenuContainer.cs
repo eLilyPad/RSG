@@ -4,7 +4,7 @@ namespace RSG.Nonogram;
 
 public sealed partial class SettingsMenuContainer : ScrollContainer
 {
-	public static void ConnectSignals(SettingsMenuContainer menu, PuzzleManager.CurrentPuzzle current)
+	public static void ConnectSignals(SettingsMenuContainer menu, CurrentPuzzle current)
 	{
 		menu.AutoCompletion.LockFilledTiles.Value.Toggled += toggled =>
 		{

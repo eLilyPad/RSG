@@ -98,65 +98,84 @@ public sealed record SaveData : Display.Data
 			}
 		}
 	}
-	internal sealed class AutoCompleter
+	public interface ISaveEvents
 	{
-		public required SaveData Save { private get; set; }
-		public required Tile.Pool Tiles { private get; init; }
-		public void BlockCompletedLines(Vector2I position, Settings settings)
-		{
-			if (!settings.LineCompleteBlockRest) return;
-			BlockCompletedLine(position, side: Display.Side.Row);
-			BlockCompletedLine(position, side: Display.Side.Column);
-		}
-		private void BlockCompletedLine(Vector2I position, Display.Side side)
-		{
-			if (!Save.IsLineComplete(position, side)) { return; }
-			foreach ((Vector2I linePosition, Mode lineMode) in Save.Tiles.InLine(position, side))
-			{
-				if (lineMode is Mode.Filled) continue;
-				Tile tile = Tiles.GetOrCreate(linePosition);
-				if (tile.Mode is Mode.Blocked) continue;
-				Save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				tile.Locked = Tiles.LockRules.ShouldLock(position);
-			}
-		}
+		void TileChanged(Vector2I position, Mode mode) { }
+		void Completed() { }
 	}
-	internal sealed class UserInput
+	public abstract class Modifier
 	{
-		public required SaveData Save { private get; set; }
-		public required Settings Settings { private get; set; }
-		public required AutoCompleter Completer { private get; init; }
-		public required PuzzleTimer Timer { private get; init; }
-		public required Tile.Pool Tiles { private get; init; }
-
-		public void GameInput(Vector2I position, PuzzleManager.IHaveEvents? eventHandler)
+		public required SaveData Save { protected get; set; }
+		public required Settings Settings { protected get; set; }
+		public abstract bool ShouldModify { get; }
+		public void Modify(Vector2I position)
 		{
-			const Mode defaultValue = Mode.NULL;
-
-			Mode input = Display.PressedMode;
-			if (input is defaultValue) return;
-			IImmutableDictionary<Vector2I, Mode> saved = Save.States;
-			Tile tile = Tiles.GetOrCreate(position);
-
-			Assert(saved.ContainsKey(position), $"No current tile in the data");
-			Mode current = saved[position];
-			Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
-
-			input = input == current ? Mode.Clear : input;
-
-			if (Mode.Clear.AllEqual(current, input)) return;
-			if (tile.Locked) return;
-			input.PlayAudio();
-			Save.ChangeState(position, mode: tile.Mode = input);
-			Completer.BlockCompletedLines(position, settings: Settings);
-
-			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
-			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
-			if (Save.IsComplete) eventHandler?.Completed(Save);
+			if (!ShouldModify) return;
+			ModifySave(position);
 		}
+		protected abstract void ModifySave(Vector2I position);
+		protected void ChangeState(Vector2I position, Mode mode) => Save.ChangeState(position, mode);
 	}
 
+	//internal sealed class AutoCompleter
+	//{
+	//	public required SaveData Save { private get; set; }
+	//	public required Tile.Pool Tiles { private get; init; }
+	//	public void BlockCompletedLines(Vector2I position, Settings settings)
+	//	{
+	//		if (!settings.LineCompleteBlockRest) return;
+	//		BlockCompletedLine(position, side: Display.Side.Row);
+	//		BlockCompletedLine(position, side: Display.Side.Column);
+	//	}
+	//	private void BlockCompletedLine(Vector2I position, Display.Side side)
+	//	{
+	//		if (!Save.IsLineComplete(position, side)) { return; }
+	//		foreach ((Vector2I linePosition, Mode lineMode) in Save.Tiles.InLine(position, side))
+	//		{
+	//			if (lineMode is Mode.Filled) continue;
+	//			Tile tile = Tiles.GetOrCreate(linePosition);
+	//			if (tile.Mode is Mode.Blocked) continue;
+	//			Save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
+	//			tile.Locked = Tiles.LockRules.ShouldLock(position);
+	//		}
+	//	}
+	//}
+	//internal sealed class UserInput
+	//{
+	//	public required SaveData Save { private get; set; }
+	//	public required Settings Settings { private get; set; }
+	//	public required AutoCompleter Completer { private get; init; }
+	//	public required PuzzleTimer Timer { private get; init; }
+	//	public required Tile.Pool Tiles { private get; init; }
 
+	//	public void GameInput(Vector2I position, PuzzleManager.IHaveEvents? eventHandler)
+	//	{
+	//		const Mode defaultValue = Mode.NULL;
+
+	//		Mode input = Display.PressedMode;
+	//		if (input is defaultValue) return;
+	//		IImmutableDictionary<Vector2I, Mode> saved = Save.States;
+	//		Tile tile = Tiles.GetOrCreate(position);
+
+	//		Assert(saved.ContainsKey(position), $"No current tile in the data");
+	//		Mode current = saved[position];
+	//		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
+
+	//		input = input == current ? Mode.Clear : input;
+
+	//		if (Mode.Clear.AllEqual(current, input)) return;
+	//		if (tile.Locked) return;
+	//		input.PlayAudio();
+	//		Save.ChangeState(position, mode: tile.Mode = input);
+	//		Completer.BlockCompletedLines(position, settings: Settings);
+
+	//		if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
+	//		if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
+	//		if (Save.IsComplete) eventHandler?.Completed(Save);
+	//	}
+	//}
+
+	public ISaveEvents? Events;
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
@@ -170,6 +189,14 @@ public sealed record SaveData : Display.Data
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
+	public void BlockLine(Vector2I position, Display.Side side)
+	{
+		foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
+		{
+			if (lineMode is Mode.Blocked) continue;
+			ChangeState(position: linePosition, mode: Mode.Blocked);
+		}
+	}
 	public bool IsLineComplete(Vector2I position, Display.Side side)
 	{
 		foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
@@ -201,6 +228,8 @@ public sealed record SaveData : Display.Data
 	{
 		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
 		Tiles[position] = mode;
+		Events?.TileChanged(position, mode);
+		if (CheckComplete()) { Events?.Completed(); }
 	}
 	private bool CheckComplete()
 	{
