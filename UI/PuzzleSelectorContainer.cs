@@ -78,6 +78,14 @@ public sealed partial class PuzzleSelector : PanelContainer
 				Background = new ColorRect { Name = "Background", Color = statusColor }
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+			display.Background.OverrideStyle((StyleBoxFlat style) =>
+			{
+				style.BorderWidthRight = 50;
+				style.SetCornerRadiusAll(0);
+				return style;
+			});
+
 			return display;
 		}
 		public required ColorRect Background { get; init; }
