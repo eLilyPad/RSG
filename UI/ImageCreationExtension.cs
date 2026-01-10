@@ -1,6 +1,6 @@
 using Godot;
 
-namespace RSG.Nonogram;
+namespace RSG.UI;
 
 public static class ImageCreationExtension
 {
