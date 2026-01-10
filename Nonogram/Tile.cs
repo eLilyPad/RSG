@@ -65,9 +65,20 @@ public sealed partial class Tile : PanelContainer
 				HoverTile(true);
 			};
 
-			tile.ButtonStyle.CornerDetail = 1;
-			tile.ButtonStyle.SetCornerRadiusAll(0);
-			tile.Button.AddThemeStyleboxOverride(themeName, tile.ButtonStyle);
+			tile.Button.OverrideStyle(modify: (StyleBoxFlat style) =>
+			{
+				style.CornerDetail = 1;
+				style.SetCornerRadiusAll(0);
+				return style;
+			});
+			tile.Button.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty());
+			tile.Button.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+			{
+				style.CornerDetail = 1;
+				style.SetCornerRadiusAll(0);
+				style.BgColor = Colors.Transparent;
+				return style;
+			});
 
 			tile.Button.AddAllFontThemeOverride(Colors.Transparent);
 			tile.Button.AddThemeFontSizeOverride("font_size", 10);
@@ -81,28 +92,16 @@ public sealed partial class Tile : PanelContainer
 			}
 		}
 	}
-	private const string themeName = "normal";
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
 
 	public Button Button { get; } = new Button { Text = EmptyText, ButtonMask = mask }
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 
 	public bool IsAlternative { get; private init; } = false;
+	public required IColours Colours { private get; set; }
 	[Export] public bool Locked { get; set => ChangeLocked(field = value); } = false;
 	[Export] public bool Hovering { get; set => ChangeHovering(field = value); } = false;
 	[Export] public TileMode Mode { get; set => ChangeMode(field = value); } = TileMode.NULL;
-
-	public required IColours Colours
-	{
-		private get; set
-		{
-			if (value is null) return;
-			field = value;
-		}
-	}
-
-	private StyleBoxFlat ButtonStyle => field ??= Button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat
-		?? throw new Exception("No theme style was obtained for");
 
 	private Tile() { }
 	public override void _Ready() => this.Add(Button);
@@ -110,31 +109,25 @@ public sealed partial class Tile : PanelContainer
 	private void ChangeHovering(bool value) => Button.Scale = Vector2.One * (value ? .9f : 1);
 	private void ChangeLocked(bool value)
 	{
-		ButtonStyle.SetBorderWidthAll(value ? 2 : 0);
-		Button.AddThemeStyleboxOverride(themeName, ButtonStyle);
+		Button.OverrideStyle((StyleBoxFlat style) =>
+		{
+			style.SetBorderWidthAll(value ? 2 : 0);
+			return style;
+		});
 	}
 	private void ChangeMode(TileMode value)
 	{
-		ButtonStyle.BgColor = Background(value);
-		ButtonStyle.BorderColor = LockedBorder(value);
-		Button.AddThemeStyleboxOverride(themeName, ButtonStyle);
-	}
-	private Color LockedBorder(TileMode value)
-	{
-		Color filled = Colours.NonogramFilledBorder;
-		Color blocked = Colours.NonogramBlockedBorder;
-		return value switch { TileMode.Filled => filled, _ => blocked };
-	}
-
-	private Color Background(TileMode value)
-	{
-		Color
-		filled = Colours.NonogramTileBackgroundFilled,
-		background = IsAlternative ? Colours.NonogramTileBackground1 : Colours.NonogramTileBackground2,
-		blocked = background.Darkened(.2f);
-
-		filled = IsAlternative ? filled : filled.Darkened(.2f);
-
-		return value switch { TileMode.Filled => filled, TileMode.Blocked => blocked, _ => background };
+		Button.OverrideStyle(modify: (StyleBoxFlat style) =>
+		{
+			style.BorderColor = Colours.NonogramLockedBorder(value);
+			style.BgColor = Colours.NonogramTileBackground(mode: value, alternative: IsAlternative);
+			return style;
+		});
+		Button.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+		{
+			style.BgColor = Colours.NonogramTileBackground(mode: value, alternative: IsAlternative);
+			style.SetBorderWidthAll(0);
+			return style;
+		});
 	}
 }
