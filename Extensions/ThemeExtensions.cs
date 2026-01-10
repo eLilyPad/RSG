@@ -11,14 +11,18 @@ public static class ThemeExtensions
 		button.AddThemeColorOverride("font_focus_color", color);
 		button.AddThemeColorOverride("font_pressed_color", color);
 	}
-	public static void OverrideNormalStyle<T>(this Control control, Func<T, T> modify)
-	where T : StyleBox
+	public static void OverrideStyle<TStyle, TControl>(
+		this TControl control,
+		Func<TStyle, TStyle> modify,
+		string name = "normal"
+	)
+	where TStyle : StyleBox
+	where TControl : Control
 	{
-		const string themeName = "normal";
-		if (control.GetThemeStylebox(themeName).Duplicate() as T is T style)
+		if (control.GetThemeStylebox(name).Duplicate() as TStyle is TStyle style)
 		{
 			modify(style);
-			control.AddThemeStyleboxOverride(themeName, style);
+			control.AddThemeStyleboxOverride(name, style);
 		}
 	}
 	public static void StyleChequeredButtons(
