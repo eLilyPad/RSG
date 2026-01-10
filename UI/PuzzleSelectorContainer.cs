@@ -62,7 +62,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 		internal PackDisplay() { }
 		public override void _Ready() => this.Add(Puzzles);
 	}
-	public sealed partial class PuzzleDisplay : BoxContainer
+	public sealed partial class PuzzleDisplay : PanelContainer
 	{
 		public static PuzzleDisplay Create(Display.Data puzzle)
 		{
@@ -76,6 +76,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 				Name = puzzle.Name + " Display",
 				Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
 				Background = new ColorRect { Name = "Background", Color = statusColor }
+					.Preset(LayoutPreset.LeftWide)
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 
