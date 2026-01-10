@@ -117,7 +117,7 @@ public sealed partial class CoreUI : PanelContainer
 			Console.GrabInputFocus();
 		};
 
-		nonogram.Resized += () => nonogram.Background.Border.DrawBorder((Vector2I)nonogram.Size);
+		nonogram.Resized += () => nonogram.Background.Border.TextureBorder((Vector2I)nonogram.Size);
 
 		return container;
 
