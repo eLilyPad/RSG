@@ -80,9 +80,14 @@ public sealed partial class PuzzleSelector : PanelContainer
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 
+			display.Button.OverrideStyle((StyleBoxFlat style) =>
+			{
+				style.SetCornerRadiusAll(0);
+				return style;
+			});
 			display.Background.OverrideStyle((StyleBoxFlat style) =>
 			{
-				style.BorderWidthRight = 50;
+				style.ContentMarginBottom = 50;
 				style.SetCornerRadiusAll(0);
 				return style;
 			});
