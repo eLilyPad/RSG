@@ -65,22 +65,22 @@ public sealed partial class Tile : PanelContainer
 				HoverTile(true);
 			};
 
-			tile.Button.OverrideStyle(modify: (StyleBoxFlat style) =>
-			{
-				style.CornerDetail = 1;
-				style.SetCornerRadiusAll(0);
-				return style;
-			});
-			tile.Button.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty());
-			tile.Button.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
-			{
-				style.CornerDetail = 1;
-				style.SetCornerRadiusAll(0);
-				style.BgColor = Colors.Transparent;
-				return style;
-			});
-
-			tile.Button.AddAllFontThemeOverride(Colors.Transparent);
+			tile.Button
+				.OverrideStyle(modify: (StyleBoxFlat style) =>
+				{
+					style.CornerDetail = 1;
+					style.SetCornerRadiusAll(0);
+					return style;
+				})
+				.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+				{
+					style.CornerDetail = 1;
+					style.SetCornerRadiusAll(0);
+					style.BgColor = Colors.Transparent;
+					return style;
+				})
+				.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty())
+				.AddAllFontThemeOverride(Colors.Transparent);
 			tile.Button.AddThemeFontSizeOverride("font_size", 10);
 
 			return tile;
