@@ -65,9 +65,9 @@ public sealed partial class Tile : PanelContainer
 				HoverTile(true);
 			};
 
-			tile.Style.CornerDetail = 1;
-			tile.Style.SetCornerRadiusAll(0);
-			tile.Button.AddThemeStyleboxOverride(themeName, tile.Style);
+			tile.ButtonStyle.CornerDetail = 1;
+			tile.ButtonStyle.SetCornerRadiusAll(0);
+			tile.Button.AddThemeStyleboxOverride(themeName, tile.ButtonStyle);
 
 			tile.Button.AddAllFontThemeOverride(Colors.Transparent);
 			tile.Button.AddThemeFontSizeOverride("font_size", 10);
@@ -101,7 +101,7 @@ public sealed partial class Tile : PanelContainer
 		}
 	}
 
-	private StyleBoxFlat Style => field ??= Button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat
+	private StyleBoxFlat ButtonStyle => field ??= Button.GetThemeStylebox(themeName).Duplicate() as StyleBoxFlat
 		?? throw new Exception("No theme style was obtained for");
 
 	private Tile() { }
@@ -110,14 +110,14 @@ public sealed partial class Tile : PanelContainer
 	private void ChangeHovering(bool value) => Button.Scale = Vector2.One * (value ? .9f : 1);
 	private void ChangeLocked(bool value)
 	{
-		Style.SetBorderWidthAll(value ? 2 : 0);
-		Button.AddThemeStyleboxOverride(themeName, Style);
+		ButtonStyle.SetBorderWidthAll(value ? 2 : 0);
+		Button.AddThemeStyleboxOverride(themeName, ButtonStyle);
 	}
 	private void ChangeMode(TileMode value)
 	{
-		Style.BgColor = Background(value);
-		Style.BorderColor = LockedBorder(value);
-		Button.AddThemeStyleboxOverride(themeName, Style);
+		ButtonStyle.BgColor = Background(value);
+		ButtonStyle.BorderColor = LockedBorder(value);
+		Button.AddThemeStyleboxOverride(themeName, ButtonStyle);
 	}
 	private Color LockedBorder(TileMode value)
 	{
