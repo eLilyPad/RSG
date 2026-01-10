@@ -4,14 +4,15 @@ namespace RSG.Extensions;
 
 public static class ThemeExtensions
 {
-	public static void AddAllFontThemeOverride(this Button button, Color color)
+	public static Button AddAllFontThemeOverride(this Button button, Color color)
 	{
 		button.AddThemeColorOverride("font_color", color);
 		button.AddThemeColorOverride("font_hover_color", color);
 		button.AddThemeColorOverride("font_focus_color", color);
 		button.AddThemeColorOverride("font_pressed_color", color);
+		return button;
 	}
-	public static void OverrideStyle<TStyle, TControl>(
+	public static TControl OverrideStyle<TStyle, TControl>(
 		this TControl control,
 		Func<TStyle, TStyle> modify,
 		string name = "normal"
@@ -24,6 +25,7 @@ public static class ThemeExtensions
 			modify(style);
 			control.AddThemeStyleboxOverride(name, style);
 		}
+		return control;
 	}
 	public static void StyleChequeredButtons(
 		this Button button,
