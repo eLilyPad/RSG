@@ -57,12 +57,12 @@ public static class ImageCreationExtension
 	}
 	private static Image TextureNoise(this Image image, Func<float, Color> colour)
 	{
-		const float threshold = .1f;
-
 		FastNoiseLite noise = new()
 		{
 			FractalOctaves = 10,
-			Seed = Random.Shared.Next(5),
+			CellularJitter = .1f,
+			Frequency = .1f,
+			Seed = Random.Shared.Next(10),
 		};
 		foreach (Vector2I position in image.GetSize().GridRange())
 		{
