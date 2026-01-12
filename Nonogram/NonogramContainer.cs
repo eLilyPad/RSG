@@ -52,13 +52,24 @@ public sealed partial class NonogramContainer : PanelContainer
 	public Display.Default Display { get; } = new Display.Default { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
+	public IColours Colours
+	{
+		private get; set
+		{
+			Background.ColorBackground.Color = value.NonogramBackground;
+			Display.Timer.Background.Color = value.NonogramTimerBackground;
+			field = value;
+		}
+	}
+
 	internal Tile.Pool Tiles { get; init; }
 	internal Hints Hints { get; init; }
 
-	internal NonogramContainer(Tile.Pool tiles, Hints hints)
+	internal NonogramContainer(IColours colours, List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
 	{
-		Hints = hints;
-		Tiles = tiles;
+		Colours = colours;
+		Hints = new(Provider: puzzle, Colours: colours);
+		Tiles = new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = rules } };
 	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }

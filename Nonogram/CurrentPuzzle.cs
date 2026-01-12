@@ -17,13 +17,8 @@ public sealed partial class PuzzleManager
 				(position) => puzzle.Settings.LockCompletedFilledTiles && puzzle.Puzzle.IsCorrectlyFilled(position),
 				(position) => puzzle.Settings.LockCompletedBlockedTiles && puzzle.Puzzle.IsCorrectlyBlocked(position),
 			];
-			return new NonogramContainer(
-				tiles: new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = rules } },
-				hints: new(Provider: puzzle, Colours: colours)
-			)
-			{
-				Name = "Nonogram",
-			}.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
+			return new NonogramContainer(colours, rules, puzzle) { Name = "Nonogram", Visible = false }
+				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 		}
 
 		public IHaveEvents? EventHandler { get; set; }

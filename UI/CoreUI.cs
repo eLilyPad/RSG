@@ -161,13 +161,7 @@ public sealed partial class CoreUI : PanelContainer
 
 	public required ColourPack Colours
 	{
-		set
-		{
-			NonogramContainer puzzle = PuzzleManager.Current.UI;
-			Menu.Background.Color = value.MainMenuBackground;
-			puzzle.Background.ColorBackground.Color = value.NonogramBackground;
-			puzzle.Display.Timer.Background.Color = value.NonogramTimerBackground;
-		}
+		set => PuzzleManager.Current.UI.Colours = value;
 	}
 
 	public override void _Ready() => this.Add(
