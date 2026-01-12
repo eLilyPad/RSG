@@ -27,64 +27,82 @@ public sealed partial class MainMenu : Container
 			SelectionEnabled = false,
 			FitContent = true,
 			BbcodeEnabled = true,
+			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore
 		}.Preset(LayoutPreset.FullRect);
 		public MainButton(string name)
 		{
-			Name = name;
+			const int fontSize = 20;
+			//AddThemeFontSizeOverride("normal", fontSize * 2);
+			Label.PushFontSize(fontSize);
 			Label.PushColor(Colors.Black);
-			Label.AddText(name);
-			Text = name;
+			Label.AddText(Text = Name = name);
+			Label.AnchorLeft = .1f;
+			Resized += () => Background.TextureNoise((Vector2I)Size, colour: Colour);
 		}
 		public override void _Ready()
 		{
-			this
-				.Add(Background, Label)
-				.SizeFlags(SizeFlags.Fill, SizeFlags.Fill)
+			this.Add(Background, Label)
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Fill)
 				.AddAllFontThemeOverride(Colors.Transparent)
 				.OverrideStyle(modify: (StyleBoxFlat style) =>
 				{
 					style.CornerDetail = 1;
 					style.BgColor = Colors.Transparent;
-					//style.ExpandMarginRight = 100;
+					style.SetContentMarginAll(10);
 					return style;
 				});
 			Label
 				.OverrideStyle(modify: (StyleBoxFlat style) =>
 				{
 					style.CornerDetail = 1;
-					//style.BgColor = Colors.Transparent;
-					//style.ExpandMarginRight = 100;
 					return style;
 				})
 				.AddThemeFontSizeOverride("normal", 40);
-			Resized += () => Background.TextureNoise((Vector2I)Size, value => value switch
-			{
-				< .1f => Colors.DarkGray,
-				> .6f => Colors.DarkSlateGray,
-				_ => Colors.Transparent
-			});
+
 		}
+		static Color Colour(float value)
+		{
+			Color color = Colors.OliveDrab;
+			return value switch
+			{
+				< .1f => color.Darkened(.2f),
+				> .4f => color with { A = .4f },
+				_ => color with { A = .7f }
+			};
+		}
+
 	}
-	public sealed partial class MainButtons : VBoxContainer
+	public sealed partial class MainButtons : HBoxContainer
 	{
-		public BaseButton Play { get; } = new MainButton(nameof(Play));
-		public BaseButton Levels { get; } = new MainButton(nameof(Levels));
-		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues));
-		public BaseButton Settings { get; } = new MainButton(nameof(Settings));
-		public BaseButton Quit { get; } = new MainButton(nameof(Quit));
-		public override void _Ready() => this.Add(Play, Levels, Dialogues, Settings, Quit);
+		public BaseButton Play { get; } = new MainButton(nameof(Play))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Settings { get; } = new MainButton(nameof(Settings))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		public override void _Ready() => this.Add(
+				Container.Add(Play, Levels, Dialogues, Settings, Quit),
+				Spacer
+			);
 	}
 
 	public const int Margin = 100;
-	public required ColourPack Colours { get; init => Background.Color = (field = value).MainMenuBackground; }
+	public required ColourPack Colours { get; init => Background.Color = (field = value).MainMenuBackground with { A = .3f }; }
 	public ColorRect Background { get; } = new ColorRect { Name = nameof(Background) }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public SettingsContainer Settings { get; } = new SettingsContainer { Name = "Settings", Visible = false }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
-	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons) }
-		//.SizeFlags(SizeFlags.Fill, SizeFlags.Fill)
-		.Preset(preset: LayoutPreset.BottomLeft, resizeMode: LayoutPresetMode.KeepSize, Margin);
+	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons), }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin / 2);
 	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector { Name = "Level Selector", Visible = false }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
