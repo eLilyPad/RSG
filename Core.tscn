@@ -1,10 +1,24 @@
-[gd_scene load_steps=10 format=3 uid="uid://b8ffxr8agxq5f"]
+[gd_scene load_steps=16 format=3 uid="uid://b8ffxr8agxq5f"]
 
 [ext_resource type="Texture2D" uid="uid://dkqqws6hslqyl" path="res://Data/Images/Cacti.png" id="1_vsfee"]
 [ext_resource type="Texture2D" uid="uid://b2gp5k67a88cg" path="res://Data/Images/RSGames_BootSplash.png" id="2_58tws"]
 
+[sub_resource type="Gradient" id="Gradient_58tws"]
+colors = PackedColorArray(0.68704385, 0.56662107, 0.24199018, 1, 1, 1, 1, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_10wf8"]
+frequency = 0.0921
+fractal_lacunarity = 3.0
+fractal_gain = 0.7
+fractal_weighted_strength = 0.1
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_au6on"]
+noise = SubResource("FastNoiseLite_10wf8")
+color_ramp = SubResource("Gradient_58tws")
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_chd3v"]
 albedo_color = Color(0.67, 0.63951504, 0.40870002, 1)
+albedo_texture = SubResource("NoiseTexture2D_au6on")
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_vsfee"]
 material = SubResource("StandardMaterial3D_chd3v")
@@ -13,18 +27,32 @@ size = Vector2(10, 10)
 [sub_resource type="BoxMesh" id="BoxMesh_10wf8"]
 size = Vector3(1, 3, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_58tws"]
-albedo_color = Color(0.06540866, 0.0633136, 0.01945508, 1)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_au6on"]
+albedo_color = Color(0.08931092, 0.07213781, 0.014324, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_dwkn5"]
-material = SubResource("StandardMaterial3D_58tws")
+material = SubResource("StandardMaterial3D_au6on")
 size = Vector3(0.15, 0.3, 0.2)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_au6on"]
-albedo_color = Color(0.42568585, 0.41973358, 0.23620266, 1)
+[sub_resource type="Gradient" id="Gradient_10wf8"]
+colors = PackedColorArray(0.98855597, 0.94773704, 0.81586695, 1, 0.72156864, 0.6431373, 0.3254902, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_au6on"]
+frequency = 0.1
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_dwkn5"]
+width = 122
+noise = SubResource("FastNoiseLite_au6on")
+color_ramp = SubResource("Gradient_10wf8")
+seamless = true
+seamless_blend_skirt = 0.175
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dwkn5"]
+albedo_color = Color(0.5449884, 0.48082286, 0.21851754, 1)
+albedo_texture = SubResource("NoiseTexture2D_dwkn5")
 
 [sub_resource type="BoxMesh" id="BoxMesh_au6on"]
-material = SubResource("StandardMaterial3D_au6on")
+material = SubResource("StandardMaterial3D_dwkn5")
 size = Vector3(0.15, 0.1, 1.615)
 
 [node name="Node" type="Node"]
