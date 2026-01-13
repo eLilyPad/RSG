@@ -6,7 +6,7 @@ namespace RSG;
 using UI;
 using Nonogram;
 
-public sealed partial class Core : Node, PuzzleManager.IHaveEvents
+public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPress
 {
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
@@ -23,17 +23,17 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 		this.Add(Container);
 		Dialogues.Instance.BuildDialogues();
 
-		Input.Bind(
-			(Key.Escape, Container.StepBack, "Toggle Main Menu"),
-			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
-		);
-		Container.Menu.Settings.Input.InputsContainer.RefreshBindings();
-
 		CoreUI.ConnectSignals(Container);
 		CoreUI.SetThemes(Container);
+		Container.Menu.OnPressed = this;
 
-		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
+
+
+		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
+			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
+			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
+		);
 		Console.Add("/", ("quit", new Console.Command { Default = () => GetTree().Quit() }),
 			("nonogram", new Console.Command
 			{
@@ -61,7 +61,6 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 	{
 		PuzzleManager.Current.Timer.Tick(delta);
 	}
-
 	public override void _Input(InputEvent input)
 	{
 		if (!input.IsPressed()) return;
@@ -94,6 +93,42 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents
 		menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
 
 	}
-
+	public void PlayPressed()
+	{
+		PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+		switch (current)
+		{
+			case { PuzzleReady: true }:
+				Container.Menu.Hide();
+				PuzzleManager.Current.UI.Show();
+				break;
+			case { PuzzleReady: false }:
+				Container.Menu.Levels.Show();
+				Container.Menu.Show();
+				break;
+			default:
+				break;
+		}
+		Container.Menu.Buttons.Hide();
+	}
+	public void LevelsPressed()
+	{
+		Container.Menu.Levels.Show();
+		Container.Menu.Buttons.Hide();
+	}
+	public void DialoguesPressed()
+	{
+		Container.Menu.Dialogues.Show();
+		Container.Menu.Buttons.Hide();
+	}
+	public void SettingsPressed()
+	{
+		Container.Menu.Settings.Show();
+		Container.Menu.Buttons.Hide();
+	}
+	public void QuitPressed()
+	{
+		GetTree().Quit();
+	}
 }
 

@@ -64,13 +64,17 @@ public sealed partial class Input : Resource
 			Bindings.Names.Remove(key);
 		}
 	}
-	public static void Bind(params Span<(Key key, Action action, string name)> bindings)
+	public static void Bind(
+		Container.KeyBindsContainer bindsContainer,
+		params ReadOnlySpan<(Key key, Action action, string name)> bindings
+	)
 	{
 		foreach (var (key, action, name) in bindings)
 		{
 			Bindings.Actions[key] = action;
 			Bindings.Names[key] = name;
 		}
+		bindsContainer.RefreshBindings();
 	}
 	public static void RunEvent(InputEvent input)
 	{
