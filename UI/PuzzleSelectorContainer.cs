@@ -42,6 +42,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 				{
 					if (!IsInstanceValid(root)) return;
 					PuzzleManager.Current.Puzzle = puzzle;
+					PuzzleManager.Current.UI.Show();
 					root.Hide();
 				}
 			}
