@@ -139,12 +139,16 @@ public sealed partial class CoreUI : PanelContainer
 
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", Colours = Core.Colours }
+	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public required ColourPack Colours
 	{
-		set => PuzzleManager.Current.UI.Colours = value;
+		set
+		{
+			PuzzleManager.Current.UI.Colours = value;
+			Menu.Colours = value;
+		}
 	}
 
 	public override void _Ready() => this.Add(
