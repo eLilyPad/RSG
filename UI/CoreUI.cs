@@ -59,21 +59,13 @@ public sealed partial class CoreUI : PanelContainer
 			configs: Dialogues.AvailableDialogues,
 			create: DialogueDisplay.Create
 		);
-		nonogram.ChildEnteredTree += node =>
-		{
-			nonogram.Status.CompletionLabel.Visible = node is NonogramContainer.GameDisplay;
-		};
-		nonogram.ChildExitingTree += node =>
-		{
-			nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
-		};
 		completionScreen.Options.Levels.Pressed += () =>
 		{
-			HideThenShow(toHide: nonogram.CompletionScreen, container.Menu, puzzleSelector);
+			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);
 		};
 		completionScreen.Options.Dialogues.Pressed += () =>
 		{
-			HideThenShow(toHide: nonogram.CompletionScreen, container.Menu, dialogueSelector);
+			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, dialogueSelector);
 		};
 		completionScreen.Options.PlayDialogue.Pressed += () =>
 		{
@@ -120,15 +112,6 @@ public sealed partial class CoreUI : PanelContainer
 		nonogram.Resized += () => nonogram.Background.Border.TextureBorder((Vector2I)nonogram.Size);
 
 		return container;
-
-		static void HideThenShow(CanvasItem toHide, params ReadOnlySpan<CanvasItem> toShow)
-		{
-			toHide.Hide();
-			foreach (var node in toShow)
-			{
-				node.Show();
-			}
-		}
 		static void RefillPacks(CanvasItem root, Node parent, List<PackDisplay> nodes)
 		{
 			Refill(root, parent, nodes, configs: PuzzleManager.SelectorConfigs, create: PackDisplay.Create);
