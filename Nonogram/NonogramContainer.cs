@@ -61,6 +61,16 @@ public sealed partial class NonogramContainer : PanelContainer
 			field = value;
 		}
 	}
+	public int PuzzleSize
+	{
+		set
+		{
+			Tiles.Update(value);
+			Hints.TileSize = Tiles.TileSize;
+			Hints.Update(value);
+			Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
+		}
+	}
 
 	internal Tile.Pool Tiles { get; init; }
 	internal Hints Hints { get; init; }
