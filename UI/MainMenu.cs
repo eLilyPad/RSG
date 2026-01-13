@@ -105,7 +105,12 @@ public sealed partial class MainMenu : Container
 	public const int Margin = 100;
 	public ColourPack Colours
 	{
-		set => Background.Color = value.MainMenuBackground with { A = .3f };
+		set
+		{
+			Levels.Background.Color = value.MainMenuDialoguesBackground;
+			Dialogues.Background.Color = value.MainMenuDialoguesBackground;
+			Background.Color = value.MainMenuBackground with { A = .3f };
+		}
 	}
 	public ColorRect Background { get; } = new ColorRect { Name = nameof(Background) }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
