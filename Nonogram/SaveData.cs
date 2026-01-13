@@ -100,42 +100,39 @@ public sealed record SaveData : Display.Data
 	}
 	internal sealed class AutoCompleter
 	{
-		public required SaveData Save { private get; set; }
 		public required Tile.Pool Tiles { private get; init; }
-		public void BlockCompletedLines(Vector2I position, Settings settings)
+		public void BlockCompletedLines(SaveData save, Vector2I position, Settings settings)
 		{
 			if (!settings.LineCompleteBlockRest) return;
-			BlockCompletedLine(position, side: Display.Side.Row);
-			BlockCompletedLine(position, side: Display.Side.Column);
+			BlockCompletedLine(save, position, side: Display.Side.Row);
+			BlockCompletedLine(save, position, side: Display.Side.Column);
 		}
-		private void BlockCompletedLine(Vector2I position, Display.Side side)
+		private void BlockCompletedLine(SaveData save, Vector2I position, Display.Side side)
 		{
-			if (!Save.IsLineComplete(position, side)) { return; }
-			foreach ((Vector2I linePosition, Mode lineMode) in Save.Tiles.InLine(position, side))
+			if (!save.IsLineComplete(position, side)) { return; }
+			foreach ((Vector2I linePosition, Mode lineMode) in save.Tiles.InLine(position, side))
 			{
 				if (lineMode is Mode.Filled) continue;
 				Tile tile = Tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
-				Save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
+				save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
 				tile.Locked = Tiles.LockRules.ShouldLock(position);
 			}
 		}
 	}
 	internal sealed class UserInput
 	{
-		public required SaveData Save { private get; set; }
-		public required Settings Settings { private get; set; }
 		public required AutoCompleter Completer { private get; init; }
 		public required PuzzleTimer Timer { private get; init; }
 		public required Tile.Pool Tiles { private get; init; }
 
-		public void GameInput(Vector2I position, PuzzleManager.IHaveEvents? eventHandler)
+		public void GameInput(SaveData save, Vector2I position, Settings settings, PuzzleManager.IHaveEvents? eventHandler)
 		{
 			const Mode defaultValue = Mode.NULL;
 
 			Mode input = Display.PressedMode;
 			if (input is defaultValue) return;
-			IImmutableDictionary<Vector2I, Mode> saved = Save.States;
+			IImmutableDictionary<Vector2I, Mode> saved = save.States;
 			Tile tile = Tiles.GetOrCreate(position);
 
 			Assert(saved.ContainsKey(position), $"No current tile in the data");
@@ -147,12 +144,12 @@ public sealed record SaveData : Display.Data
 			if (Mode.Clear.AllEqual(current, input)) return;
 			if (tile.Locked) return;
 			input.PlayAudio();
-			Save.ChangeState(position, mode: tile.Mode = input);
-			Completer.BlockCompletedLines(position, settings: Settings);
+			save.ChangeState(position, mode: tile.Mode = input);
+			Completer.BlockCompletedLines(save, position, settings);
 
 			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
 			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
-			if (Save.IsComplete) eventHandler?.Completed(Save);
+			if (save.IsComplete) eventHandler?.Completed(save);
 		}
 	}
 

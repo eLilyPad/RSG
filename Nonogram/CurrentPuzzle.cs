@@ -36,11 +36,9 @@ public sealed partial class PuzzleManager
 		{
 			UI = Create(this);
 			Timer = new() { Provider = this };
-			_autoCompleter = new() { Save = Puzzle, Tiles = UI.Tiles, };
+			_autoCompleter = new() { Tiles = UI.Tiles, };
 			_playerCompleter = new()
 			{
-				Save = Puzzle,
-				Settings = Settings,
 				Timer = Timer,
 				Tiles = UI.Tiles,
 				Completer = _autoCompleter,
@@ -60,7 +58,10 @@ public sealed partial class PuzzleManager
 		}
 		void Tile.IProvider.OnActivate(Vector2I position, Tile tile)
 		{
-			if (Type is Type.Game) _playerCompleter.GameInput(position, eventHandler: EventHandler);
+			if (Type is Type.Game)
+			{
+				_playerCompleter.GameInput(save: Puzzle, position, settings: Settings, eventHandler: EventHandler);
+			}
 			Save(Puzzle);
 		}
 
