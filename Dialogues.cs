@@ -50,11 +50,15 @@ public sealed class Dialogues
 		}
 	}
 
-	public static void Next()
+	public static void Next(Action finished)
 	{
 		if (!Container.Visible) { return; }
 		Current.SpeechIndex++;
 		DisplayCurrent();
+		if (Current.Speech.Messages.Length <= Current.SpeechIndex)
+		{
+			finished();
+		}
 	}
 
 	private static void DisplayCurrent()

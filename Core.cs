@@ -71,10 +71,16 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		}
 		if (input is InputEventMouseButton { Pressed: true })
 		{
-			Dialogues.Next();
+			Dialogues.Next(finished: DialogueFinished);
 			return;
 		}
 		Input.RunEvent(input);
+
+		void DialogueFinished()
+		{
+			Container.Menu.Show();
+			Container.Menu.Buttons.Show();
+		}
 	}
 
 	public void Completed(SaveData puzzle)
