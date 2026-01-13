@@ -62,14 +62,18 @@ public sealed partial class CoreUI : PanelContainer
 		completionScreen.Options.Levels.Pressed += () =>
 		{
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);
+			nonogram.Hide();
 		};
 		completionScreen.Options.Dialogues.Pressed += () =>
 		{
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, dialogueSelector);
+			nonogram.Hide();
 		};
 		completionScreen.Options.PlayDialogue.Pressed += () =>
 		{
 			Dialogues.Start(name: PuzzleManager.Current.CompletionDialogueName);
+			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, container.Menu.Buttons);
+			nonogram.Hide();
 		};
 		completionScreen.VisibilityChanged += () =>
 		{
