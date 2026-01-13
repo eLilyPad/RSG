@@ -23,6 +23,16 @@ public sealed partial class Backgrounded<T> : Container where T : Control
 }
 public static class UIX
 {
+	public static T ReplaceVisibility<T>(this T toHide, params ReadOnlySpan<CanvasItem> toShow)
+	where T : CanvasItem
+	{
+		toHide.Hide();
+		foreach (var node in toShow)
+		{
+			node.Show();
+		}
+		return toHide;
+	}
 	public static T SizeFlags<T>(this T control, SizeFlags horizontal, SizeFlags vertical) where T : Control
 	{
 		(control.SizeFlagsHorizontal, control.SizeFlagsVertical) = (horizontal, vertical);
