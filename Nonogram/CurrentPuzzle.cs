@@ -21,12 +21,32 @@ public sealed partial class PuzzleManager
 				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 		}
 
-		public IHaveEvents? EventHandler { get; set; }
-		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
-		public Settings Settings { get; set => ChangeSettings(field = value); } = new Settings();
 		public PuzzleTimer Timer { get; }
+		public IHaveEvents? EventHandler { get; set; }
+		public bool PuzzleReady { get; private set; } = false;
+		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
+		public Settings Settings
+		{
+			get; set
+			{
+				field = value;
+				EventHandler?.SettingsChanged();
+			}
+		} = new Settings();
+		public SaveData Puzzle
+		{
+			private get; set
+			{
+				if (value is null) return;
+				field = value;
+
+				Instance.Puzzles[field.Name] = field;
+				Timer.Elapsed = field.TimeTaken;
+				PuzzleReady = true;
+				UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
+			}
+		}
 		public string CompletionDialogueName => Puzzle.Expected.DialogueName;
-		public SaveData Puzzle { private get; set => ChangePuzzle(field = value); } = new SaveData();
 
 		public NonogramContainer UI => field ??= Create(this);
 
@@ -43,6 +63,8 @@ public sealed partial class PuzzleManager
 				Tiles = UI.Tiles,
 				Completer = _autoCompleter,
 			};
+			Puzzle = new() { };
+			PuzzleReady = false;
 		}
 		void PuzzleTimer.IProvider.TimeChanged(string value)
 		{
@@ -63,30 +85,6 @@ public sealed partial class PuzzleManager
 				_playerCompleter.GameInput(save: Puzzle, position, settings: Settings, eventHandler: EventHandler);
 			}
 			Save(Puzzle);
-		}
-
-		private void ChangeSettings(Settings value)
-		{
-			_playerCompleter.Settings = value;
-			EventHandler?.SettingsChanged();
-		}
-		private void ChangePuzzle(SaveData value)
-		{
-			Assert(value is not null, "null save puzzle was given to the Puzzle manager. Unable to change puzzle");
-			Display display = UI.Display;
-			Tile.Pool tiles = UI.Tiles;
-			Hints hints = UI.Hints;
-			int size = display.TilesGrid.Columns = value.Size;
-
-			Instance.Puzzles[value.Name] = value;
-			_playerCompleter.Save = _autoCompleter.Save = value;
-			Timer.Elapsed = value.TimeTaken;
-
-			tiles.Update(size);
-			hints.TileSize = tiles.TileSize;
-			hints.Update(size);
-			display.ResetTheme();
-			display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value.Size) * tiles.TileSize;
 		}
 	}
 }

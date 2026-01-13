@@ -153,20 +153,36 @@ public sealed partial class CoreUI : PanelContainer
 
 	public override void _Ready() => this.Add(
 		PuzzleManager.Current.UI,
-		Menu,
 		Dialogues.Container,
 		Console.Container,
+		Menu,
 		LoadingScreen
 	);
-	public void StepBack()
+	public void EscapePressed()
 	{
-		Menu.StepBack(
+		if (!Menu.Visible)
+		{
+			Menu.Show();
+			Menu.Buttons.Show();
+			return;
+		}
+		ReadOnlySpan<Control> steps = [
 			Console.Container,
 			PuzzleManager.Current.UI.CompletionScreen,
 			Menu.Settings,
 			Menu.Levels,
 			Menu.Dialogues
-		);
+		];
+		foreach (Control control in steps)
+		{
+			if (control.Visible)
+			{
+				control.Hide();
+				Menu.Show();
+				Menu.Buttons.Show();
+				return;
+			}
+		}
 	}
 
 	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;

@@ -27,17 +27,16 @@ public sealed partial class MainMenu : Container
 			SelectionEnabled = false,
 			FitContent = true,
 			BbcodeEnabled = true,
+			AnchorLeft = .1f,
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore
 		}.Preset(LayoutPreset.FullRect);
 		public MainButton(string name)
 		{
 			const int fontSize = 20;
-			//AddThemeFontSizeOverride("normal", fontSize * 2);
 			Label.PushFontSize(fontSize);
 			Label.PushColor(Colors.Black);
 			Label.AddText(Text = Name = name);
-			Label.AnchorLeft = .1f;
 			Resized += () => Background.TextureNoise((Vector2I)Size, colour: Colour);
 		}
 		public override void _Ready()
@@ -94,6 +93,14 @@ public sealed partial class MainMenu : Container
 				Spacer
 			);
 	}
+	public interface IPress
+	{
+		void PlayPressed() { }
+		void LevelsPressed() { }
+		void DialoguesPressed() { }
+		void SettingsPressed() { }
+		void QuitPressed() { }
+	}
 
 	public const int Margin = 100;
 	public ColourPack Colours
@@ -111,13 +118,31 @@ public sealed partial class MainMenu : Container
 	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 
+	public IPress? OnPressed
+	{
+		set
+		{
+			if (value is null) return;
+			Buttons.Play.Pressed += value.PlayPressed;
+			Buttons.Levels.Pressed += value.LevelsPressed;
+			Buttons.Dialogues.Pressed += value.DialoguesPressed;
+			Buttons.Settings.Pressed += value.SettingsPressed;
+			Buttons.Quit.Pressed += value.QuitPressed;
+			if (field is null)
+			{
+				field = value;
+				return;
+			}
+			Buttons.Play.Pressed -= field.PlayPressed;
+			Buttons.Levels.Pressed -= field.LevelsPressed;
+			Buttons.Dialogues.Pressed -= field.DialoguesPressed;
+			Buttons.Settings.Pressed -= field.SettingsPressed;
+			Buttons.Quit.Pressed -= field.QuitPressed;
+		}
+	}
+
 	public MainMenu()
 	{
-		Buttons.Play.Pressed += Hide;
-		Buttons.Levels.Pressed += Levels.Show;
-		Buttons.Dialogues.Pressed += Dialogues.Show;
-		Buttons.Settings.Pressed += Settings.Show;
-		Buttons.Quit.Pressed += () => GetTree().Quit();
 		Settings.VisibilityChanged += () => Buttons.Visible = !Settings.Visible;
 	}
 

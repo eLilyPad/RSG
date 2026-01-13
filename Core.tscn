@@ -59,52 +59,60 @@ size = Vector3(0.15, 0.1, 1.615)
 
 [node name="MainMenuBackground" type="Node3D" parent="."]
 
-[node name="Floor" type="MeshInstance3D" parent="MainMenuBackground"]
-mesh = SubResource("PlaneMesh_vsfee")
-
 [node name="Camera3D" type="Camera3D" parent="MainMenuBackground"]
 transform = Transform3D(1, 0, 0, 0, 0.9793571, 0.20213781, 0, -0.20213781, 0.9793571, 0.037217677, 0.16235077, 1.3059618)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="MainMenuBackground"]
 transform = Transform3D(1, 0, 0, 0, 0.5144545, 0.85751766, 0, -0.85751766, 0.5144545, 0, 1.731359, 1.0094657)
 
-[node name="Cacti" type="Sprite3D" parent="MainMenuBackground"]
+[node name="Enviroment" type="Node3D" parent="MainMenuBackground"]
+
+[node name="Floor" type="MeshInstance3D" parent="MainMenuBackground/Enviroment"]
+mesh = SubResource("PlaneMesh_vsfee")
+skeleton = NodePath("../..")
+
+[node name="Building" type="MeshInstance3D" parent="MainMenuBackground/Enviroment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 1.0552061, -0.91)
+mesh = SubResource("BoxMesh_10wf8")
+skeleton = NodePath("../..")
+
+[node name="Door" type="MeshInstance3D" parent="MainMenuBackground/Enviroment/Building"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0037630685, -0.95400697, 0.4013905)
+mesh = SubResource("BoxMesh_dwkn5")
+skeleton = NodePath("../../..")
+
+[node name="LogoSign" type="Sprite3D" parent="MainMenuBackground/Enviroment/Building"]
+transform = Transform3D(0.02, 0, 0, 0, 0.02, 0, 0, 0, 0.02, -0.010000002, -0.6, 0.518)
+texture = ExtResource("2_58tws")
+region_rect = Rect2(0, 0, 190, 330)
+
+[node name="Foliage" type="Node3D" parent="MainMenuBackground/Enviroment"]
+
+[node name="Cacti" type="Sprite3D" parent="MainMenuBackground/Enviroment/Foliage"]
 transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, -0.24868086, 0.14255041, -0.12844571)
 texture = ExtResource("1_vsfee")
 region_enabled = true
 region_rect = Rect2(0, 0, 190, 330)
 
-[node name="Cacti2" type="Sprite3D" parent="MainMenuBackground"]
+[node name="Cacti2" type="Sprite3D" parent="MainMenuBackground/Enviroment/Foliage"]
 transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0.211, 0.143, -0.044)
 texture = ExtResource("1_vsfee")
 region_enabled = true
 region_rect = Rect2(0, 0, 190, 330)
 
-[node name="Cacti3" type="Sprite3D" parent="MainMenuBackground"]
+[node name="Cacti3" type="Sprite3D" parent="MainMenuBackground/Enviroment/Foliage"]
 transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0.43646643, 0.14255041, 0.3224945)
 texture = ExtResource("1_vsfee")
 region_enabled = true
 region_rect = Rect2(0, 0, 190, 330)
 
-[node name="Cacti4" type="Sprite3D" parent="MainMenuBackground"]
+[node name="Cacti4" type="Sprite3D" parent="MainMenuBackground/Enviroment/Foliage"]
 transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, -0.494, 0.143, 0.653)
 texture = ExtResource("1_vsfee")
 region_enabled = true
 region_rect = Rect2(0, 0, 190, 330)
 
-[node name="LogoSign" type="Sprite3D" parent="MainMenuBackground"]
-transform = Transform3D(0.02, 0, 0, 0, 0.02, 0, 0, 0, 0.02, 0.04, 0.4, -0.392)
-texture = ExtResource("2_58tws")
-region_rect = Rect2(0, 0, 190, 330)
-
-[node name="Building" type="MeshInstance3D" parent="MainMenuBackground"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 1, -0.91)
-mesh = SubResource("BoxMesh_10wf8")
-
-[node name="Door" type="MeshInstance3D" parent="MainMenuBackground"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.046236932, 0.04599303, -0.50860953)
-mesh = SubResource("BoxMesh_dwkn5")
-
-[node name="Pathway" type="MeshInstance3D" parent="MainMenuBackground"]
+[node name="Pathway" type="MeshInstance3D" parent="MainMenuBackground/Enviroment"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.046236932, -0.04896696, 0.36978006)
 mesh = SubResource("BoxMesh_au6on")
+skeleton = NodePath("../..")
