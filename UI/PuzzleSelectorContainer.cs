@@ -42,6 +42,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 				{
 					if (!IsInstanceValid(root)) return;
 					PuzzleManager.Current.Puzzle = puzzle;
+					PuzzleManager.Current.UI.Show();
 					root.Hide();
 				}
 			}
@@ -62,7 +63,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 		internal PackDisplay() { }
 		public override void _Ready() => this.Add(Puzzles);
 	}
-	public sealed partial class PuzzleDisplay : BoxContainer
+	public sealed partial class PuzzleDisplay : PanelContainer
 	{
 		public static PuzzleDisplay Create(Display.Data puzzle)
 		{
@@ -76,8 +77,22 @@ public sealed partial class PuzzleSelector : PanelContainer
 				Name = puzzle.Name + " Display",
 				Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
 				Background = new ColorRect { Name = "Background", Color = statusColor }
+					.Preset(LayoutPreset.LeftWide)
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+			display.Button.OverrideStyle((StyleBoxFlat style) =>
+			{
+				style.SetCornerRadiusAll(0);
+				return style;
+			});
+			display.Background.OverrideStyle((StyleBoxFlat style) =>
+			{
+				style.ContentMarginBottom = 50;
+				style.SetCornerRadiusAll(0);
+				return style;
+			});
+
 			return display;
 		}
 		public required ColorRect Background { get; init; }

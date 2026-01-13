@@ -7,6 +7,8 @@ public sealed partial class ColourPack : Resource, Nonogram.IColours
 	public static ColourPack Default { get; } = new ColourPack();
 
 	[Export] public Color MainMenuBackground { get; private set; } = Colors.Black;
+	[Export] public Color MainMenuLevelsBackground { get; private set; } = Colors.DimGray;
+	[Export] public Color MainMenuDialoguesBackground { get; private set; } = Colors.DimGray;
 
 	[Export] public Color NonogramBackground { get; private set; } = Colors.DarkOliveGreen;
 	[Export] public Color NonogramFilledBorder { get; private set; } = Colors.DarkBlue;

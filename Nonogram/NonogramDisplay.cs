@@ -29,6 +29,8 @@ public abstract partial class Display : AspectRatioContainer
 	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
+
+	public Container HintsParent(Side side) => side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
 	public override sealed void _Ready() => this.Add(
 		Margin.Add(Grid.Add(Spacer.Add(Timer), Columns, Rows, TilesGrid))
 	);

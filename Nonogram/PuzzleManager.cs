@@ -6,7 +6,11 @@ using static Display;
 
 public sealed partial class PuzzleManager
 {
-	public interface IHaveEvents { void Completed(SaveData puzzle); }
+	public interface IHaveEvents
+	{
+		void Completed(SaveData puzzle) { }
+		void SettingsChanged() { }
+	}
 
 	public static CurrentPuzzle Current => field ??= new();
 	internal static PuzzleManager Instance => field ??= new();

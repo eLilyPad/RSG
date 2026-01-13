@@ -37,12 +37,8 @@ public sealed partial class CoreUI : PanelContainer
 		PuzzleSelector puzzleSelector = container.Menu.Levels;
 		DialogueSelector dialogueSelector = container.Menu.Dialogues;
 
-		container.Menu.Buttons.Play.Pressed += container.Menu.Hide;
-		container.Menu.Buttons.Levels.Pressed += container.Menu.Levels.Show;
-		container.Menu.Buttons.Dialogues.Pressed += container.Menu.Dialogues.Show;
-		container.Menu.Buttons.Settings.Pressed += container.Menu.Settings.Show;
-		container.Menu.Buttons.Quit.Pressed += () => container.GetTree().Quit();
-		container.Menu.Settings.VisibilityChanged += () => container.Menu.Buttons.Visible = !container.Menu.Settings.Visible;
+		SettingsMenuContainer.ConnectSignals(menu: container.Menu.Settings.Nonogram, current: PuzzleManager.Current);
+
 		puzzleSelector.VisibilityChanged += () =>
 		{
 			if (!puzzleSelector.Visible)
@@ -63,25 +59,21 @@ public sealed partial class CoreUI : PanelContainer
 			configs: Dialogues.AvailableDialogues,
 			create: DialogueDisplay.Create
 		);
-		nonogram.ChildEnteredTree += node =>
-		{
-			nonogram.Status.CompletionLabel.Visible = node is NonogramContainer.GameDisplay;
-		};
-		nonogram.ChildExitingTree += node =>
-		{
-			nonogram.Status.CompletionLabel.Visible = node is not NonogramContainer.GameDisplay;
-		};
 		completionScreen.Options.Levels.Pressed += () =>
 		{
-			HideThenShow(toHide: nonogram.CompletionScreen, container.Menu, puzzleSelector);
+			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);
+			nonogram.Hide();
 		};
 		completionScreen.Options.Dialogues.Pressed += () =>
 		{
-			HideThenShow(toHide: nonogram.CompletionScreen, container.Menu, dialogueSelector);
+			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, dialogueSelector);
+			nonogram.Hide();
 		};
 		completionScreen.Options.PlayDialogue.Pressed += () =>
 		{
 			Dialogues.Start(name: PuzzleManager.Current.CompletionDialogueName);
+			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, container.Menu.Buttons);
+			nonogram.Hide();
 		};
 		completionScreen.VisibilityChanged += () =>
 		{
@@ -121,18 +113,9 @@ public sealed partial class CoreUI : PanelContainer
 			Console.GrabInputFocus();
 		};
 
-		nonogram.Resized += () => nonogram.Background.Border.DrawBorder((Vector2I)nonogram.Size);
+		nonogram.Resized += () => nonogram.Background.Border.TextureBorder((Vector2I)nonogram.Size);
 
 		return container;
-
-		static void HideThenShow(CanvasItem toHide, params ReadOnlySpan<CanvasItem> toShow)
-		{
-			toHide.Hide();
-			foreach (var node in toShow)
-			{
-				node.Show();
-			}
-		}
 		static void RefillPacks(CanvasItem root, Node parent, List<PackDisplay> nodes)
 		{
 			Refill(root, parent, nodes, configs: PuzzleManager.SelectorConfigs, create: PackDisplay.Create);
@@ -160,36 +143,50 @@ public sealed partial class CoreUI : PanelContainer
 
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", Colours = Core.Colours }
+	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public required ColourPack Colours
 	{
 		set
 		{
-			NonogramContainer puzzle = PuzzleManager.Current.UI;
-			Menu.Background.Color = value.MainMenuBackground;
-			puzzle.Background.ColorBackground.Color = value.NonogramBackground;
-			puzzle.Display.Timer.Background.Color = value.NonogramTimerBackground;
+			PuzzleManager.Current.UI.Colours = value;
+			Menu.Colours = value;
 		}
 	}
 
 	public override void _Ready() => this.Add(
 		PuzzleManager.Current.UI,
-		Menu,
 		Dialogues.Container,
 		Console.Container,
+		Menu,
 		LoadingScreen
 	);
-	public void StepBack()
+	public void EscapePressed()
 	{
-		Menu.StepBack(
+		if (!Menu.Visible)
+		{
+			Menu.Show();
+			Menu.Buttons.Show();
+			return;
+		}
+		ReadOnlySpan<Control> steps = [
 			Console.Container,
 			PuzzleManager.Current.UI.CompletionScreen,
 			Menu.Settings,
 			Menu.Levels,
 			Menu.Dialogues
-		);
+		];
+		foreach (Control control in steps)
+		{
+			if (control.Visible)
+			{
+				control.Hide();
+				Menu.Show();
+				Menu.Buttons.Show();
+				return;
+			}
+		}
 	}
 
 	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;
