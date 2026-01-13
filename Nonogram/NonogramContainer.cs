@@ -19,16 +19,6 @@ public sealed partial class NonogramContainer : PanelContainer
 		}.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		public override void _Ready() => this.Add(CompletionLabel);
 	}
-	public sealed partial class GameDisplay : Display, IHaveTools
-	{
-		public PopupMenu Tools { get; } = new() { Name = "Game" };
-		public required StatusBar Status { get; init; }
-
-	}
-	public sealed partial class PaintDisplay : Display, IHaveTools
-	{
-		public PopupMenu Tools { get; } = new() { Name = "Paint" };
-	}
 
 	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
