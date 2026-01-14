@@ -1,6 +1,6 @@
 using Godot;
 
-namespace RSG.Nonogram;
+namespace RSG;
 
 public abstract class NodePool<TKey, TValue> where TKey : notnull where TValue : Node
 {
