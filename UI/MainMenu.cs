@@ -34,9 +34,10 @@ public sealed partial class MainMenu : Container
 		public MainButton(string name)
 		{
 			const int fontSize = 20;
+			Text = Name = name.AddSpacesToPascalCase();
 			Label.PushFontSize(fontSize);
 			Label.PushColor(Colors.Black);
-			Label.AddText(Text = Name = name);
+			Label.AddText(Text);
 			Resized += () => Background.TextureNoise((Vector2I)Size, colour: Colour);
 		}
 		public override void _Ready()
@@ -76,6 +77,8 @@ public sealed partial class MainMenu : Container
 	{
 		public BaseButton Play { get; } = new MainButton(nameof(Play))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
@@ -89,13 +92,14 @@ public sealed partial class MainMenu : Container
 		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 		public override void _Ready() => this.Add(
-				Container.Add(Play, Levels, Dialogues, Settings, Quit),
+				Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
 				Spacer
 			);
 	}
 	public interface IPress
 	{
 		void PlayPressed() { }
+		void PlayMinesweeperPressed() { }
 		void LevelsPressed() { }
 		void DialoguesPressed() { }
 		void SettingsPressed() { }
@@ -129,6 +133,7 @@ public sealed partial class MainMenu : Container
 		{
 			if (value is null) return;
 			Buttons.Play.Pressed += value.PlayPressed;
+			Buttons.PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
 			Buttons.Levels.Pressed += value.LevelsPressed;
 			Buttons.Dialogues.Pressed += value.DialoguesPressed;
 			Buttons.Settings.Pressed += value.SettingsPressed;
@@ -139,6 +144,7 @@ public sealed partial class MainMenu : Container
 				return;
 			}
 			Buttons.Play.Pressed -= field.PlayPressed;
+			Buttons.PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
 			Buttons.Levels.Pressed -= field.LevelsPressed;
 			Buttons.Dialogues.Pressed -= field.DialoguesPressed;
 			Buttons.Settings.Pressed -= field.SettingsPressed;

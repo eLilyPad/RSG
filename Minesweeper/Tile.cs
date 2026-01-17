@@ -1,6 +1,6 @@
 using Godot;
 
-namespace RSG.MineSweeper;
+namespace RSG.Minesweeper;
 
 public sealed partial class Tile : PanelContainer
 {
@@ -10,10 +10,12 @@ public sealed partial class Tile : PanelContainer
 	{
 		void OnActivate(Vector2I position, Tile tile) { }
 		Mode GetType(Vector2I position) => Mode.Empty;
+		//bool
 	}
-	internal sealed class Pool(Node parent, IProvider provider, IColours colours) : NodePool<Vector2I, Tile>
+	internal sealed class Pool(Node parent, IColours colours) : NodePool<Vector2I, Tile>
 	{
 		public Vector2 TileSize { get; private set; } = Vector2.One;
+		public IProvider? Provider { private get; set; }
 		public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(parent: _ => parent, exceptions);
 		public void Update(int size)
 		{
@@ -22,7 +24,7 @@ public sealed partial class Tile : PanelContainer
 			foreach (Vector2I position in tileValues)
 			{
 				Tile tile = GetOrCreate(position);
-				tile.Type = provider.GetType(position);
+				tile.Type = Provider?.GetType(position) ?? Mode.Empty;
 
 				if (firstTile)
 				{
@@ -35,17 +37,14 @@ public sealed partial class Tile : PanelContainer
 
 		protected override Tile Create(Vector2I position)
 		{
-			Tile tile = new Tile
-			{
-				Name = $"Tile (X: {position.X}, Y: {position.Y})",
-				Colours = colours
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			Tile tile = new Tile { Name = $"Tile (X: {position.X}, Y: {position.Y})", Colours = colours }
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 			parent.AddChild(tile);
 
 			var button = tile.Button;
 
-			tile.Button.ButtonDown += () => provider.OnActivate(position, tile);
-			tile.Button
+			button.ButtonDown += () => Provider?.OnActivate(position, tile);
+			button
 				.OverrideStyle(modify: (StyleBoxFlat style) =>
 				{
 					style.CornerDetail = 1;

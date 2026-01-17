@@ -1,8 +1,8 @@
 using Godot;
 
-namespace RSG.MineSweeper;
+namespace RSG.Minesweeper;
 
-public sealed partial class MineSweeperContainer : HBoxContainer
+public sealed partial class MinesweeperContainer : HBoxContainer
 {
 	public sealed partial class CompletionOptions : HBoxContainer
 	{
@@ -68,7 +68,7 @@ public sealed partial class MineSweeperContainer : HBoxContainer
 			.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
 		public override void _Ready() => this.Add(CompletionTitle, ReportContainer.Add(Report), Options);
 	}
-	public sealed partial class MineSweeperBackground : Container
+	public sealed partial class MinesweeperBackground : Container
 	{
 		public ColorRect ColorBackground { get; } = new ColorRect { Color = Colors.AntiqueWhite with { A = 0.3f } }
 		.Preset(LayoutPreset.FullRect);
@@ -76,7 +76,7 @@ public sealed partial class MineSweeperContainer : HBoxContainer
 			.Preset(LayoutPreset.FullRect);
 		public override void _Ready() => this.Add(ColorBackground, Border);
 	}
-	public sealed partial class MineSweeperDisplay : AspectRatioContainer
+	public sealed partial class MinesweeperDisplay : AspectRatioContainer
 	{
 		public const MouseButton CheckButton = MouseButton.Left, FlagButton = MouseButton.Right;
 
@@ -97,18 +97,28 @@ public sealed partial class MineSweeperContainer : HBoxContainer
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize, 250)
 	}.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.Minsize);
 
-	public MineSweeperBackground Background { get; } = new MineSweeperBackground { Name = "Background" }
+	public MinesweeperBackground Background { get; } = new MinesweeperBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MineSweeperDisplay Display { get; } = new MineSweeperDisplay { }
+	public MinesweeperDisplay Display { get; } = new MinesweeperDisplay { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+
+	public int PuzzleSize
+	{
+		set
+		{
+			Tiles.Update(value);
+			Display.TilesGrid.Columns = value;
+			Display.TilesGrid.CustomMinimumSize = value * Tiles.TileSize;
+		}
+	}
 
 	internal Tile.Pool Tiles { get; }
 
-	internal MineSweeperContainer(Tile.IProvider provider, IColours colours)
+	internal MinesweeperContainer(IColours colours)
 	{
-		Tiles = new(parent: Display.TilesGrid, provider, colours);
+		Tiles = new(parent: Display.TilesGrid, colours);
 	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }

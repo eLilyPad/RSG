@@ -10,17 +10,6 @@ public sealed partial class PuzzleManager
 {
 	public sealed record class CurrentPuzzle : Hints.IProvider, Tile.IProvider, PuzzleTimer.IProvider
 	{
-		private static NonogramContainer Create(CurrentPuzzle puzzle)
-		{
-			ColourPack colours = Core.Colours;
-			List<Func<Vector2I, bool>> rules = [
-				(position) => puzzle.Settings.LockCompletedFilledTiles && puzzle.Puzzle.IsCorrectlyFilled(position),
-				(position) => puzzle.Settings.LockCompletedBlockedTiles && puzzle.Puzzle.IsCorrectlyBlocked(position),
-			];
-			return new NonogramContainer(colours, rules, puzzle) { Name = "Nonogram", Visible = false }
-				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
-		}
-
 		public PuzzleTimer Timer { get; }
 		public IHaveEvents? EventHandler { get; set; }
 		public bool PuzzleReady { get; private set; } = false;
@@ -47,14 +36,20 @@ public sealed partial class PuzzleManager
 			}
 		}
 		public string CompletionDialogueName => Puzzle.Expected.DialogueName;
+		public List<Func<Vector2I, bool>> Rules => [
+			(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
+			(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
+		];
 
-		public NonogramContainer UI => field ??= Create(this);
+		public NonogramContainer UI;
 
 		private readonly SaveData.AutoCompleter _autoCompleter;
 		private readonly SaveData.UserInput _playerCompleter;
 		internal CurrentPuzzle()
 		{
-			UI = Create(this);
+			UI = new NonogramContainer(Core.Colours, Rules, this) { Name = "Nonogram", Visible = false }
+				.Preset(Control.LayoutPreset.FullRect)
+				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 			Timer = new() { Provider = this };
 			_autoCompleter = new() { Tiles = UI.Tiles, };
 			_playerCompleter = new()

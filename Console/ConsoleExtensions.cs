@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RSG;
+namespace RSG.Console;
 
 public static class ConsoleExtensions
 {

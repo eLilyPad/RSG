@@ -13,6 +13,7 @@ public static class ImageCreationExtension
 	}
 	public static void TextureBorder(this TextureRect rect, Vector2I size, int pixelSize = 5, Color? borderColour = null)
 	{
+		if (size == Vector2I.Zero) return;
 		Image image = Image
 			.CreateEmpty(size.X, size.Y, false, Image.Format.Rgba8)
 			.TextureBorder(pixelSize, borderColour);

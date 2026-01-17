@@ -1,7 +1,7 @@
 using System.Data;
 using static Godot.Control;
 
-namespace RSG;
+namespace RSG.Console;
 
 public sealed record Console
 {

@@ -6,38 +6,118 @@ namespace RSG;
 using UI;
 using Nonogram;
 
+
 public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPress
 {
+	private sealed class CoreEventHandler(Core core) : PuzzleManager.IHaveEvents, MainMenu.IPress
+	{
+		public void Completed(SaveData puzzle)
+		{
+			string dialogueName = puzzle.Expected.DialogueName;
+			PuzzleManager.Current.UI.CompletionScreen.Show();
+			Dialogues.Enable(dialogueName);
+		}
+		public void SettingsChanged()
+		{
+			SettingsMenuContainer menu = core.Container.Menu.Settings.Nonogram;
+			Settings settings = PuzzleManager.Current.Settings;
+
+			menu.AutoCompletion.LockFilledTiles.Value.ButtonPressed = settings.LockCompletedFilledTiles;
+			menu.AutoCompletion.LockBlockedTiles.Value.ButtonPressed = settings.LockCompletedBlockedTiles;
+			menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
+		}
+		public void PlayMinesweeperPressed()
+		{
+			core.Minesweeper.Puzzle = RSG.Minesweeper.Minesweeper.Data.CreateRandom(10);
+			core.Minesweeper.UI.Show();
+			core.Container.Menu.Hide();
+		}
+		public void PlayPressed()
+		{
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			switch (current)
+			{
+				case { PuzzleReady: true }:
+					core.Container.Menu.Hide();
+					PuzzleManager.Current.UI.Show();
+					break;
+				case { PuzzleReady: false }:
+					core.Container.Menu.Levels.Show();
+					core.Container.Menu.Show();
+					break;
+				default:
+					break;
+			}
+			core.Container.Menu.Buttons.Hide();
+		}
+		public void LevelsPressed()
+		{
+			core.Container.Menu.Levels.Show();
+			core.Container.Menu.Buttons.Hide();
+		}
+		public void DialoguesPressed()
+		{
+			core.Container.Menu.Dialogues.Show();
+			core.Container.Menu.Buttons.Hide();
+		}
+		public void SettingsPressed()
+		{
+			core.Container.Menu.Settings.Show();
+			core.Container.Menu.Buttons.Hide();
+		}
+		public void QuitPressed()
+		{
+			core.GetTree().Quit();
+		}
+	}
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
 	public CoreUI Container => field ??= new CoreUI { Name = "Core UI", Colours = Colours }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+
+	private CoreEventHandler Events => field ??= new(this);
+	private Minesweeper.Minesweeper Minesweeper
+	{
+		get
+		{
+			if (field is not null) return field;
+			Minesweeper.MinesweeperContainer ui = new Minesweeper.MinesweeperContainer(Colours)
+			{
+				Name = "Minesweeper",
+				Visible = false
+			}.Preset(LayoutPreset.FullRect);
+			Minesweeper.Minesweeper minesweeper = new() { UI = ui };
+
+			Container.AddChild(ui);
+			ui.Tiles.Provider = minesweeper;
+
+			ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
+
+			return field = minesweeper;
+		}
+	}
 
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-		NonogramContainer nonogram = PuzzleManager.Current.UI;
 
 		this.Add(Container);
 		Dialogues.Instance.BuildDialogues();
 
 		CoreUI.ConnectSignals(Container);
 		CoreUI.SetThemes(Container);
-		Container.Menu.OnPressed = this;
-
-
-
+		Container.Menu.OnPressed = Events;
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
 			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
-		Console.Add("/", ("quit", new Console.Command { Default = () => GetTree().Quit() }),
-			("nonogram", new Console.Command
+		Console.Console.Add("/", ("quit", new Console.Console.Command { Default = () => GetTree().Quit() }),
+			("nonogram", new Console.Console.Command
 			{
-				Default = () => Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
+				Default = () => Console.Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
 				Flags = new()
 				{
 					["game"] = () => ChangeDisplayType(Display.Type.Game),
@@ -49,12 +129,14 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		);
 
 		PuzzleManager.Current.Type = Display.Type.Game;
-		PuzzleManager.Current.EventHandler = this;
-		PuzzleManager.Current.Settings = new();
+		PuzzleManager.Current.EventHandler = Events;
+
+		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+
 		static void ChangeDisplayType(Display.Type type)
 		{
 			PuzzleManager.Current.Type = type;
-			Console.Log($"Display changed too {type.AsName()}");
+			Console.Console.Log($"Display changed too {type.AsName()}");
 		}
 	}
 	public override void _Process(double delta)
@@ -81,60 +163,6 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 			Container.Menu.Show();
 			Container.Menu.Buttons.Show();
 		}
-	}
-
-	public void Completed(SaveData puzzle)
-	{
-		string dialogueName = puzzle.Expected.DialogueName;
-		PuzzleManager.Current.UI.CompletionScreen.Show();
-		Dialogues.Enable(dialogueName);
-	}
-	public void SettingsChanged()
-	{
-		SettingsMenuContainer menu = Container.Menu.Settings.Nonogram;
-		Settings settings = PuzzleManager.Current.Settings;
-
-		menu.AutoCompletion.LockFilledTiles.Value.ButtonPressed = settings.LockCompletedFilledTiles;
-		menu.AutoCompletion.LockBlockedTiles.Value.ButtonPressed = settings.LockCompletedBlockedTiles;
-		menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
-
-	}
-	public void PlayPressed()
-	{
-		PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-		switch (current)
-		{
-			case { PuzzleReady: true }:
-				Container.Menu.Hide();
-				PuzzleManager.Current.UI.Show();
-				break;
-			case { PuzzleReady: false }:
-				Container.Menu.Levels.Show();
-				Container.Menu.Show();
-				break;
-			default:
-				break;
-		}
-		Container.Menu.Buttons.Hide();
-	}
-	public void LevelsPressed()
-	{
-		Container.Menu.Levels.Show();
-		Container.Menu.Buttons.Hide();
-	}
-	public void DialoguesPressed()
-	{
-		Container.Menu.Dialogues.Show();
-		Container.Menu.Buttons.Hide();
-	}
-	public void SettingsPressed()
-	{
-		Container.Menu.Settings.Show();
-		Container.Menu.Buttons.Hide();
-	}
-	public void QuitPressed()
-	{
-		GetTree().Quit();
 	}
 }
 

@@ -3,10 +3,11 @@ using Godot;
 namespace RSG.UI;
 
 using Nonogram;
+using RSG.Console;
 using static DialogueSelector;
 using static Nonogram.PuzzleSelector;
 
-public sealed partial class CoreUI : PanelContainer
+public sealed partial class CoreUI : Control
 {
 	public static CoreUI SetThemes(CoreUI container)
 	{
@@ -90,6 +91,7 @@ public sealed partial class CoreUI : PanelContainer
 			parent: nonogram.ToolsBar.PuzzleLoader.Control,
 			nodes: levelLoaderDisplays
 		);
+		nonogram.Resized += () => nonogram.Background.Border.TextureBorder((Vector2I)nonogram.Size);
 
 		console.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
 		console.Input.Line.TextSubmitted += Console.Instance.Submitted;
@@ -112,8 +114,6 @@ public sealed partial class CoreUI : PanelContainer
 			console.Input.Line.Text += suggestion;
 			Console.GrabInputFocus();
 		};
-
-		nonogram.Resized += () => nonogram.Background.Border.TextureBorder((Vector2I)nonogram.Size);
 
 		return container;
 		static void RefillPacks(CanvasItem root, Node parent, List<PackDisplay> nodes)
@@ -141,19 +141,12 @@ public sealed partial class CoreUI : PanelContainer
 		}
 	}
 
-	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", }
+	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu" }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 
-	public required ColourPack Colours
-	{
-		set
-		{
-			PuzzleManager.Current.UI.Colours = value;
-			Menu.Colours = value;
-		}
-	}
+	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
 
 	public override void _Ready() => this.Add(
 		PuzzleManager.Current.UI,
