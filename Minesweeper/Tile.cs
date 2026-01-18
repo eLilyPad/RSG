@@ -24,7 +24,23 @@ public sealed partial class Tile : PanelContainer
 			foreach (Vector2I position in tileValues)
 			{
 				Tile tile = GetOrCreate(position);
-				tile.Type = Provider?.GetType(position) ?? Mode.Empty;
+				Mode mode = tile.Type = Provider?.GetType(position) ?? Mode.Empty;
+				tile.Covered = true;
+				int bombsAround = 0;
+
+				switch (mode)
+				{
+					case Mode.Empty:
+						foreach (Vector2I around in tileValues.PointsAround(position))
+						{
+							if (Provider?.GetType(position: around) is Mode.Bomb) bombsAround++;
+						}
+						break;
+					default: break;
+				}
+
+				tile.Button.Text = bombsAround.ToString();
+				tile.Button.AddThemeFontSizeOverride("normal", (int)tile.Size.LengthSquared() * 3);
 
 				if (firstTile)
 				{
@@ -43,22 +59,8 @@ public sealed partial class Tile : PanelContainer
 
 			var button = tile.Button;
 
+			button.AddThemeFontSizeOverride("normal", 40);
 			button.ButtonDown += () => Provider?.OnActivate(position, tile);
-			button
-				.OverrideStyle(modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.SetCornerRadiusAll(0);
-					return style;
-				})
-				.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.SetCornerRadiusAll(0);
-					style.BgColor = Colors.Transparent;
-					return style;
-				})
-				.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty());
 
 			return tile;
 		}
@@ -66,14 +68,28 @@ public sealed partial class Tile : PanelContainer
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
 
 	public Button Button { get; } = new Button { Text = " ", ButtonMask = mask }
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+		.OverrideStyle(modify: (StyleBoxFlat style) =>
+		{
+			style.CornerDetail = 1;
+			style.SetCornerRadiusAll(0);
+			return style;
+		})
+		.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+		{
+			style.CornerDetail = 1;
+			style.SetCornerRadiusAll(0);
+			style.BgColor = Colors.Transparent;
+			return style;
+		})
+		.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty());
 
 
 	public required IColours Colours { private get; set; }
 	[Export]
 	public Mode Type
 	{
-		private get; set
+		get; set
 		{
 			Button.OverrideStyle(modify: (StyleBoxFlat style) =>
 			{
@@ -93,8 +109,8 @@ public sealed partial class Tile : PanelContainer
 			{
 				style.BgColor = Colours.MineSweeperBackground(mode: Type, covered: value);
 				return style;
-			});
-			Button.AddAllFontThemeOverride(Colors.Chocolate);
+			})
+			.AddAllFontThemeOverride(Colors.Chocolate);
 			field = value;
 		}
 	} = true;
