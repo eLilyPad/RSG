@@ -1,4 +1,5 @@
 using System.Data;
+using Godot;
 using static Godot.Control;
 
 namespace RSG.Console;
@@ -115,40 +116,48 @@ public sealed record Console
 	public Dictionary<string, Dictionary<string, Command>> Modules { private get; init; } = [];
 	private Console()
 	{
-		var console = Container;
-		console.Input.Line.VisibilityChanged += () => GrabInputFocus(true);
-		console.Input.Line.TextSubmitted += Submitted;
-		console.Input.Line.TextChanged += input =>
-		{
-			console.Input.SuggestionDisplay.Clear();
-			IEnumerable<string> suggestions = Suggestions(input);
-			foreach (string suggestion in suggestions)
-			{
-				console.Input.SuggestionDisplay.AddItem(suggestion);
-			}
-		};
-		console.Input.SuggestionDisplay.ItemSelected += index =>
-		{
-			string suggestion = console.Input.SuggestionDisplay.GetItemText((int)index);
-			if (!console.Input.Line.Text.EndsWith(' '))
-			{
-				console.Input.Line.Text += ' ';
-			}
-			console.Input.Line.Text += suggestion;
-			GrabInputFocus();
-		};
+		ConsoleContainer console = Container;
+		ConsoleContainer.InputContainer input = console.Input;
+		LineEdit line = input.Line;
+		ItemList suggestionDisplay = input.SuggestionDisplay;
+
+		line.VisibilityChanged += () => GrabInputFocus(true);
+		line.TextSubmitted += Submitted;
+		line.TextChanged += UpdateSuggestions;
+		suggestionDisplay.ItemSelected += InsertSuggestion;
 	}
 
-	public void Submitted(string input)
+	private void Submitted(string input)
 	{
 		if (input.Length == 0) return;
 		Modules.Run(CommandInput.Parse(input), out string? response);
 		Log(input);
-		Godot.GD.Print(response);
+		GD.Print(response);
 		if (response is not null) Log(response);
 		GrabInputFocus(clearSuggestions: true);
 	}
-	public IEnumerable<string> Suggestions(string input)
+	private void InsertSuggestion(long index)
+	{
+		ConsoleContainer.InputContainer input = Container.Input;
+		string suggestion = input.SuggestionDisplay.GetItemText((int)index);
+		if (!input.Line.Text.EndsWith(' '))
+		{
+			input.Line.Text += ' ';
+		}
+		input.Line.Text += suggestion;
+		GrabInputFocus();
+	}
+	private void UpdateSuggestions(string input)
+	{
+		IEnumerable<string> suggestions = FindSuggestions(input);
+		ItemList suggestionDisplay = Container.Input.SuggestionDisplay;
+		suggestionDisplay.Clear();
+		foreach (string suggestion in suggestions)
+		{
+			suggestionDisplay.AddItem(suggestion);
+		}
+	}
+	private IEnumerable<string> FindSuggestions(string input)
 	{
 		CommandInput commandInput = CommandInput.Parse(input);
 		if (!Modules.TryGetValue(commandInput.Prefix, out Dictionary<string, Command>? module))
