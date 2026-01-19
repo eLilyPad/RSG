@@ -36,39 +36,8 @@ public sealed record Console
 			}
 			return commandInput;
 
-			//return input.Split(separator: ' ', count: 3) switch
-			//{
-			//	[string Prefix, string Phrase, string rest] => new CommandInput(Prefix, Phrase)
-			//	{
-			//		Flags = flags(rest),
-			//		Properties = props(rest),
-			//		Args = args(rest)
-			//	},
-			//	[string Prefix, string Phrase] => new CommandInput(Prefix, Phrase),
-			//	[string Prefix] => new CommandInput(Prefix),
-			//	_ => new CommandInput()
-			//};
-
-			//static IReadOnlyList<string> flags(string s) => [
-			//	.. s.Split(separator: ' ')
-			//	.Where(predicate: a => a.StartsWith(FlagPrefix))
-			//	.Select(selector: a => a[FlagPrefix.Length..])
-			//];
-			//static IReadOnlyList<object> args(string s) => [
-			//	.. s.Split(separator: ' ')
-			//	.Where(static s => s is not FlagPrefix)
-			//	.Select(static s => Convert.ChangeType(value: s, conversionType: s.ParseInput().GetType()))
-			//];
-			//static Dictionary<string, object> props(string s) => s.Split(' ')
-			//	.Where(static a => a.StartsWith(PropertiesPrefix) && a.Contains('='))
-			//	.Select(static a => a[PropertiesPrefix.Length..].Split('=', 2))
-			//	.Where(static a => a.Length == 2)
-			//	.Select(static a => new KeyValuePair<string, object>(key: a[0], value: a[1].ParseInput()))
-			//	.ToDictionary();
-
 			static void ProcessToken(ReadOnlySpan<char> token, CommandInput result)
 			{
-				// Flag
 				if (token.StartsWith(FlagPrefix))
 				{
 					string flag = token[FlagPrefix.Length..].ToString();
@@ -77,7 +46,6 @@ public sealed record Console
 					return;
 				}
 
-				// Property
 				if (token.StartsWith(PropertiesPrefix))
 				{
 					int eq = token.IndexOf('=');
@@ -91,7 +59,6 @@ public sealed record Console
 					}
 				}
 
-				// Argument
 				result.Args.Add(token.ToString().ParseInput());
 			}
 		}
