@@ -124,6 +124,7 @@ public sealed partial class Tile : PanelContainer
 	{
 		get; set
 		{
+			if (Flagged && !value) return;
 			Button.OverrideStyle(modify: (StyleBoxFlat style) =>
 			{
 				style.BgColor = Colours.MineSweeperBackground(mode: Type, covered: value);
@@ -134,7 +135,7 @@ public sealed partial class Tile : PanelContainer
 			Image.Texture = Type switch
 			{
 				Mode.Bomb when !value => Textures.Bomb,
-				_ => Image.Texture
+				_ => null
 			};
 
 			field = value;
