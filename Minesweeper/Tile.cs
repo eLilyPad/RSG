@@ -66,7 +66,8 @@ public sealed partial class Tile : PanelContainer
 		}
 	}
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
-	private static MinesweeperTextures Textures => field ??= Core.MinesweeperTexturesPath.LoadOrCreateResource<MinesweeperTextures>();
+	private static MinesweeperTextures Textures => field ??= Core.MinesweeperTexturesPath
+		.LoadOrCreateResource<MinesweeperTextures>();
 
 	public TextureRect Image { get; } = new TextureRect
 	{
