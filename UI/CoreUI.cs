@@ -91,27 +91,6 @@ public sealed partial class CoreUI : Control
 			parent: nonogram.ToolsBar.PuzzleLoader.Control,
 			nodes: levelLoaderDisplays
 		);
-		console.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
-		console.Input.Line.TextSubmitted += Console.Instance.Submitted;
-		console.Input.Line.TextChanged += input =>
-		{
-			console.Input.SuggestionDisplay.Clear();
-			IEnumerable<string> suggestions = Console.Instance.Suggestions(input);
-			foreach (string suggestion in suggestions)
-			{
-				console.Input.SuggestionDisplay.AddItem(suggestion);
-			}
-		};
-		console.Input.SuggestionDisplay.ItemSelected += index =>
-		{
-			string suggestion = console.Input.SuggestionDisplay.GetItemText((int)index);
-			if (!console.Input.Line.Text.EndsWith(' '))
-			{
-				console.Input.Line.Text += ' ';
-			}
-			console.Input.Line.Text += suggestion;
-			Console.GrabInputFocus();
-		};
 
 		return container;
 		static void RefillPacks(CanvasItem root, Node parent, List<PackDisplay> nodes)

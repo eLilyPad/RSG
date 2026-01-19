@@ -113,6 +113,31 @@ public sealed record Console
 
 	public IEnumerable<string> Prefixes => [.. Modules.Keys];
 	public Dictionary<string, Dictionary<string, Command>> Modules { private get; init; } = [];
+	private Console()
+	{
+		var console = Container;
+		console.Input.Line.VisibilityChanged += () => GrabInputFocus(true);
+		console.Input.Line.TextSubmitted += Submitted;
+		console.Input.Line.TextChanged += input =>
+		{
+			console.Input.SuggestionDisplay.Clear();
+			IEnumerable<string> suggestions = Suggestions(input);
+			foreach (string suggestion in suggestions)
+			{
+				console.Input.SuggestionDisplay.AddItem(suggestion);
+			}
+		};
+		console.Input.SuggestionDisplay.ItemSelected += index =>
+		{
+			string suggestion = console.Input.SuggestionDisplay.GetItemText((int)index);
+			if (!console.Input.Line.Text.EndsWith(' '))
+			{
+				console.Input.Line.Text += ' ';
+			}
+			console.Input.Line.Text += suggestion;
+			GrabInputFocus();
+		};
+	}
 
 	public void Submitted(string input)
 	{
