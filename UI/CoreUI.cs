@@ -36,8 +36,6 @@ public sealed partial class CoreUI : Control
 		PuzzleSelector puzzleSelector = container.Menu.Levels;
 		DialogueSelector dialogueSelector = container.Menu.Dialogues;
 
-		SettingsMenuContainer.ConnectSignals(menu: container.Menu.Settings.Nonogram, current: PuzzleManager.Current);
-
 		completionScreen.Options.Levels.Pressed += () =>
 		{
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);

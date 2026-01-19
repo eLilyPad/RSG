@@ -1,4 +1,5 @@
 using Godot;
+using RSG.Nonogram;
 
 namespace RSG.UI;
 
@@ -186,9 +187,11 @@ public sealed partial class MainMenu : Container
 	}
 
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
-	public void OverrideSignals<T>(T value) where T : IPress, IReceiveSignals
+	public void OverrideSignals<T>(T value)
+	where T : IPress, IReceiveSignals, SettingsMenuContainer.IChangeSettings
 	{
 		Signals = value;
 		OnPressed = value;
+		Settings.Nonogram.SettingsChanger = value;
 	}
 }

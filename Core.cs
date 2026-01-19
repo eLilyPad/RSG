@@ -9,10 +9,11 @@ using RSG.Minesweeper;
 
 public sealed partial class Core : Node
 {
-	private sealed class CoreEventHandler(Core core) :
+	private sealed class EventHandler(Core core) :
 	PuzzleManager.IHaveEvents,
 	MainMenu.IPress,
-	MainMenu.IReceiveSignals
+	MainMenu.IReceiveSignals,
+	SettingsMenuContainer.IChangeSettings
 	{
 		readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
 		readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
@@ -25,10 +26,12 @@ public sealed partial class Core : Node
 				menu.Hide();
 				return;
 			}
-			RefillPacks(
+			Refill(
 				root: puzzleSelector,
 				parent: puzzleSelector.Puzzles.Value,
-				nodes: _levelSelectorDisplays
+				nodes: _levelSelectorDisplays,
+				configs: PuzzleManager.SelectorConfigs,
+				create: PuzzleSelector.PackDisplay.Create
 			);
 		}
 		public void DialogueSelectorVisibilityChanged()
@@ -124,13 +127,23 @@ public sealed partial class Core : Node
 		{
 			core.GetTree().Quit();
 		}
-
-		static void RefillPacks(CanvasItem root, Node parent, List<PuzzleSelector.PackDisplay> nodes)
+		public void ToggledLockFilledTiles(bool toggled)
 		{
-			IEnumerable<(string Name, IEnumerable<SaveData> Data)> configs = PuzzleManager.SelectorConfigs;
-			Refill(root, parent, nodes, configs, create: PuzzleSelector.PackDisplay.Create);
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
 		}
-		static void Refill<TConfig, TNode>(
+		public void ToggledLockBlockedTiles(bool toggled)
+		{
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
+		}
+		public void ToggledBlockCompleteLines(bool toggled)
+		{
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
+		}
+
+		private static void Refill<TConfig, TNode>(
 			CanvasItem root,
 			Node parent,
 			List<TNode> nodes,
@@ -158,7 +171,7 @@ public sealed partial class Core : Node
 	public CoreUI Container => field ??= new CoreUI { Name = "Core UI", Colours = Colours }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 
-	private CoreEventHandler Events => field ??= new(this);
+	private EventHandler Handler => field ??= new(this);
 	private Manager Minesweeper
 	{
 		get
@@ -189,7 +202,7 @@ public sealed partial class Core : Node
 
 		CoreUI.ConnectSignals(Container);
 		CoreUI.SetThemes(Container);
-		Container.Menu.OverrideSignals(Events);
+		Container.Menu.OverrideSignals(Handler);
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
@@ -210,7 +223,7 @@ public sealed partial class Core : Node
 		);
 
 		PuzzleManager.Current.Type = Display.Type.Game;
-		PuzzleManager.Current.EventHandler = Events;
+		PuzzleManager.Current.EventHandler = Handler;
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
