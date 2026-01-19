@@ -1,8 +1,9 @@
 using Godot;
+using RSG.UI;
 
 namespace RSG.Minesweeper;
 
-public sealed partial class MinesweeperContainer : HBoxContainer
+public sealed partial class MinesweeperContainer : PanelContainer
 {
 	public sealed partial class CompletionOptions : HBoxContainer
 	{
@@ -74,6 +75,11 @@ public sealed partial class MinesweeperContainer : HBoxContainer
 		.Preset(LayoutPreset.FullRect);
 		public TextureRect Border { get; } = new TextureRect { Name = "Border", ClipContents = true }
 			.Preset(LayoutPreset.FullRect);
+
+		public MinesweeperBackground()
+		{
+			Resized += () => Border.TextureBorder((Vector2I)Size);
+		}
 		public override void _Ready() => this.Add(ColorBackground, Border);
 	}
 	public sealed partial class MinesweeperDisplay : AspectRatioContainer
@@ -98,8 +104,6 @@ public sealed partial class MinesweeperContainer : HBoxContainer
 	}.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.Minsize);
 
 	public MinesweeperBackground Background { get; } = new MinesweeperBackground { Name = "Background" }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public MinesweeperDisplay Display { get; } = new MinesweeperDisplay { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);

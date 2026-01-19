@@ -91,8 +91,6 @@ public sealed partial class CoreUI : Control
 			parent: nonogram.ToolsBar.PuzzleLoader.Control,
 			nodes: levelLoaderDisplays
 		);
-		nonogram.Resized += () => nonogram.Background.Border.TextureBorder((Vector2I)nonogram.Size);
-
 		console.Input.Line.VisibilityChanged += () => Console.GrabInputFocus(true);
 		console.Input.Line.TextSubmitted += Console.Instance.Submitted;
 		console.Input.Line.TextChanged += input =>
