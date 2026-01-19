@@ -62,36 +62,8 @@ public sealed partial class CoreUI : Control
 				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
 			}
 		};
-		nonogram.ToolsBar.PuzzleLoader.AboutToPopup += () => RefillPacks(
-			root: nonogram.ToolsBar,
-			parent: nonogram.ToolsBar.PuzzleLoader.Control,
-			nodes: levelLoaderDisplays
-		);
 
 		return container;
-		static void RefillPacks(CanvasItem root, Node parent, List<PackDisplay> nodes)
-		{
-			Refill(root, parent, nodes, configs: PuzzleManager.SelectorConfigs, create: PackDisplay.Create);
-		}
-		static void Refill<TConfig, TNode>(
-			CanvasItem root,
-			Node parent,
-			List<TNode> nodes,
-			IEnumerable<TConfig> configs,
-			Func<TConfig, CanvasItem, TNode> create
-		)
-		where TNode : Node
-		{
-			if (!root.Visible) return;
-			parent.Remove(true, nodes);
-			nodes.Clear();
-			foreach (TConfig config in configs)
-			{
-				TNode node = create(config, root);
-				parent.AddChild(node);
-				nodes.Add(node);
-			}
-		}
 	}
 
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }

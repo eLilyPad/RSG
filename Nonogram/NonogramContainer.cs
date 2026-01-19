@@ -14,8 +14,6 @@ public sealed partial class NonogramContainer : PanelContainer
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize, 250)
 	}.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.Minsize);
 
-	public Menu ToolsBar { get; } = new Menu { Name = "Toolbar", SizeFlagsStretchRatio = 0.05f }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public NonogramBackground Background { get; } = new NonogramBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Display.Default Display { get; } = new Display.Default { }
