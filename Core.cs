@@ -72,6 +72,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 	}
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
+	MinesweeperTexturesPath = "res://Data/MinesweeperTextures.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
 	public CoreUI Container => field ??= new CoreUI { Name = "Core UI", Colours = Colours }
