@@ -4,22 +4,6 @@ namespace RSG.Nonogram;
 
 public sealed partial class NonogramContainer : PanelContainer
 {
-	public interface IHaveTools { PopupMenu Tools { get; } }
-	public interface IHaveStatus { StatusBar Status { get; } }
-
-	public sealed partial class StatusBar : HBoxContainer
-	{
-		public const string PuzzleComplete = "Puzzle is complete", PuzzleIncomplete = "Puzzle is incomplete";
-		public RichTextLabel CompletionLabel { get; } = new RichTextLabel
-		{
-			Name = "Completion",
-			FitContent = true,
-			CustomMinimumSize = new(200, 0),
-			Text = PuzzleIncomplete
-		}.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		public override void _Ready() => this.Add(CompletionLabel);
-	}
-
 	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
 		Name = "PuzzleCompleteScreen",
