@@ -91,7 +91,15 @@ public sealed partial class MinesweeperContainer : PanelContainer
 		public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
-		public override void _Ready() => this.Add(Margin.Add(TilesGrid));
+		public override void _Ready()
+		{
+			const int marginValue = 50;
+			this.Add(Margin.Add(TilesGrid));
+			Margin.AddThemeConstantOverride("margin_top", marginValue);
+			Margin.AddThemeConstantOverride("margin_left", marginValue);
+			Margin.AddThemeConstantOverride("margin_bottom", marginValue);
+			Margin.AddThemeConstantOverride("margin_right", marginValue);
+		}
 	}
 	public Backgrounded<CompletedScreen> CompletionScreen { get; } = new Backgrounded<CompletedScreen>
 	{
@@ -123,6 +131,7 @@ public sealed partial class MinesweeperContainer : PanelContainer
 	internal MinesweeperContainer(IColours colours)
 	{
 		Tiles = new(parent: Display.TilesGrid, colours);
+		Background.ColorBackground.Color = colours.MinesweeperBackground;
 	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }
