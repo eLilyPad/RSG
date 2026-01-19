@@ -122,11 +122,16 @@ public sealed partial class MainMenu : Container
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons), }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin / 2);
-	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector { Name = "Level Selector", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
-	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
-
+	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector
+	{
+		Name = "Level Selector",
+		Visible = false
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
+	public DialogueSelector Dialogues { get; } = new DialogueSelector
+	{
+		Name = "Dialogue Selector",
+		Visible = false
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public IPress OnPressed
 	{
 		set
