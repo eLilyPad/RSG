@@ -127,11 +127,10 @@ public sealed partial class MainMenu : Container
 	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 
-	public IPress? OnPressed
+	public IPress OnPressed
 	{
 		set
 		{
-			if (value is null) return;
 			Buttons.Play.Pressed += value.PlayPressed;
 			Buttons.PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
 			Buttons.Levels.Pressed += value.LevelsPressed;
