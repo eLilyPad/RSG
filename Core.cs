@@ -110,6 +110,21 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		CoreUI.ConnectSignals(Container);
 		CoreUI.SetThemes(Container);
 		Container.Menu.OnPressed = Events;
+		Container.Menu.VisibilityChanged += () =>
+		{
+			if (!Container.Menu.Visible)
+			{
+				return;
+			}
+			if (PuzzleManager.Current.UI.Visible)
+			{
+				PuzzleManager.Current.UI.Hide();
+			}
+			if (Minesweeper.UI.Visible)
+			{
+				Minesweeper.UI.Hide();
+			}
+		};
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
