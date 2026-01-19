@@ -8,8 +8,8 @@ public sealed partial class PuzzleManager
 {
 	public interface IHaveEvents
 	{
-		void Completed(SaveData puzzle) { }
-		void SettingsChanged() { }
+		void Completed(SaveData puzzle);
+		void SettingsChanged();
 	}
 
 	public static CurrentPuzzle Current => field ??= new();

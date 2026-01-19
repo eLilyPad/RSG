@@ -28,9 +28,7 @@ public sealed partial class CoreUI : Control
 	}
 	public static CoreUI ConnectSignals(CoreUI container)
 	{
-		List<PackDisplay> levelSelectorDisplays = [];
 		List<PackDisplay> levelLoaderDisplays = [];
-		List<DialogueDisplay> dialogueLoaderDisplays = [];
 
 		ConsoleContainer console = Console.Container;
 		NonogramContainer nonogram = PuzzleManager.Current.UI;
@@ -40,26 +38,6 @@ public sealed partial class CoreUI : Control
 
 		SettingsMenuContainer.ConnectSignals(menu: container.Menu.Settings.Nonogram, current: PuzzleManager.Current);
 
-		puzzleSelector.VisibilityChanged += () =>
-		{
-			if (!puzzleSelector.Visible)
-			{
-				container.Menu.Hide();
-				return;
-			}
-			RefillPacks(
-				root: puzzleSelector,
-				parent: puzzleSelector.Puzzles.Value,
-				nodes: levelSelectorDisplays
-			);
-		};
-		dialogueSelector.VisibilityChanged += () => Refill(
-			root: dialogueSelector,
-			parent: dialogueSelector.DisplayContainer.Value,
-			nodes: dialogueLoaderDisplays,
-			configs: Dialogues.AvailableDialogues,
-			create: DialogueDisplay.Create
-		);
 		completionScreen.Options.Levels.Pressed += () =>
 		{
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);

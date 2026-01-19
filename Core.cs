@@ -5,12 +5,67 @@ namespace RSG;
 
 using UI;
 using Nonogram;
+using RSG.Minesweeper;
 
-
-public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPress
+public sealed partial class Core : Node
 {
-	private sealed class CoreEventHandler(Core core) : PuzzleManager.IHaveEvents, MainMenu.IPress
+	private sealed class CoreEventHandler(Core core) :
+	PuzzleManager.IHaveEvents,
+	MainMenu.IPress,
+	MainMenu.IReceiveSignals
 	{
+		readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
+		readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
+		public void PuzzleSelectorVisibilityChanged()
+		{
+			MainMenu menu = core.Container.Menu;
+			PuzzleSelector puzzleSelector = menu.Levels;
+			if (!puzzleSelector.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			RefillPacks(
+				root: puzzleSelector,
+				parent: puzzleSelector.Puzzles.Value,
+				nodes: _levelSelectorDisplays
+			);
+		}
+		public void DialogueSelectorVisibilityChanged()
+		{
+			MainMenu menu = core.Container.Menu;
+			DialogueSelector dialogueSelector = menu.Dialogues;
+			if (!dialogueSelector.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			Refill(
+				root: dialogueSelector,
+				parent: dialogueSelector.DisplayContainer.Value,
+				nodes: _dialogueSelectorDisplays,
+				configs: Dialogues.AvailableDialogues,
+				create: DialogueSelector.DialogueDisplay.Create
+			);
+		}
+		public void MenuVisibilityChanged()
+		{
+			MainMenu menu = core.Container.Menu;
+			NonogramContainer nonogram = PuzzleManager.Current.UI;
+			MinesweeperContainer minesweeper = core.Minesweeper.UI;
+			if (!menu.Visible)
+			{
+				return;
+			}
+			if (nonogram.Visible)
+			{
+				nonogram.Hide();
+			}
+			if (minesweeper.Visible)
+			{
+				minesweeper.Hide();
+			}
+		}
 		public void Completed(SaveData puzzle)
 		{
 			string dialogueName = puzzle.Expected.DialogueName;
@@ -28,7 +83,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		}
 		public void PlayMinesweeperPressed()
 		{
-			core.Minesweeper.Puzzle = RSG.Minesweeper.Manager.Data.CreateRandom(10);
+			core.Minesweeper.Puzzle = Manager.Data.CreateRandom(10);
 			core.Minesweeper.UI.Show();
 			core.Container.Menu.Hide();
 		}
@@ -69,6 +124,31 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		{
 			core.GetTree().Quit();
 		}
+
+		static void RefillPacks(CanvasItem root, Node parent, List<PuzzleSelector.PackDisplay> nodes)
+		{
+			IEnumerable<(string Name, IEnumerable<SaveData> Data)> configs = PuzzleManager.SelectorConfigs;
+			Refill(root, parent, nodes, configs, create: PuzzleSelector.PackDisplay.Create);
+		}
+		static void Refill<TConfig, TNode>(
+			CanvasItem root,
+			Node parent,
+			List<TNode> nodes,
+			IEnumerable<TConfig> configs,
+			Func<TConfig, CanvasItem, TNode> create
+		)
+		where TNode : Node
+		{
+			if (!root.Visible) return;
+			parent.Remove(true, nodes);
+			nodes.Clear();
+			foreach (TConfig config in configs)
+			{
+				TNode node = create(config, root);
+				parent.AddChild(node);
+				nodes.Add(node);
+			}
+		}
 	}
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
@@ -79,17 +159,17 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 
 	private CoreEventHandler Events => field ??= new(this);
-	private Minesweeper.Manager Minesweeper
+	private Manager Minesweeper
 	{
 		get
 		{
 			if (field is not null) return field;
-			Minesweeper.MinesweeperContainer ui = new Minesweeper.MinesweeperContainer(Colours)
+			MinesweeperContainer ui = new MinesweeperContainer(Colours)
 			{
 				Name = "Minesweeper",
 				Visible = false
 			}.Preset(LayoutPreset.FullRect);
-			Minesweeper.Manager minesweeper = new() { UI = ui };
+			Manager minesweeper = new() { UI = ui };
 
 			Container.AddChild(ui);
 			ui.Tiles.Provider = minesweeper;
@@ -109,22 +189,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 
 		CoreUI.ConnectSignals(Container);
 		CoreUI.SetThemes(Container);
-		Container.Menu.OnPressed = Events;
-		Container.Menu.VisibilityChanged += () =>
-		{
-			if (!Container.Menu.Visible)
-			{
-				return;
-			}
-			if (PuzzleManager.Current.UI.Visible)
-			{
-				PuzzleManager.Current.UI.Hide();
-			}
-			if (Minesweeper.UI.Visible)
-			{
-				Minesweeper.UI.Hide();
-			}
-		};
+		Container.Menu.OverrideSignals(Events);
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),

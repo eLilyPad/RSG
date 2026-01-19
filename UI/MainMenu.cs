@@ -98,12 +98,18 @@ public sealed partial class MainMenu : Container
 	}
 	public interface IPress
 	{
-		void PlayPressed() { }
-		void PlayMinesweeperPressed() { }
-		void LevelsPressed() { }
-		void DialoguesPressed() { }
-		void SettingsPressed() { }
-		void QuitPressed() { }
+		void PlayPressed();
+		void PlayMinesweeperPressed();
+		void LevelsPressed();
+		void DialoguesPressed();
+		void SettingsPressed();
+		void QuitPressed();
+	}
+	public interface IReceiveSignals
+	{
+		void MenuVisibilityChanged();
+		void PuzzleSelectorVisibilityChanged();
+		void DialogueSelectorVisibilityChanged();
 	}
 
 	public const int Margin = 100;
@@ -132,7 +138,25 @@ public sealed partial class MainMenu : Container
 		Name = "Dialogue Selector",
 		Visible = false
 	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
-	public IPress OnPressed
+
+	private IReceiveSignals Signals
+	{
+		set
+		{
+			VisibilityChanged += value.MenuVisibilityChanged;
+			Levels.VisibilityChanged += value.PuzzleSelectorVisibilityChanged;
+			Dialogues.VisibilityChanged += value.DialogueSelectorVisibilityChanged;
+			if (field is null)
+			{
+				field = value;
+				return;
+			}
+			VisibilityChanged -= field.MenuVisibilityChanged;
+			Levels.VisibilityChanged -= field.PuzzleSelectorVisibilityChanged;
+			Dialogues.VisibilityChanged -= field.DialogueSelectorVisibilityChanged;
+		}
+	}
+	private IPress OnPressed
 	{
 		set
 		{
@@ -162,4 +186,9 @@ public sealed partial class MainMenu : Container
 	}
 
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
+	public void OverrideSignals<T>(T value) where T : IPress, IReceiveSignals
+	{
+		Signals = value;
+		OnPressed = value;
+	}
 }
