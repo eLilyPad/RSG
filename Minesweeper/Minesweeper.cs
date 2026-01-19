@@ -18,6 +18,62 @@ public interface IColours
 		};
 	}
 }
+sealed class UserInput
+{
+	public const MouseButton UnCoverButton = MouseButton.Left, FlagButton = MouseButton.Right;
+	public required Tile.Pool Tiles { private get; init; }
+	public required AutoCompleter Completer { private get; init; }
+
+	public void MousePressed(Minesweeper.Data data, Vector2I position)
+	{
+		Tile tile = Tiles.GetOrCreate(position);
+		if (Input.IsMouseButtonPressed(FlagButton))
+		{
+			tile.Flagged = !tile.Flagged;
+			return;
+		}
+		if (tile.Flagged) return;
+		tile.Covered = false;
+		switch (tile.Type)
+		{
+			case Tile.Mode.Bomb:
+				GD.Print("Boom! You hit a mine!");
+				break;
+			case Tile.Mode.Empty when tile.Button.Text == string.Empty:
+				Completer.FloodFillEmpty(data, position);
+				break;
+			default: break;
+		}
+	}
+}
+sealed class AutoCompleter
+{
+	public required Tile.Pool Tiles { private get; init; }
+
+	public void FloodFillEmpty(Minesweeper.Data data, Vector2I start)
+	{
+		IImmutableDictionary<Vector2I, (Tile.Mode mode, bool covered)> saved = data.State;
+		HashSet<Vector2I> visited = [start];
+		Queue<Vector2I> queue = new();
+		queue.Enqueue(start);
+		int maxIterations = saved.Count, i = 0;
+		while (queue.Count > 0)
+		{
+			if (i++ >= maxIterations) break;
+			Vector2I current = queue.Dequeue();
+
+			foreach (Vector2I next in saved.Keys.PointsAround(current))
+			{
+				Tile tile = Tiles.GetOrCreate(next);
+				if (tile.Type is not Tile.Mode.Empty) { continue; }
+				if (visited.Contains(next)) { continue; }
+				tile.Covered = false;
+				visited.Add(next);
+				if (tile.Button.Text == string.Empty) queue.Enqueue(next);
+			}
+		}
+	}
+}
 public sealed partial class Minesweeper : Tile.IProvider
 {
 	public sealed class Data
@@ -40,61 +96,9 @@ public sealed partial class Minesweeper : Tile.IProvider
 
 		private Data(Dictionary<Vector2I, (Tile.Mode mode, bool covered)> state) => _state = state;
 	}
-	sealed class UserInput
-	{
-		public required Tile.Pool Tiles { private get; init; }
-		public required AutoCompleter Completer { private get; init; }
-
-		public void CheckForMine(Data data, Vector2I position)
-		{
-			Tile tile = Tiles.GetOrCreate(position);
-			tile.Covered = false;
-			switch (tile.Type)
-			{
-				case Tile.Mode.Bomb:
-					GD.Print("Boom! You hit a mine!");
-					break;
-				case Tile.Mode.Empty:
-					Completer.FloodFillEmpty(data, position);
-					break;
-				default: break;
-			}
-		}
-	}
-	sealed class AutoCompleter
-	{
-		public required Tile.Pool Tiles { private get; init; }
-
-		public void FloodFillEmpty(Data data, Vector2I start)
-		{
-			IImmutableDictionary<Vector2I, (Tile.Mode mode, bool covered)> saved = data.State;
-			HashSet<Vector2I> visited = [start];
-			Queue<Vector2I> queue = new();
-			queue.Enqueue(start);
-			int maxIterations = saved.Count, i = 0;
-			while (queue.Count > 0)
-			{
-				if (i++ >= maxIterations) break;
-				Vector2I current = queue.Dequeue();
-
-				foreach (Vector2I next in saved.Keys.PointsAround(current))
-				{
-					Tile tile = Tiles.GetOrCreate(next);
-					if (visited.Contains(next) || tile.Type is not Tile.Mode.Empty) { continue; }
-					tile.Covered = false;
-					visited.Add(next);
-					if (tile.Button.Text == "0") queue.Enqueue(next);
-				}
-			}
-		}
-	}
 	public Data Puzzle
 	{
-		get; set
-		{
-			UI.PuzzleSize = value.Size;
-			field = value;
-		}
+		private get; set => UI.PuzzleSize = (field = value).Size;
 	} = Data.CreateRandom();
 	public required MinesweeperContainer UI { get; init; }
 
@@ -103,7 +107,7 @@ public sealed partial class Minesweeper : Tile.IProvider
 
 	public void OnActivate(Vector2I position, Tile tile)
 	{
-		Input.CheckForMine(data: Puzzle, position);
+		Input.MousePressed(data: Puzzle, position);
 	}
 	public Tile.Mode GetType(Vector2I position)
 	{
