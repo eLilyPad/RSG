@@ -28,7 +28,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		}
 		public void PlayMinesweeperPressed()
 		{
-			core.Minesweeper.Puzzle = RSG.Minesweeper.Minesweeper.Data.CreateRandom(10);
+			core.Minesweeper.Puzzle = RSG.Minesweeper.Manager.Data.CreateRandom(10);
 			core.Minesweeper.UI.Show();
 			core.Container.Menu.Hide();
 		}
@@ -79,7 +79,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 
 	private CoreEventHandler Events => field ??= new(this);
-	private Minesweeper.Minesweeper Minesweeper
+	private Minesweeper.Manager Minesweeper
 	{
 		get
 		{
@@ -89,7 +89,7 @@ public sealed partial class Core : Node, PuzzleManager.IHaveEvents, MainMenu.IPr
 				Name = "Minesweeper",
 				Visible = false
 			}.Preset(LayoutPreset.FullRect);
-			Minesweeper.Minesweeper minesweeper = new() { UI = ui };
+			Minesweeper.Manager minesweeper = new() { UI = ui };
 
 			Container.AddChild(ui);
 			ui.Tiles.Provider = minesweeper;

@@ -24,7 +24,7 @@ sealed class UserInput
 	public required Tile.Pool Tiles { private get; init; }
 	public required AutoCompleter Completer { private get; init; }
 
-	public void MousePressed(Minesweeper.Data data, Vector2I position)
+	public void MousePressed(Manager.Data data, Vector2I position)
 	{
 		Tile tile = Tiles.GetOrCreate(position);
 		if (Input.IsMouseButtonPressed(FlagButton))
@@ -50,7 +50,7 @@ sealed class AutoCompleter
 {
 	public required Tile.Pool Tiles { private get; init; }
 
-	public void FloodFillEmpty(Minesweeper.Data data, Vector2I start)
+	public void FloodFillEmpty(Manager.Data data, Vector2I start)
 	{
 		IImmutableDictionary<Vector2I, (Tile.Mode mode, bool covered)> saved = data.State;
 		HashSet<Vector2I> visited = [start];
@@ -74,7 +74,7 @@ sealed class AutoCompleter
 		}
 	}
 }
-public sealed partial class Minesweeper : Tile.IProvider
+public sealed partial class Manager : Tile.IProvider
 {
 	public sealed class Data
 	{
