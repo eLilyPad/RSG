@@ -91,7 +91,6 @@ public sealed partial class Tile : PanelContainer
 			return style;
 		})
 		.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty());
-	//public 
 
 	public required IColours Colours { private get; set; }
 	[Export]
