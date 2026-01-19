@@ -39,7 +39,7 @@ public sealed partial class Tile : PanelContainer
 					default: break;
 				}
 
-				tile.Button.Text = bombsAround.ToString();
+				tile.Button.Text = bombsAround is 0 ? string.Empty : bombsAround.ToString();
 				tile.Button.AddThemeFontSizeOverride("normal", (int)tile.Size.LengthSquared() * 3);
 
 				if (firstTile)
@@ -66,8 +66,16 @@ public sealed partial class Tile : PanelContainer
 		}
 	}
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
+	private static MinesweeperTextures Textures => field ??= Core.MinesweeperTexturesPath.LoadOrCreateResource<MinesweeperTextures>();
 
-	public Button Button { get; } = new Button { Text = " ", ButtonMask = mask }
+	public TextureRect Image { get; } = new TextureRect
+	{
+		Name = "Image",
+		ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+		MouseFilter = MouseFilterEnum.Ignore
+	}
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+	public Button Button { get; } = new Button { Text = " ", ButtonMask = mask, ExpandIcon = false }
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 		.OverrideStyle(modify: (StyleBoxFlat style) =>
 		{
@@ -83,7 +91,7 @@ public sealed partial class Tile : PanelContainer
 			return style;
 		})
 		.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty());
-
+	//public 
 
 	public required IColours Colours { private get; set; }
 	[Export]
@@ -96,10 +104,21 @@ public sealed partial class Tile : PanelContainer
 				style.BgColor = Colours.MineSweeperBackground(mode: value, covered: Covered);
 				return style;
 			});
+			if (value is Mode.Bomb && !Covered) Image.Texture = Textures.Bomb;
 
 			field = value;
 		}
 	}
+	[Export]
+	public bool Flagged
+	{
+		get; set
+		{
+			if (value && !Covered) return;
+			Image.Texture = value ? Textures.Flag : null;
+			field = value;
+		}
+	} = false;
 	[Export]
 	public bool Covered
 	{
@@ -110,12 +129,19 @@ public sealed partial class Tile : PanelContainer
 				style.BgColor = Colours.MineSweeperBackground(mode: Type, covered: value);
 				return style;
 			})
-			.AddAllFontThemeOverride(Colors.Chocolate);
+			.AddAllFontThemeOverride(value ? Colors.Transparent : Colors.Chocolate);
+
+			Image.Texture = Type switch
+			{
+				Mode.Bomb when !value => Textures.Bomb,
+				_ => Image.Texture
+			};
+
 			field = value;
 		}
 	} = true;
 
 	private Tile() { }
-	public override void _Ready() => this.Add(Button);
+	public override void _Ready() => this.Add(Button, Image);
 }
 
