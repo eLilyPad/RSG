@@ -23,6 +23,24 @@ public sealed partial class Backgrounded<T> : Container where T : Control
 }
 public static class UIX
 {
+	public static void Refill<TConfig, TNode>(
+		this CanvasItem root,
+		Node parent,
+		List<TNode> nodes,
+		IEnumerable<TConfig> configs,
+		Func<TConfig, CanvasItem, TNode> create
+	) where TNode : Node
+	{
+		if (!root.Visible) return;
+		parent.Remove(true, nodes);
+		nodes.Clear();
+		foreach (TConfig config in configs)
+		{
+			TNode node = create(config, root);
+			parent.AddChild(node);
+			nodes.Add(node);
+		}
+	}
 	public static T ReplaceVisibility<T>(this T toHide, params ReadOnlySpan<CanvasItem> toShow)
 	where T : CanvasItem
 	{

@@ -11,6 +11,7 @@ public sealed partial class Core : Node
 {
 	private sealed class EventHandler(Core core) :
 	PuzzleManager.IHaveEvents,
+	IHandleEvents,
 	MainMenu.IPress,
 	MainMenu.IReceiveSignals,
 	SettingsMenuContainer.IChangeSettings
@@ -26,8 +27,7 @@ public sealed partial class Core : Node
 				menu.Hide();
 				return;
 			}
-			Refill(
-				root: puzzleSelector,
+			puzzleSelector.Refill(
 				parent: puzzleSelector.Puzzles.Value,
 				nodes: _levelSelectorDisplays,
 				configs: PuzzleManager.SelectorConfigs,
@@ -43,8 +43,7 @@ public sealed partial class Core : Node
 				menu.Hide();
 				return;
 			}
-			Refill(
-				root: dialogueSelector,
+			dialogueSelector.Refill(
 				parent: dialogueSelector.DisplayContainer.Value,
 				nodes: _dialogueSelectorDisplays,
 				configs: Dialogues.AvailableDialogues,
@@ -108,25 +107,10 @@ public sealed partial class Core : Node
 			}
 			core.Container.Menu.Buttons.Hide();
 		}
-		public void LevelsPressed()
-		{
-			core.Container.Menu.Levels.Show();
-			core.Container.Menu.Buttons.Hide();
-		}
-		public void DialoguesPressed()
-		{
-			core.Container.Menu.Dialogues.Show();
-			core.Container.Menu.Buttons.Hide();
-		}
-		public void SettingsPressed()
-		{
-			core.Container.Menu.Settings.Show();
-			core.Container.Menu.Buttons.Hide();
-		}
-		public void QuitPressed()
-		{
-			core.GetTree().Quit();
-		}
+		public void LevelsPressed() => core.Container.Menu.Levels.Show();
+		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
+		public void SettingsPressed() => core.Container.Menu.Settings.Show();
+		public void QuitPressed() => core.GetTree().Quit();
 		public void ToggledLockFilledTiles(bool toggled)
 		{
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
@@ -143,24 +127,13 @@ public sealed partial class Core : Node
 			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
 		}
 
-		private static void Refill<TConfig, TNode>(
-			CanvasItem root,
-			Node parent,
-			List<TNode> nodes,
-			IEnumerable<TConfig> configs,
-			Func<TConfig, CanvasItem, TNode> create
-		)
-		where TNode : Node
+		public void Failed(Manager.Data data)
 		{
-			if (!root.Visible) return;
-			parent.Remove(true, nodes);
-			nodes.Clear();
-			foreach (TConfig config in configs)
-			{
-				TNode node = create(config, root);
-				parent.AddChild(node);
-				nodes.Add(node);
-			}
+			core.Container.Menu.Show();
+		}
+		public void Completed(Manager.Data data)
+		{
+			core.Container.Menu.Show();
 		}
 	}
 	public const string
@@ -180,9 +153,9 @@ public sealed partial class Core : Node
 			MinesweeperContainer ui = new MinesweeperContainer(Colours)
 			{
 				Name = "Minesweeper",
-				Visible = false
+				Visible = false,
 			}.Preset(LayoutPreset.FullRect);
-			Manager minesweeper = new() { UI = ui };
+			Manager minesweeper = new() { UI = ui, EventHandler = Handler };
 
 			Container.AddChild(ui);
 			ui.Tiles.Provider = minesweeper;
