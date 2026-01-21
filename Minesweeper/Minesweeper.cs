@@ -19,13 +19,18 @@ public interface IColours
 		};
 	}
 }
+public interface IHandleEvents
+{
+	void Failed(Manager.Data data);
+	void Completed(Manager.Data data);
+}
 sealed class UserInput
 {
 	public const MouseButton UnCoverButton = MouseButton.Left, FlagButton = MouseButton.Right;
 	public required Tile.Pool Tiles { private get; init; }
 	public required AutoCompleter Completer { private get; init; }
 
-	public void MousePressed(Manager.Data data, Vector2I position)
+	public void MousePressed(Manager.Data data, Vector2I position, IHandleEvents? handler = null)
 	{
 		Tile tile = Tiles.GetOrCreate(position);
 		if (Input.IsMouseButtonPressed(FlagButton))
@@ -38,13 +43,32 @@ sealed class UserInput
 		switch (tile.Type)
 		{
 			case Tile.Mode.Bomb:
-				GD.Print("Boom! You hit a mine!");
+				handler?.Failed(data);
 				break;
 			case Tile.Mode.Empty when tile.Button.Text == string.Empty:
 				Completer.FloodFillEmpty(data, position);
 				break;
 			default: break;
 		}
+		if (IsCompleted(data))
+		{
+			handler?.Completed(data);
+		}
+	}
+	private bool IsCompleted(Manager.Data data)
+	{
+		foreach (var (position, (mode, _)) in data.State)
+		{
+			Tile tile = Tiles.GetOrCreate(position);
+			bool tileCorrect = mode switch
+			{
+				Tile.Mode.Bomb when tile.Flagged || tile.Covered => true,
+				Tile.Mode.Empty when !tile.Covered => true,
+				_ => false,
+			};
+			if (!tileCorrect) return false;
+		}
+		return true;
 	}
 }
 sealed class AutoCompleter
@@ -88,27 +112,26 @@ public sealed partial class Manager : Tile.IProvider
 				bool covered = true;
 				state[position] = (mode, covered);
 			}
-			Data data = new(state: state);
+			Data data = new() { State = state.ToImmutableDictionary() };
 			return data;
 		}
-		public int Size => (int)Mathf.Sqrt(_state.Count);
-		public IImmutableDictionary<Vector2I, (Tile.Mode mode, bool covered)> State => _state.ToImmutableDictionary();
-		private readonly Dictionary<Vector2I, (Tile.Mode mode, bool covered)> _state = [];
-
-		private Data(Dictionary<Vector2I, (Tile.Mode mode, bool covered)> state) => _state = state;
+		public int Size => (int)Mathf.Sqrt(State.Count);
+		public required IImmutableDictionary<Vector2I, (Tile.Mode mode, bool covered)> State { get; init; }
 	}
 	public Data Puzzle
 	{
 		private get; set => UI.PuzzleSize = (field = value).Size;
 	} = Data.CreateRandom();
 	public required MinesweeperContainer UI { get; init; }
+	public IHandleEvents? EventHandler { get; set; }
+	public bool IsCompleted => Puzzle.State.Values.All(v => v.covered is false || v.mode is Tile.Mode.Bomb);
 
 	private AutoCompleter Completer => field ??= new AutoCompleter { Tiles = UI.Tiles };
 	private UserInput Input => field ??= new UserInput { Tiles = UI.Tiles, Completer = Completer };
 
 	public void OnActivate(Vector2I position, Tile tile)
 	{
-		Input.MousePressed(data: Puzzle, position);
+		Input.MousePressed(data: Puzzle, position, EventHandler);
 	}
 	public Tile.Mode GetType(Vector2I position)
 	{
