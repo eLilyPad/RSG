@@ -18,55 +18,15 @@ public sealed partial class Core : Node
 	{
 		readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
 		readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
-		public void PuzzleSelectorVisibilityChanged()
-		{
-			MainMenu menu = core.Container.Menu;
-			PuzzleSelector puzzleSelector = menu.Levels;
-			if (!puzzleSelector.Visible)
-			{
-				menu.Hide();
-				return;
-			}
-			puzzleSelector.Refill(
-				parent: puzzleSelector.Puzzles.Value,
-				nodes: _levelSelectorDisplays,
-				configs: PuzzleManager.SelectorConfigs,
-				create: PuzzleSelector.PackDisplay.Create
-			);
-		}
-		public void DialogueSelectorVisibilityChanged()
-		{
-			MainMenu menu = core.Container.Menu;
-			DialogueSelector dialogueSelector = menu.Dialogues;
-			if (!dialogueSelector.Visible)
-			{
-				menu.Hide();
-				return;
-			}
-			dialogueSelector.Refill(
-				parent: dialogueSelector.DisplayContainer.Value,
-				nodes: _dialogueSelectorDisplays,
-				configs: Dialogues.AvailableDialogues,
-				create: DialogueSelector.DialogueDisplay.Create
-			);
-		}
+		public void PuzzleSelectorVisibilityChanged() => Refill(value: core.Container.Menu.Levels);
+		public void DialogueSelectorVisibilityChanged() => Refill(value: core.Container.Menu.Dialogues);
 		public void MenuVisibilityChanged()
 		{
-			MainMenu menu = core.Container.Menu;
 			NonogramContainer nonogram = PuzzleManager.Current.UI;
 			MinesweeperContainer minesweeper = core.Minesweeper.UI;
-			if (!menu.Visible)
-			{
-				return;
-			}
-			if (nonogram.Visible)
-			{
-				nonogram.Hide();
-			}
-			if (minesweeper.Visible)
-			{
-				minesweeper.Hide();
-			}
+			if (!core.Container.Menu.Visible) { return; }
+			if (nonogram.Visible) { nonogram.Hide(); }
+			if (minesweeper.Visible) { minesweeper.Hide(); }
 		}
 		public void Completed(SaveData puzzle)
 		{
@@ -134,6 +94,38 @@ public sealed partial class Core : Node
 		public void Completed(Manager.Data data)
 		{
 			core.Container.Menu.Show();
+		}
+
+		private void Refill<T>(T value) where T : Control
+		{
+			MainMenu menu = core.Container.Menu;
+			if (!value.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			switch (value)
+			{
+				case PuzzleSelector puzzle:
+					puzzle.Refill(
+						parent: puzzle.Puzzles.Value,
+						nodes: _levelSelectorDisplays,
+						configs: PuzzleManager.SelectorConfigs,
+						create: PuzzleSelector.PackDisplay.Create
+					);
+					break;
+				case DialogueSelector dialogue:
+					dialogue.Refill(
+						parent: dialogue.DisplayContainer.Value,
+						nodes: _dialogueSelectorDisplays,
+						configs: Dialogues.AvailableDialogues,
+						create: DialogueSelector.DialogueDisplay.Create
+					);
+					break;
+				default:
+					GD.PrintErr($"Unhandled refill for type {value.GetType().Name}");
+					break;
+			}
 		}
 	}
 	public const string
