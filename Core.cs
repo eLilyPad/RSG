@@ -7,7 +7,7 @@ using UI;
 using Nonogram;
 using RSG.Minesweeper;
 using RSG.Dialogue;
-
+using System.Diagnostics.CodeAnalysis;
 
 public sealed partial class Core : Node
 {
@@ -130,6 +130,131 @@ public sealed partial class Core : Node
 			}
 		}
 	}
+	private sealed class CommandConfigs(Core core)
+	{
+		public (string name, Console.Console.Command command) Quit => ("quit", new()
+		{
+			Default = () => core.GetTree().Quit()
+		});
+		public (string name, Console.Console.Command command) Dialogue => ("dialogue", new()
+		{
+			Default = () => Console.Console.Log("Current Dialogue: " + Dialogues.Container.Visible),
+			Flags = new()
+			{
+				["enable_all"] = () =>
+				{
+					Dialogues.EnableAll();
+					Console.Console.Log("Enabled All Dialogues");
+				}
+			},
+			Properties = new()
+			{
+				["start"] = obj =>
+				{
+					if (obj is not string name)
+					{
+						Console.Console.Log("Invalid dialogue name");
+						return;
+					}
+					if (!Dialogues.Contains(name))
+					{
+						Console.Console.Log("Dialogue does not exist");
+						return;
+					}
+					Dialogues.Start(name);
+					Console.Console.Log($"Started Dialogue: {name}");
+				},
+				["enable"] = obj =>
+				{
+					if (obj is not string name)
+					{
+						Console.Console.Log("Invalid dialogue name");
+						return;
+					}
+					if (!Dialogues.Contains(name))
+					{
+						Console.Console.Log("Dialogue does not exist");
+						return;
+					}
+					Dialogues.Enable(name);
+					Console.Console.Log($"Enabled Dialogue: {name}");
+				},
+			}
+		});
+	}
+
+	private static void InitConsole(Core core)
+	{
+		Console.Console.Command
+		quitCommand = new() { Default = () => core.GetTree().Quit() },
+		dialogueCommand = new()
+		{
+			Default = () => Console.Console.Log("Current Dialogue: " + Dialogues.Container.Visible),
+			Flags = new()
+			{
+				["enable_all"] = () =>
+				{
+					Dialogues.EnableAll();
+					Console.Console.Log("Enabled All Dialogues");
+				}
+			},
+			Properties = new()
+			{
+				["start"] = obj =>
+				{
+
+					if (!TryConvertDialogueName(obj, out string? name)) return;
+					Dialogues.Start(name);
+					Console.Console.Log($"Started Dialogue: {name}");
+				},
+				["enable"] = obj =>
+				{
+					if (!TryConvertDialogueName(obj, out string? name)) return;
+					Dialogues.Enable(name);
+					Console.Console.Log($"Enabled Dialogue: {name}");
+				},
+			}
+		},
+		nonogramCommand = new()
+		{
+			Default = () => Console.Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
+			Flags = new()
+			{
+				["game"] = () => ChangeDisplayType(Display.Type.Game),
+				["paint"] = () => ChangeDisplayType(Display.Type.Paint),
+				["display"] = () => ChangeDisplayType(Display.Type.Display),
+			}
+		};
+		ReadOnlySpan<(string, Console.Console.Command)> configs = [
+			("quit", quitCommand),
+			("dialogue", dialogueCommand),
+			("nonogram", nonogramCommand)
+		];
+		Console.Console.Add("\\", configs);
+
+		static bool TryConvertDialogueName(object obj, [MaybeNullWhen(false)] out string name)
+		{
+			name = null;
+			if (obj is not string value)
+			{
+				Console.Console.Log("Invalid dialogue name");
+				return false;
+			}
+			if (!Dialogues.Contains(value))
+			{
+				Console.Console.Log("Dialogue does not exist");
+				return false;
+			}
+			name = value;
+			return true;
+		}
+		static void ChangeDisplayType(Display.Type type)
+		{
+			PuzzleManager.Current.Type = type;
+			Console.Console.Log($"Display changed too {type.AsName()}");
+		}
+	}
+
 	public const string
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	MinesweeperTexturesPath = "res://Data/MinesweeperTextures.tres",
@@ -175,77 +300,12 @@ public sealed partial class Core : Node
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
 			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
-		Console.Console.Add("/",
-			("quit", new Console.Console.Command { Default = () => GetTree().Quit() }),
-			("dialogue", new Console.Console.Command
-			{
-				Default = () => Console.Console.Log("Current Dialogue: " + Dialogues.Container.Visible),
-				Flags = new()
-				{
-					["enable_all"] = () =>
-					{
-						Dialogues.EnableAll();
-						Console.Console.Log("Enabled All Dialogues");
-					}
-				},
-				Properties = new()
-				{
-					["start"] = obj =>
-					{
-						if (obj is not string name)
-						{
-							Console.Console.Log("Invalid dialogue name");
-							return;
-						}
-						if (!Dialogues.Contains(name))
-						{
-							Console.Console.Log("Dialogue does not exist");
-							return;
-						}
-						Dialogues.Start(name);
-						Console.Console.Log($"Started Dialogue: {name}");
-					},
-					["enable"] = obj =>
-					{
-						if (obj is not string name)
-						{
-							Console.Console.Log("Invalid dialogue name");
-							return;
-						}
-						if (!Dialogues.Contains(name))
-						{
-							Console.Console.Log("Dialogue does not exist");
-							return;
-						}
-						Dialogues.Enable(name);
-						Console.Console.Log($"Enabled Dialogue: {name}");
-					},
-				}
-			}
-			),
-			("nonogram", new Console.Console.Command
-			{
-				Default = () => Console.Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
-				Flags = new()
-				{
-					["game"] = () => ChangeDisplayType(Display.Type.Game),
-					["paint"] = () => ChangeDisplayType(Display.Type.Paint),
-					["display"] = () => ChangeDisplayType(Display.Type.Display),
-				}
-			}
-			)
-		);
+		InitConsole(this);
 
 		PuzzleManager.Current.Type = Display.Type.Game;
 		PuzzleManager.Current.EventHandler = Handler;
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
-
-		static void ChangeDisplayType(Display.Type type)
-		{
-			PuzzleManager.Current.Type = type;
-			Console.Console.Log($"Display changed too {type.AsName()}");
-		}
 	}
 	public override void _Process(double delta)
 	{
