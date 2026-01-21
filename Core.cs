@@ -6,6 +6,8 @@ namespace RSG;
 using UI;
 using Nonogram;
 using RSG.Minesweeper;
+using RSG.Dialogue;
+
 
 public sealed partial class Core : Node
 {

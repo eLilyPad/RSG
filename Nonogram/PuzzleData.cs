@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using static System.Text.Json.JsonSerializer;
 using System.Text.Json;
 using Godot;
+using RSG.Dialogue;
 
 namespace RSG.Nonogram;
 

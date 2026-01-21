@@ -1,6 +1,6 @@
 using Godot;
 
-namespace RSG;
+namespace RSG.Dialogue;
 
 using static Data;
 

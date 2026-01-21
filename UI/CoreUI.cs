@@ -4,6 +4,7 @@ namespace RSG.UI;
 
 using Nonogram;
 using RSG.Console;
+using RSG.Dialogue;
 using static DialogueSelector;
 using static Nonogram.PuzzleSelector;
 
