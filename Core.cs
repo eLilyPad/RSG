@@ -129,58 +129,6 @@ public sealed partial class Core : Node
 			}
 		}
 	}
-	private sealed class CommandConfigs(Core core)
-	{
-		public (string name, Console.Console.Command command) Quit => ("quit", new()
-		{
-			Default = () => core.GetTree().Quit()
-		});
-		public (string name, Console.Console.Command command) Dialogue => ("dialogue", new()
-		{
-			Default = () => Console.Console.Log("Current Dialogue: " + Dialogues.Container.Visible),
-			Flags = new()
-			{
-				["enable_all"] = () =>
-				{
-					Dialogues.EnableAll();
-					Console.Console.Log("Enabled All Dialogues");
-				}
-			},
-			Properties = new()
-			{
-				["start"] = obj =>
-				{
-					if (obj is not string name)
-					{
-						Console.Console.Log("Invalid dialogue name");
-						return;
-					}
-					if (!Dialogues.Contains(name))
-					{
-						Console.Console.Log("Dialogue does not exist");
-						return;
-					}
-					Dialogues.Start(name);
-					Console.Console.Log($"Started Dialogue: {name}");
-				},
-				["enable"] = obj =>
-				{
-					if (obj is not string name)
-					{
-						Console.Console.Log("Invalid dialogue name");
-						return;
-					}
-					if (!Dialogues.Contains(name))
-					{
-						Console.Console.Log("Dialogue does not exist");
-						return;
-					}
-					Dialogues.Enable(name);
-					Console.Console.Log($"Enabled Dialogue: {name}");
-				},
-			}
-		});
-	}
 
 	private static void InitConsole(Core core)
 	{
