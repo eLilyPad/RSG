@@ -2,13 +2,13 @@ using Godot;
 
 namespace RSG;
 
-using static Dialogue;
+using static Data;
 
 using SpeechTemplate = OneOf<
 	string,
-	(string text, Dialogue.Background background),
-	(string text, Dialogue.Profile profile),
-	(string text, Dialogue.Profile profile, Dialogue.Background background)
+	(string text, Data.Background background),
+	(string text, Data.Profile profile),
+	(string text, Data.Profile profile, Data.Background background)
 >;
 
 public sealed class Dialogues

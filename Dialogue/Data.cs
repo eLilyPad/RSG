@@ -2,7 +2,7 @@ using Godot;
 
 namespace RSG;
 
-using static Dialogue;
+using static Data;
 
 public static class DialogueBuilder
 {
@@ -43,7 +43,7 @@ public static class DialogueBuilder
 	}
 }
 
-public abstract record Dialogue
+public abstract record Data
 {
 	public const string Intro = "Introduction", CatOnThePath = "catOnThePath";
 	public readonly record struct Background(CompressedTexture2D Value)
