@@ -16,7 +16,6 @@ public sealed partial class Tile : PanelContainer
 	{
 		public Vector2 TileSize { get; private set; } = Vector2.One;
 		public IProvider? Provider { private get; set; }
-		public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(parent: _ => parent, exceptions);
 		public void Update(int size)
 		{
 			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
@@ -51,7 +50,7 @@ public sealed partial class Tile : PanelContainer
 			}
 			Clear(exceptions: tileValues);
 		}
-
+		protected override Node Parent(Vector2I position) => parent;
 		protected override Tile Create(Vector2I position)
 		{
 			Tile tile = new Tile { Name = $"Tile (X: {position.X}, Y: {position.Y})", Colours = colours }

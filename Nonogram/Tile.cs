@@ -43,7 +43,7 @@ public sealed partial class Tile : PanelContainer
 
 			Clear(exceptions: tileValues);
 		}
-		public override void Clear(IEnumerable<Vector2I> exceptions) => Clear(_ => Provider.Parent(), exceptions);
+		protected override Node Parent(Vector2I position) => Provider.Parent();
 		protected override Tile Create(Vector2I position)
 		{
 			const int chunkSize = 5;
