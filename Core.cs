@@ -7,7 +7,6 @@ using UI;
 using Nonogram;
 using RSG.Minesweeper;
 using RSG.Dialogue;
-using System.Diagnostics.CodeAnalysis;
 
 public sealed partial class Core : Node
 {
