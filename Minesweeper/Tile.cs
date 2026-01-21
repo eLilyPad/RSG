@@ -26,6 +26,7 @@ public sealed partial class Tile : PanelContainer
 				Tile tile = GetOrCreate(position);
 				Mode mode = tile.Type = Provider?.GetType(position) ?? Mode.Empty;
 				tile.Covered = true;
+				tile.Flagged = false;
 				int bombsAround = 0;
 
 				switch (mode)
