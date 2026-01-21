@@ -41,6 +41,13 @@ public sealed class Dialogues
 		(Current.Speech, Current.SpeechIndex, Current.Name) = (speech, 0, name);
 		DisplayCurrent();
 	}
+	public static void EnableAll()
+	{
+		foreach (string name in Instance.Speeches.Keys)
+		{
+			Instance.Enabled[name] = true;
+		}
+	}
 	public static void Enable(params Span<string> names)
 	{
 		foreach (string name in names)
