@@ -192,6 +192,7 @@ public sealed partial class Core : Node
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
 			("quit", quitCommand),
+			("minesweeper", minesweeperCommand),
 			("dialogue", dialogueCommand),
 			("nonogram", nonogramCommand)
 		];
