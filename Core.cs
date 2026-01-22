@@ -134,6 +134,24 @@ public sealed partial class Core : Node
 	{
 		Console.Console.Command
 		quitCommand = new() { Default = () => core.GetTree().Quit() },
+		minesweeperCommand = new()
+		{
+			Flags = new()
+			{
+				["new"] = () =>
+				{
+					core.Minesweeper.Puzzle = Manager.Data.CreateRandom(10);
+					core.Minesweeper.UI.Show();
+					Console.Console.Log("Started new Minesweeper game");
+				},
+				["uncover_all"] = () =>
+				{
+					core.Minesweeper.UI.Tiles.ShowAll();
+					core.Minesweeper.UI.Show();
+					Console.Console.Log("Started new Minesweeper game");
+				}
+			}
+		},
 		dialogueCommand = new()
 		{
 			Default = () => Console.Console.Log("Current Dialogue: " + Dialogues.Container.Visible),

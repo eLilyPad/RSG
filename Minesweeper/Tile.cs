@@ -50,6 +50,13 @@ public sealed partial class Tile : PanelContainer
 			}
 			Clear(exceptions: tileValues);
 		}
+		public void ShowAll()
+		{
+			foreach (Tile tile in _nodes.Values)
+			{
+				tile.Covered = false;
+			}
+		}
 		protected override Node Parent(Vector2I position) => parent;
 		protected override Tile Create(Vector2I position)
 		{
