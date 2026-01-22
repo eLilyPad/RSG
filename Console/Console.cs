@@ -109,8 +109,12 @@ public sealed record Console
 	}
 
 	public static Console Instance { get; } = new();
-	public static ConsoleContainer Container => field ??= new ConsoleContainer { Name = "Console", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public static ConsoleContainer Container => field ??= new ConsoleContainer
+	{
+		Name = "Console",
+		Visible = false,
+		TopLevel = true
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public IEnumerable<string> Prefixes => [.. Modules.Keys];
 	public Dictionary<string, Dictionary<string, Command>> Modules { private get; init; } = [];
