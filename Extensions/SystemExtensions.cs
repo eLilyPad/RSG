@@ -51,4 +51,18 @@ public static class SystemExtensions
 	{
 		return array.ToDictionary(keySelector: key => key, elementSelector);
 	}
+	public static string AddSpacesToPascalCase(this string input)
+	{
+		if (string.IsNullOrEmpty(input)) return input;
+		System.Text.StringBuilder builder = new(input.Length + 5);
+		builder.Append(input[0]);
+		for (int i = 1; i < input.Length; i++)
+		{
+			char current = input[i], previous = input[i - 1];
+			bool shouldAddSpace = char.IsUpper(current) && (char.IsLower(previous) || char.IsDigit(previous));
+			if (shouldAddSpace) builder.Append(' ');
+			builder.Append(current);
+		}
+		return builder.ToString();
+	}
 }

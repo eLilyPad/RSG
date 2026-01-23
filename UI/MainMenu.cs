@@ -34,9 +34,10 @@ public sealed partial class MainMenu : Container
 		public MainButton(string name)
 		{
 			const int fontSize = 20;
+			Text = Name = name.AddSpacesToPascalCase();
 			Label.PushFontSize(fontSize);
 			Label.PushColor(Colors.Black);
-			Label.AddText(Text = Name = name);
+			Label.AddText(Text);
 			Resized += () => Background.TextureNoise((Vector2I)Size, colour: Colour);
 		}
 		public override void _Ready()
@@ -76,6 +77,8 @@ public sealed partial class MainMenu : Container
 	{
 		public BaseButton Play { get; } = new MainButton(nameof(Play))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
@@ -89,17 +92,24 @@ public sealed partial class MainMenu : Container
 		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 		public override void _Ready() => this.Add(
-				Container.Add(Play, Levels, Dialogues, Settings, Quit),
+				Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
 				Spacer
 			);
 	}
 	public interface IPress
 	{
-		void PlayPressed() { }
-		void LevelsPressed() { }
-		void DialoguesPressed() { }
-		void SettingsPressed() { }
-		void QuitPressed() { }
+		void PlayPressed();
+		void PlayMinesweeperPressed();
+		void LevelsPressed();
+		void DialoguesPressed();
+		void SettingsPressed();
+		void QuitPressed();
+	}
+	public interface IReceiveSignals
+	{
+		void MenuVisibilityChanged();
+		void PuzzleSelectorVisibilityChanged();
+		void DialogueSelectorVisibilityChanged();
 	}
 
 	public const int Margin = 100;
@@ -118,17 +128,40 @@ public sealed partial class MainMenu : Container
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons), }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin / 2);
-	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector { Name = "Level Selector", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
-	public DialogueSelector Dialogues { get; } = new DialogueSelector { Name = "Dialogue Selector", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
+	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector
+	{
+		Name = "Level Selector",
+		Visible = false
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
+	public DialogueSelector Dialogues { get; } = new DialogueSelector
+	{
+		Name = "Dialogue Selector",
+		Visible = false
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 
-	public IPress? OnPressed
+	public IReceiveSignals Signals
 	{
 		set
 		{
-			if (value is null) return;
+			VisibilityChanged += value.MenuVisibilityChanged;
+			Levels.VisibilityChanged += value.PuzzleSelectorVisibilityChanged;
+			Dialogues.VisibilityChanged += value.DialogueSelectorVisibilityChanged;
+			if (field is null)
+			{
+				field = value;
+				return;
+			}
+			VisibilityChanged -= field.MenuVisibilityChanged;
+			Levels.VisibilityChanged -= field.PuzzleSelectorVisibilityChanged;
+			Dialogues.VisibilityChanged -= field.DialogueSelectorVisibilityChanged;
+		}
+	}
+	public IPress OnPressed
+	{
+		set
+		{
 			Buttons.Play.Pressed += value.PlayPressed;
+			Buttons.PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
 			Buttons.Levels.Pressed += value.LevelsPressed;
 			Buttons.Dialogues.Pressed += value.DialoguesPressed;
 			Buttons.Settings.Pressed += value.SettingsPressed;
@@ -139,6 +172,7 @@ public sealed partial class MainMenu : Container
 				return;
 			}
 			Buttons.Play.Pressed -= field.PlayPressed;
+			Buttons.PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
 			Buttons.Levels.Pressed -= field.LevelsPressed;
 			Buttons.Dialogues.Pressed -= field.DialoguesPressed;
 			Buttons.Settings.Pressed -= field.SettingsPressed;
@@ -148,7 +182,32 @@ public sealed partial class MainMenu : Container
 
 	public MainMenu()
 	{
+		VisibilityChanged += () =>
+		{
+			if (!Visible) return;
+			IEnumerable<Node> children = GetChildren();
+			IEnumerable<Node> visibleChildren = children
+				.Where(n => n is Control control && control.Visible);
+
+			switch (visibleChildren.Count())
+			{
+				case 0:
+					Buttons.Show();
+					Background.Show();
+					break;
+				case 1 when visibleChildren.First() == Background:
+					Buttons.Show();
+					break;
+				case 1 when visibleChildren.First() == Buttons:
+					Background.Show();
+					break;
+				default: break;
+			}
+
+		};
 		Settings.VisibilityChanged += () => Buttons.Visible = !Settings.Visible;
+		Dialogues.VisibilityChanged += () => Buttons.Visible = !Dialogues.Visible;
+		Levels.VisibilityChanged += () => Buttons.Visible = !Levels.Visible;
 	}
 
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);

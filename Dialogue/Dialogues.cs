@@ -1,14 +1,14 @@
 using Godot;
 
-namespace RSG;
+namespace RSG.Dialogue;
 
-using static Dialogue;
+using static Data;
 
 using SpeechTemplate = OneOf<
 	string,
-	(string text, Dialogue.Background background),
-	(string text, Dialogue.Profile profile),
-	(string text, Dialogue.Profile profile, Dialogue.Background background)
+	(string text, Data.Background background),
+	(string text, Data.Profile profile),
+	(string text, Data.Profile profile, Data.Background background)
 >;
 
 public sealed class Dialogues
@@ -40,6 +40,13 @@ public sealed class Dialogues
 		if (!Instance.Speeches.TryGetValue(name, out Speech speech)) return;
 		(Current.Speech, Current.SpeechIndex, Current.Name) = (speech, 0, name);
 		DisplayCurrent();
+	}
+	public static void EnableAll()
+	{
+		foreach (string name in Instance.Speeches.Keys)
+		{
+			Instance.Enabled[name] = true;
+		}
 	}
 	public static void Enable(params Span<string> names)
 	{

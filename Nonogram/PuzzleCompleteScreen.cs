@@ -4,6 +4,13 @@ namespace RSG.Nonogram;
 
 public sealed partial class PuzzleCompleteScreen : VBoxContainer
 {
+	public interface IHandleSignals
+	{
+		void OnLevelsPressed();
+		void OnDialoguesPressed();
+		void OnPlayDialoguePressed();
+		void OnVisibilityChanged();
+	}
 	public sealed partial class CompletionOptions : HBoxContainer
 	{
 		public Button Levels { get; } = new() { Name = "Levels", Text = "Levels" };
@@ -64,5 +71,27 @@ public sealed partial class PuzzleCompleteScreen : VBoxContainer
 	}
 		.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
+
+	public IHandleSignals Signals
+	{
+		set
+		{
+			Options.Levels.Pressed += value.OnLevelsPressed;
+			Options.Dialogues.Pressed += value.OnDialoguesPressed;
+			Options.PlayDialogue.Pressed += value.OnPlayDialoguePressed;
+			VisibilityChanged += value.OnVisibilityChanged;
+			if (field is null)
+			{
+				field = value;
+				return;
+			}
+			Options.Levels.Pressed -= value.OnLevelsPressed;
+			Options.Dialogues.Pressed -= value.OnDialoguesPressed;
+			Options.PlayDialogue.Pressed -= value.OnPlayDialoguePressed;
+			VisibilityChanged -= value.OnVisibilityChanged;
+
+		}
+	}
+
 	public override void _Ready() => this.Add(CompletionTitle, ReportContainer.Add(Report), Options);
 }

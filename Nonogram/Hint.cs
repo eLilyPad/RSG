@@ -24,7 +24,7 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 		Clear(exceptions: hintValues);
 	}
 	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
-	public override void Clear(IEnumerable<HintPosition> exceptions) => Clear(parent: Provider.Parent, exceptions);
+	protected override Node Parent(HintPosition position) => Provider.Parent(position);
 	protected override Hint Create(HintPosition position)
 	{
 		Hint hint = Hint.Create(position, Colours);

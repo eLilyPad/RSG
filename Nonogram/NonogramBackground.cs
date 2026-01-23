@@ -1,4 +1,5 @@
 using Godot;
+using RSG.UI;
 
 namespace RSG.Nonogram;
 
@@ -8,5 +9,10 @@ public sealed partial class NonogramBackground : Container
 			.Preset(LayoutPreset.FullRect);
 	public TextureRect Border { get; } = new TextureRect { Name = "Border", ClipContents = true }
 		.Preset(LayoutPreset.FullRect);
+
+	public NonogramBackground()
+	{
+		Resized += () => Border.TextureBorder((Vector2I)Size);
+	}
 	public override void _Ready() => this.Add(ColorBackground, Border);
 }

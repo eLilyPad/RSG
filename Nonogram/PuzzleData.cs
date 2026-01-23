@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using static System.Text.Json.JsonSerializer;
 using System.Text.Json;
 using Godot;
+using RSG.Dialogue;
 
 namespace RSG.Nonogram;
 
@@ -136,8 +137,8 @@ public sealed record PuzzleData : Display.Data
 			{
 				Name = "Procedural",
 				Puzzles = [
-					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Intro},
-					new("Kitty", selector: Cat, size) { DialogueName = Dialogue.CatOnThePath},
+					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Data.Intro},
+					new("Kitty", selector: Cat, size) { DialogueName = Data.CatOnThePath},
 					new("Spiral", selector: Spiral, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
 					//new("Noise", selector: position => position.IsOverNoiseThreshold(threshold: 0), size),

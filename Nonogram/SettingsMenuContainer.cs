@@ -4,20 +4,11 @@ namespace RSG.Nonogram;
 
 public sealed partial class SettingsMenuContainer : ScrollContainer
 {
-	public static void ConnectSignals(SettingsMenuContainer menu, PuzzleManager.CurrentPuzzle current)
+	public interface IChangeSettings
 	{
-		menu.AutoCompletion.LockFilledTiles.Value.Toggled += toggled =>
-		{
-			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
-		};
-		menu.AutoCompletion.LockBlockedTiles.Value.Toggled += toggled =>
-		{
-			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
-		};
-		menu.AutoCompletion.BlockCompleteLines.Value.Toggled += toggled =>
-		{
-			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
-		};
+		void ToggledLockFilledTiles(bool toggled);
+		void ToggledLockBlockedTiles(bool toggled);
+		void ToggledBlockCompleteLines(bool toggled);
 	}
 	public sealed partial class AutoCompletionContainer : VBoxContainer
 	{
@@ -57,6 +48,23 @@ public sealed partial class SettingsMenuContainer : ScrollContainer
 
 	public AutoCompletionContainer AutoCompletion { get; } = new AutoCompletionContainer { Name = "Auto Completion" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.Fill);
+	public IChangeSettings SettingsChanger
+	{
+		set
+		{
+			AutoCompletion.LockFilledTiles.Value.Toggled += value.ToggledLockFilledTiles;
+			AutoCompletion.LockBlockedTiles.Value.Toggled += value.ToggledLockBlockedTiles;
+			AutoCompletion.BlockCompleteLines.Value.Toggled += value.ToggledBlockCompleteLines;
+			if (field is null)
+			{
+				field = value;
+				return;
+			}
+			AutoCompletion.LockFilledTiles.Value.Toggled -= field.ToggledLockFilledTiles;
+			AutoCompletion.LockBlockedTiles.Value.Toggled -= field.ToggledLockBlockedTiles;
+			AutoCompletion.BlockCompleteLines.Value.Toggled -= field.ToggledBlockCompleteLines;
+		}
+	}
 
 	public override void _Ready() => this.Add(AutoCompletion);
 }

@@ -1,7 +1,8 @@
 using System.Data;
+using Godot;
 using static Godot.Control;
 
-namespace RSG;
+namespace RSG.Console;
 
 public sealed record Console
 {
@@ -36,39 +37,8 @@ public sealed record Console
 			}
 			return commandInput;
 
-			//return input.Split(separator: ' ', count: 3) switch
-			//{
-			//	[string Prefix, string Phrase, string rest] => new CommandInput(Prefix, Phrase)
-			//	{
-			//		Flags = flags(rest),
-			//		Properties = props(rest),
-			//		Args = args(rest)
-			//	},
-			//	[string Prefix, string Phrase] => new CommandInput(Prefix, Phrase),
-			//	[string Prefix] => new CommandInput(Prefix),
-			//	_ => new CommandInput()
-			//};
-
-			//static IReadOnlyList<string> flags(string s) => [
-			//	.. s.Split(separator: ' ')
-			//	.Where(predicate: a => a.StartsWith(FlagPrefix))
-			//	.Select(selector: a => a[FlagPrefix.Length..])
-			//];
-			//static IReadOnlyList<object> args(string s) => [
-			//	.. s.Split(separator: ' ')
-			//	.Where(static s => s is not FlagPrefix)
-			//	.Select(static s => Convert.ChangeType(value: s, conversionType: s.ParseInput().GetType()))
-			//];
-			//static Dictionary<string, object> props(string s) => s.Split(' ')
-			//	.Where(static a => a.StartsWith(PropertiesPrefix) && a.Contains('='))
-			//	.Select(static a => a[PropertiesPrefix.Length..].Split('=', 2))
-			//	.Where(static a => a.Length == 2)
-			//	.Select(static a => new KeyValuePair<string, object>(key: a[0], value: a[1].ParseInput()))
-			//	.ToDictionary();
-
 			static void ProcessToken(ReadOnlySpan<char> token, CommandInput result)
 			{
-				// Flag
 				if (token.StartsWith(FlagPrefix))
 				{
 					string flag = token[FlagPrefix.Length..].ToString();
@@ -77,7 +47,6 @@ public sealed record Console
 					return;
 				}
 
-				// Property
 				if (token.StartsWith(PropertiesPrefix))
 				{
 					int eq = token.IndexOf('=');
@@ -91,7 +60,6 @@ public sealed record Console
 					}
 				}
 
-				// Argument
 				result.Args.Add(token.ToString().ParseInput());
 			}
 		}
@@ -141,22 +109,59 @@ public sealed record Console
 	}
 
 	public static Console Instance { get; } = new();
-	public static ConsoleContainer Container => field ??= new ConsoleContainer { Name = "Console", Visible = false }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public static ConsoleContainer Container => field ??= new ConsoleContainer
+	{
+		Name = "Console",
+		Visible = false,
+		TopLevel = true
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public IEnumerable<string> Prefixes => [.. Modules.Keys];
 	public Dictionary<string, Dictionary<string, Command>> Modules { private get; init; } = [];
+	private Console()
+	{
+		ConsoleContainer console = Container;
+		ConsoleContainer.InputContainer input = console.Input;
+		LineEdit line = input.Line;
+		ItemList suggestionDisplay = input.SuggestionDisplay;
 
-	public void Submitted(string input)
+		line.VisibilityChanged += () => GrabInputFocus(true);
+		line.TextSubmitted += Submitted;
+		line.TextChanged += UpdateSuggestions;
+		suggestionDisplay.ItemSelected += InsertSuggestion;
+	}
+
+	private void Submitted(string input)
 	{
 		if (input.Length == 0) return;
 		Modules.Run(CommandInput.Parse(input), out string? response);
 		Log(input);
-		Godot.GD.Print(response);
+		GD.Print(response);
 		if (response is not null) Log(response);
 		GrabInputFocus(clearSuggestions: true);
 	}
-	public IEnumerable<string> Suggestions(string input)
+	private void InsertSuggestion(long index)
+	{
+		ConsoleContainer.InputContainer input = Container.Input;
+		string suggestion = input.SuggestionDisplay.GetItemText((int)index);
+		if (!input.Line.Text.EndsWith(' '))
+		{
+			input.Line.Text += ' ';
+		}
+		input.Line.Text += suggestion;
+		GrabInputFocus();
+	}
+	private void UpdateSuggestions(string input)
+	{
+		IEnumerable<string> suggestions = FindSuggestions(input);
+		ItemList suggestionDisplay = Container.Input.SuggestionDisplay;
+		suggestionDisplay.Clear();
+		foreach (string suggestion in suggestions)
+		{
+			suggestionDisplay.AddItem(suggestion);
+		}
+	}
+	private IEnumerable<string> FindSuggestions(string input)
 	{
 		CommandInput commandInput = CommandInput.Parse(input);
 		if (!Modules.TryGetValue(commandInput.Prefix, out Dictionary<string, Command>? module))

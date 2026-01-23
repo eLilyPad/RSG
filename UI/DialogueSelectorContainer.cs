@@ -1,4 +1,5 @@
 using Godot;
+using RSG.Dialogue;
 
 namespace RSG;
 

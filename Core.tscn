@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://b2gp5k67a88cg" path="res://Data/Images/RSGames_BootSplash.png" id="2_58tws"]
 
 [sub_resource type="Gradient" id="Gradient_58tws"]
-colors = PackedColorArray(0.68704385, 0.56662107, 0.24199018, 1, 1, 1, 1, 1)
+colors = PackedColorArray(0.6862745, 0.5647059, 0.24313726, 1, 1, 1, 1, 1)
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_10wf8"]
 frequency = 0.0921

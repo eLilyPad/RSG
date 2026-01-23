@@ -1,0 +1,10 @@
+[gd_resource type="Resource" load_steps=4 format=3 uid="uid://b0av5fdfgipf1"]
+
+[ext_resource type="Texture2D" uid="uid://cid3h6mict5sd" path="res://Data/Images/minesweeper_bomb.png" id="1_kgfcd"]
+[ext_resource type="Script" uid="uid://46ugeawsjg2u" path="res://Minesweeper/MinesweeperTextures.cs" id="1_rplyq"]
+[ext_resource type="Texture2D" uid="uid://b0lih7mamt4bg" path="res://Data/Images/minesweeper_flag.png" id="2_7wpjm"]
+
+[resource]
+script = ExtResource("1_rplyq")
+Flag = ExtResource("2_7wpjm")
+Bomb = ExtResource("1_kgfcd")
