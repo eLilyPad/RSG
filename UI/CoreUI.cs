@@ -33,34 +33,34 @@ public sealed partial class CoreUI : Control
 
 		ConsoleContainer console = Console.Container;
 		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		PuzzleCompleteScreen completionScreen = nonogram.CompletionScreen.Value;
+		PuzzleCompleteScreen completeNonogramScreen = nonogram.CompletionScreen.Value;
 		PuzzleSelector puzzleSelector = container.Menu.Levels;
 		DialogueSelector dialogueSelector = container.Menu.Dialogues;
 
-		completionScreen.Options.Levels.Pressed += () =>
+		completeNonogramScreen.Options.Levels.Pressed += () =>
 		{
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);
 			nonogram.Hide();
 		};
-		completionScreen.Options.Dialogues.Pressed += () =>
+		completeNonogramScreen.Options.Dialogues.Pressed += () =>
 		{
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, dialogueSelector);
 			nonogram.Hide();
 		};
-		completionScreen.Options.PlayDialogue.Pressed += () =>
+		completeNonogramScreen.Options.PlayDialogue.Pressed += () =>
 		{
 			Dialogues.Start(name: PuzzleManager.Current.CompletionDialogueName);
 			nonogram.CompletionScreen.ReplaceVisibility(container.Menu.Buttons);
 			nonogram.Hide();
 		};
-		completionScreen.VisibilityChanged += () =>
+		completeNonogramScreen.VisibilityChanged += () =>
 		{
 			string name = PuzzleManager.Current.CompletionDialogueName;
 			bool hasDialogue = Dialogues.Contains(name);
-			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
+			completeNonogramScreen.Options.PlayDialogue.Visible = hasDialogue;
 			if (hasDialogue)
 			{
-				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
+				completeNonogramScreen.Report.Value.Log.Text = "Dialogue: " + name;
 			}
 		};
 
