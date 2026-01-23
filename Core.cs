@@ -230,8 +230,23 @@ public sealed partial class Core : Node
 	MinesweeperTexturesPath = "res://Data/MinesweeperTextures.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
-	public CoreUI Container => field ??= new CoreUI { Name = "Core UI", Colours = Colours }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+
+
+	public CoreUI Container
+	{
+		get
+		{
+			if (field is not null) return field;
+			CoreUI ui = new() { Name = "Core UI", Colours = Colours };
+			AddChild(ui);
+			ui.Menu.Signals = Handler;
+			ui.Menu.OnPressed = Handler;
+			ui.Menu.Settings.Nonogram.SettingsChanger = Handler;
+			return field = ui
+				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+		}
+	}
+
 
 	private EventHandler Handler => field ??= new(this);
 	private Manager Minesweeper
@@ -264,13 +279,7 @@ public sealed partial class Core : Node
 	public override void _Ready()
 	{
 		Name = nameof(Core);
-
-		this.Add(Container);
 		Dialogues.Instance.BuildDialogues();
-
-		CoreUI.ConnectSignals(Container);
-		CoreUI.SetThemes(Container);
-		Container.Menu.OverrideSignals(Handler);
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),

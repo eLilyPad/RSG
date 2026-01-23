@@ -5,66 +5,43 @@ namespace RSG.UI;
 using Nonogram;
 using RSG.Console;
 using RSG.Dialogue;
-using static DialogueSelector;
-using static Nonogram.PuzzleSelector;
 
 public sealed partial class CoreUI : Control
 {
-	public static CoreUI SetThemes(CoreUI container)
+	private sealed class UIEventHandler(CoreUI UI) : PuzzleCompleteScreen.IHandleSignals
 	{
-		ConsoleContainer console = Console.Container;
-		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		PuzzleCompleteScreen completionScreen = nonogram.CompletionScreen.Value;
-		PuzzleSelector puzzleSelector = container.Menu.Levels;
-		DialogueSelector dialogueSelector = container.Menu.Dialogues;
-
-		//completionScreen.AddThemeStyleboxOverride(dialogueSelector);
-		//int marginValue = 200;
-		//completionScreen.AddThemeConstantOverride("margin_top", marginValue);
-		//completionScreen.AddThemeConstantOverride("margin_left", marginValue);
-		//completionScreen.AddThemeConstantOverride("margin_bottom", marginValue);
-		//completionScreen.AddThemeConstantOverride("margin_right", marginValue);
-
-		return container;
-	}
-	public static CoreUI ConnectSignals(CoreUI container)
-	{
-		List<PackDisplay> levelLoaderDisplays = [];
-
-		ConsoleContainer console = Console.Container;
-		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		PuzzleCompleteScreen completeNonogramScreen = nonogram.CompletionScreen.Value;
-		PuzzleSelector puzzleSelector = container.Menu.Levels;
-		DialogueSelector dialogueSelector = container.Menu.Dialogues;
-
-		completeNonogramScreen.Options.Levels.Pressed += () =>
+		void PuzzleCompleteScreen.IHandleSignals.OnLevelsPressed()
 		{
-			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, puzzleSelector);
-			nonogram.Hide();
-		};
-		completeNonogramScreen.Options.Dialogues.Pressed += () =>
+			UI.Menu.Show();
+			UI.Menu.Levels.Show();
+			PuzzleManager.Current.UI.CompletionScreen.Hide();
+		}
+		void PuzzleCompleteScreen.IHandleSignals.OnDialoguesPressed()
 		{
-			nonogram.CompletionScreen.ReplaceVisibility(container.Menu, dialogueSelector);
-			nonogram.Hide();
-		};
-		completeNonogramScreen.Options.PlayDialogue.Pressed += () =>
+			UI.Menu.Show();
+			UI.Menu.Dialogues.Show();
+			PuzzleManager.Current.UI.CompletionScreen.Hide();
+		}
+		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
 		{
-			Dialogues.Start(name: PuzzleManager.Current.CompletionDialogueName);
-			nonogram.CompletionScreen.ReplaceVisibility(container.Menu.Buttons);
-			nonogram.Hide();
-		};
-		completeNonogramScreen.VisibilityChanged += () =>
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			Dialogues.Start(name: current.CompletionDialogueName);
+			UI.Menu.Show();
+			UI.Menu.Buttons.Show();
+			current.UI.CompletionScreen.Hide();
+		}
+		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
 		{
-			string name = PuzzleManager.Current.CompletionDialogueName;
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
+			string name = current.CompletionDialogueName;
 			bool hasDialogue = Dialogues.Contains(name);
-			completeNonogramScreen.Options.PlayDialogue.Visible = hasDialogue;
+			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
 			if (hasDialogue)
 			{
-				completeNonogramScreen.Report.Value.Log.Text = "Dialogue: " + name;
+				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
 			}
-		};
-
-		return container;
+		}
 	}
 
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
@@ -74,13 +51,20 @@ public sealed partial class CoreUI : Control
 
 	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
 
-	public override void _Ready() => this.Add(
-		PuzzleManager.Current.UI,
-		Dialogues.Container,
-		Console.Container,
-		Menu,
-		LoadingScreen
-	);
+	private UIEventHandler Handler => field ??= new(UI: this);
+	public override void _Ready()
+	{
+		NonogramContainer nonogram = PuzzleManager.Current.UI;
+		this.Add(
+			nonogram,
+			Dialogues.Container,
+			Console.Container,
+			Menu,
+			LoadingScreen
+		);
+		nonogram.CompletionScreen.Value.Signals = Handler;
+	}
+
 	public void EscapePressed()
 	{
 		if (!Menu.Visible)
