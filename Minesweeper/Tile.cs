@@ -50,6 +50,20 @@ public sealed partial class Tile : PanelContainer
 			}
 			Clear(exceptions: tileValues);
 		}
+		public bool AllEmptyUnCovered()
+		{
+			foreach (Tile tile in _nodes.Values)
+			{
+				bool tileCorrect = tile.Type switch
+				{
+					Mode.Bomb when tile.Flagged || tile.Covered => true,
+					Mode.Empty when !tile.Covered => true,
+					_ => false,
+				};
+				if (!tileCorrect) return false;
+			}
+			return true;
+		}
 		public void ShowAll()
 		{
 			foreach (Tile tile in _nodes.Values)
