@@ -90,11 +90,15 @@ public sealed partial class Core : Node
 
 		public void Failed(Manager.Data data)
 		{
-			core.Container.Menu.Show();
+			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = core.Minesweeper.UI.CompletionScreen;
+			completionScreen.Show();
+			completionScreen.Value.TitleText = "Game Over";
 		}
 		public void Completed(Manager.Data data)
 		{
-			core.Container.Menu.Show();
+			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = core.Minesweeper.UI.CompletionScreen;
+			completionScreen.Show();
+			completionScreen.Value.TitleText = "Mines Located!";
 		}
 
 		private void Refill<T>(T value) where T : Control
@@ -246,6 +250,12 @@ public sealed partial class Core : Node
 			ui.Tiles.Provider = minesweeper;
 
 			ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
+			ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
+			{
+				ui.CompletionScreen.Hide();
+				ui.Hide();
+				Container.Menu.Show();
+			};
 
 			return field = minesweeper;
 		}
