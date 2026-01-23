@@ -7,10 +7,8 @@ public sealed partial class MinesweeperContainer : PanelContainer
 {
 	public sealed partial class CompletionOptions : HBoxContainer
 	{
-		public Button Levels { get; } = new() { Name = "Levels", Text = "Levels" };
-		public Button Dialogues { get; } = new() { Name = "Dialogue", Text = "Dialogues" };
-		public Button PlayDialogue { get; } = new() { Name = "PlayDialogue", Text = "Play Dialogue" };
-		public override void _Ready() => this.Add(Levels, Dialogues, PlayDialogue);
+		public Button MainMenu { get; } = new() { Name = "MainMenu", Text = "Main Menu" };
+		public override void _Ready() => this.Add(MainMenu);
 	}
 	public sealed partial class CompletionReport : VBoxContainer
 	{
@@ -67,6 +65,8 @@ public sealed partial class MinesweeperContainer : PanelContainer
 		}
 			.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
 			.Preset(preset: LayoutPreset.Center, resizeMode: LayoutPresetMode.KeepSize);
+		public string TitleText { set => CompletionTitle.Text = "[color=black][font_size=80]" + value; }
+
 		public override void _Ready() => this.Add(CompletionTitle, ReportContainer.Add(Report), Options);
 	}
 	public sealed partial class MinesweeperBackground : Container
