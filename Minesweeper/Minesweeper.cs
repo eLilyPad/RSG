@@ -16,7 +16,7 @@ public sealed partial class Manager : Tile.IProvider
 			Dictionary<Vector2I, (Tile.Mode mode, bool covered)> state = [];
 			foreach (Vector2I position in (size * Vector2I.One).GridRange())
 			{
-				bool isBomb = Random.Shared.Next(10) > 1;
+				bool isBomb = Random.Shared.Next(10) == 0;
 				Tile.Mode mode = isBomb ? Tile.Mode.Bomb : Tile.Mode.Empty;
 				state[position] = (mode, true);
 			}
@@ -31,25 +31,8 @@ public sealed partial class Manager : Tile.IProvider
 		private get; set => UI.PuzzleSize = (field = value).Size;
 	} = Data.CreateRandom();
 	public required MinesweeperContainer UI { get; init; }
-	public IHandleEvents? EventHandler { get; set; }
-	public bool IsCompleted
-	{
-		get
-		{
-			foreach (var (position, (mode, _)) in Puzzle.State)
-			{
-				Tile tile = UI.Tiles.GetOrCreate(position);
-				bool tileCorrect = mode switch
-				{
-					Tile.Mode.Bomb when tile.Flagged || tile.Covered => true,
-					Tile.Mode.Empty when !tile.Covered => true,
-					_ => false,
-				};
-				if (!tileCorrect) return false;
-			}
-			return true;
-		}
-	}
+	public required IHandleEvents EventHandler { get; set; }
+	public bool IsCompleted => UI.Tiles.AllEmptyUnCovered();
 
 	private AutoCompleter Completer => field ??= new AutoCompleter { Tiles = UI.Tiles };
 	private UserInput Input => field ??= new UserInput { Tiles = UI.Tiles };
@@ -59,28 +42,35 @@ public sealed partial class Manager : Tile.IProvider
 		var inputResponse = Input.MousePressed(position);
 		inputResponse.Switch(
 			flag => { },
-			uncovered =>
-			{
-				switch (uncovered.Type)
-				{
-					case Tile.Mode.Bomb:
-						EventHandler?.Failed(Puzzle);
-						return;
-					case Tile.Mode.Empty:
-						if (IsCompleted)
-						{
-							EventHandler?.Completed(Puzzle);
-							return;
-						}
-						Completer.FloodFillEmpty(Puzzle, position);
-						break;
-				}
-			});
+			uncovered => TileUncovered(uncovered, position),
+			nothing => { }
+		);
 	}
+
 	public Tile.Mode GetType(Vector2I position)
 	{
 		(Tile.Mode mode, bool covered) defaultValue = (Tile.Mode.Empty, true);
 		return Puzzle.State.GetValueOrDefault(position, defaultValue).mode;
+	}
+
+	private void TileUncovered(UserInput.UnCovered uncovered, Vector2I position)
+	{
+		Data data = Puzzle;
+		switch (uncovered.Type)
+		{
+			case Tile.Mode.Bomb:
+				GD.Print("BOOM!");
+				EventHandler.Failed(data);
+				return;
+			case Tile.Mode.Empty:
+				Completer.FloodFillEmpty(data, start: position);
+				if (IsCompleted)
+				{
+					EventHandler.Completed(data);
+					return;
+				}
+				break;
+		}
 	}
 }
 
