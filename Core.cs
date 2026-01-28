@@ -247,7 +247,6 @@ public sealed partial class Core : Node
 		}
 	}
 
-
 	private EventHandler Handler => field ??= new(this);
 	private Manager Minesweeper
 	{
@@ -283,6 +282,8 @@ public sealed partial class Core : Node
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
 			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
+			(Key.D, Container.MainMenuFigure.StepRight, "MoveRight"),
+			(Key.A, Container.MainMenuFigure.StepLeft, "MoveLeft"),
 			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
 		InitConsole(this);

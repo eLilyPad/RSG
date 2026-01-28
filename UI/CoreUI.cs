@@ -49,6 +49,21 @@ public sealed partial class CoreUI : Control
 	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 
+	public AnimatedFigure MainMenuFigure
+	{
+		get
+		{
+			if (field is not null) return field;
+			AnimatedFigure animatedFigure = new()
+			{
+				Name = "Figure",
+				Position = GetTree().CurrentScene.GetViewport().GetVisibleRect().GetCenter()
+			};
+			AddChild(animatedFigure);
+			return field = animatedFigure;
+		}
+	}
+
 	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
 
 	private UIEventHandler Handler => field ??= new(UI: this);
