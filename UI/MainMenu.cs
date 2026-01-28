@@ -2,21 +2,8 @@ using Godot;
 
 namespace RSG.UI;
 
-public sealed partial class MainMenu : Container
+public sealed partial class MainButtons : HBoxContainer
 {
-	public sealed partial class SettingsContainer : TabContainer
-	{
-		public const int Margin = 0;
-		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public Nonogram.SettingsMenuContainer Nonogram { get; } = new Nonogram.SettingsMenuContainer { Name = "Nonogram" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public override void _Ready() => this.Add(Audio, Video, Input, Nonogram);
-	}
 	private sealed partial class MainButton : Button
 	{
 		public TextureRect Background { get; } = new TextureRect { Name = "Background", }
@@ -73,29 +60,44 @@ public sealed partial class MainMenu : Container
 		}
 
 	}
-	public sealed partial class MainButtons : HBoxContainer
+
+	public BaseButton Play { get; } = new MainButton(nameof(Play))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public BaseButton Levels { get; } = new MainButton(nameof(Levels))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public BaseButton Settings { get; } = new MainButton(nameof(Settings))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public BaseButton Quit { get; } = new MainButton(nameof(Quit))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+	public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+	public override void _Ready() => this.Add(
+			Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
+			Spacer
+		);
+}
+public sealed partial class MainMenu : Container
+{
+	public sealed partial class SettingsContainer : TabContainer
 	{
-		public BaseButton Play { get; } = new MainButton(nameof(Play))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Settings { get; } = new MainButton(nameof(Settings))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-		public override void _Ready() => this.Add(
-				Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
-				Spacer
-			);
+		public const int Margin = 0;
+		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
+		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
+		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
+		public Nonogram.SettingsMenuContainer Nonogram { get; } = new Nonogram.SettingsMenuContainer { Name = "Nonogram" }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
+		public override void _Ready() => this.Add(Audio, Video, Input, Nonogram);
 	}
+
 	public interface IPress
 	{
 		void PlayPressed();
