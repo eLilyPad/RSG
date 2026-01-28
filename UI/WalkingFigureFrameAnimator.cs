@@ -4,10 +4,26 @@ namespace RSG.UI;
 
 using static AnimatedFigure;
 
-public sealed class WalkingFigureFrameAnimator
+public sealed class WalkingFigureFrameAnimator(Dictionary<Joints, Vector2> values)
 {
-	public required Dictionary<Joints, Vector2> Parts { get; init; }
+	public const float MinSpeed = .1f;
+	public Dictionary<Joints, Vector2> Parts { get; } = values;
+	public IImmutableDictionary<Joints, Vector2> DefaultParts { get; } = values.ToImmutableDictionary();
+
+	public Vector2 LastPosition
+	{
+		private get; set
+		{
+			Vector2 velocity = field - value;
+			float speed = velocity.Length();
+			IsWalking = speed > MinSpeed;
+			field = value;
+		}
+	}
+	public bool IsWalking { get; private set; }
+
 	private readonly List<StepTarget> _stepTargets = [];
+
 	public void GenerateTargets(float maxWidth)
 	{
 		const int maxSteps = 10_000;

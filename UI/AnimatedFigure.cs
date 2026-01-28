@@ -8,14 +8,14 @@ public static class JointExtensions
 	public static T Create<T>(this T values, int size = 640) where T : IDictionary<Joints, Vector2>
 	{
 		int
-		center = size / 2,
+		center = Mathf.RoundToInt(size * .5f),
 		footHeight = Mathf.RoundToInt(size * .9f),
 		legHeight = Mathf.RoundToInt(size * .5f),
 		handHeight = Mathf.RoundToInt(size * .6f),
-		shoulderHeight = size / 5;
+		shoulderHeight = Mathf.RoundToInt(size * .2f);
 
-		values[Joints.Head] = new(center, size / 7);
-		values[Joints.Chest] = new(center, size / 4);
+		values[Joints.Head] = new(center, size * .14f);
+		values[Joints.Chest] = new(center, size * .25f);
 		values[Joints.Hip] = new(center, center);
 		values[Joints.LeftShoulder] = new(size * .7f, shoulderHeight);
 		values[Joints.RightShoulder] = new(size * .3f, shoulderHeight);
@@ -44,7 +44,6 @@ public static class JointExtensions
 	}
 }
 
-//[GlobalClass, Tool]
 public sealed partial class AnimatedFigure : Sprite2D
 {
 	public enum Joints
@@ -63,29 +62,22 @@ public sealed partial class AnimatedFigure : Sprite2D
 	}
 	internal readonly record struct StepTarget(Vector2 Position, bool Left);
 	private const int size = 640, stepDistance = 100;
-	//[ExportToolButton("ReadyNode")]
-	//private Callable Generate => Callable.From(action: () => Draw());
 	private Vector2 _lastPosition;
 	private bool _isWalking;
-	private readonly WalkingFigureFrameAnimator _animator = new()
-	{
-		Parts = new Dictionary<Joints, Vector2>().Create(size)
-	};
+	private readonly WalkingFigureFrameAnimator _animator = new(
+		values: new Dictionary<Joints, Vector2>().Create(size)
+	);
 	public void StepLeft() => Position = Position with { X = Position.X - stepDistance };
 	public void StepRight() => Position = Position with { X = Position.X + stepDistance };
 	public override void _Ready()
 	{
-		_animator.GenerateTargets(GetViewportRect().Size.X);
+		_animator.GenerateTargets(maxWidth: GetViewportRect().Size.X);
+		_animator.LastPosition = GlobalPosition;
 	}
 	public override void _Process(double delta)
 	{
-		Vector2 velocity = GlobalPosition - _lastPosition;
-		float speed = velocity.Length();
-
-		_lastPosition = GlobalPosition;
-		_isWalking = speed > .1f;
-
-		if (!_isWalking) { return; }
+		_animator.LastPosition = GlobalPosition;
+		if (!_animator.IsWalking) { return; }
 
 		Image image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
 		Vector2 closestRightFootTarget = _animator.GetClosestTarget(GlobalPosition, joint: Joints.RightFoot);
