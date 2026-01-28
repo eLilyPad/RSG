@@ -2,7 +2,7 @@ using Godot;
 
 namespace RSG.UI;
 
-public sealed partial class MainButtons : HBoxContainer
+public sealed partial class MainMenuButtons : HBoxContainer
 {
 	private sealed partial class MainButton : Button
 	{
@@ -128,7 +128,7 @@ public sealed partial class MainMenu : Container
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public SettingsContainer Settings { get; } = new SettingsContainer { Name = "Settings", Visible = false }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
-	public MainButtons Buttons { get; } = new MainButtons { Name = nameof(Buttons), }
+	public MainMenuButtons Buttons { get; } = new MainMenuButtons { Name = nameof(Buttons), }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin / 2);
 	public Nonogram.PuzzleSelector Levels { get; } = new Nonogram.PuzzleSelector
 	{
