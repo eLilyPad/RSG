@@ -13,7 +13,7 @@ public sealed partial class Core : Node
 	private sealed class EventHandler(Core core) :
 	PuzzleManager.IHaveEvents,
 	IHandleEvents,
-	MainMenu.IPress,
+	MainMenuButtons.IPress,
 	MainMenu.IReceiveSignals,
 	SettingsMenuContainer.IChangeSettings
 	{
@@ -240,7 +240,7 @@ public sealed partial class Core : Node
 			CoreUI ui = new() { Name = "Core UI", Colours = Colours };
 			AddChild(ui);
 			ui.Menu.Signals = Handler;
-			ui.Menu.OnPressed = Handler;
+			ui.Menu.Buttons.OnPressed = Handler;
 			ui.Menu.Settings.Nonogram.SettingsChanger = Handler;
 			return field = ui
 				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);

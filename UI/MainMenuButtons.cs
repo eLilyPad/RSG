@@ -4,6 +4,15 @@ namespace RSG.UI;
 
 public sealed partial class MainMenuButtons : HBoxContainer
 {
+	public interface IPress
+	{
+		void PlayPressed();
+		void PlayMinesweeperPressed();
+		void LevelsPressed();
+		void DialoguesPressed();
+		void SettingsPressed();
+		void QuitPressed();
+	}
 	private sealed partial class MainButton : Button
 	{
 		public TextureRect Background { get; } = new TextureRect { Name = "Background", }
@@ -77,6 +86,31 @@ public sealed partial class MainMenuButtons : HBoxContainer
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 	public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+	public IPress OnPressed
+	{
+		set
+		{
+			Play.Pressed += value.PlayPressed;
+			PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
+			Levels.Pressed += value.LevelsPressed;
+			Dialogues.Pressed += value.DialoguesPressed;
+			Settings.Pressed += value.SettingsPressed;
+			Quit.Pressed += value.QuitPressed;
+			if (field is null)
+			{
+				field = value;
+				return;
+			}
+			Play.Pressed -= field.PlayPressed;
+			PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
+			Levels.Pressed -= field.LevelsPressed;
+			Dialogues.Pressed -= field.DialoguesPressed;
+			Settings.Pressed -= field.SettingsPressed;
+			Quit.Pressed -= field.QuitPressed;
+		}
+	}
+
 	public override void _Ready() => this.Add(
 			Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
 			Spacer

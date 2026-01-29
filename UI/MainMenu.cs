@@ -4,16 +4,6 @@ namespace RSG.UI;
 
 public sealed partial class MainMenu : Container
 {
-
-	public interface IPress
-	{
-		void PlayPressed();
-		void PlayMinesweeperPressed();
-		void LevelsPressed();
-		void DialoguesPressed();
-		void SettingsPressed();
-		void QuitPressed();
-	}
 	public interface IReceiveSignals
 	{
 		void MenuVisibilityChanged();
@@ -63,29 +53,6 @@ public sealed partial class MainMenu : Container
 			VisibilityChanged -= field.MenuVisibilityChanged;
 			Levels.VisibilityChanged -= field.PuzzleSelectorVisibilityChanged;
 			Dialogues.VisibilityChanged -= field.DialogueSelectorVisibilityChanged;
-		}
-	}
-	public IPress OnPressed
-	{
-		set
-		{
-			Buttons.Play.Pressed += value.PlayPressed;
-			Buttons.PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
-			Buttons.Levels.Pressed += value.LevelsPressed;
-			Buttons.Dialogues.Pressed += value.DialoguesPressed;
-			Buttons.Settings.Pressed += value.SettingsPressed;
-			Buttons.Quit.Pressed += value.QuitPressed;
-			if (field is null)
-			{
-				field = value;
-				return;
-			}
-			Buttons.Play.Pressed -= field.PlayPressed;
-			Buttons.PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
-			Buttons.Levels.Pressed -= field.LevelsPressed;
-			Buttons.Dialogues.Pressed -= field.DialoguesPressed;
-			Buttons.Settings.Pressed -= field.SettingsPressed;
-			Buttons.Quit.Pressed -= field.QuitPressed;
 		}
 	}
 
