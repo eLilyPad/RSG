@@ -133,29 +133,11 @@ public sealed partial class Core : Node
 			}
 		}
 	}
-
+	public const string DefaultCommandPrefix = "\\";
 	private static void InitConsole(Core core)
 	{
 		Console.Console.Command
 		quitCommand = new() { Default = () => core.GetTree().Quit() },
-		minesweeperCommand = new()
-		{
-			Flags = new()
-			{
-				["new"] = () =>
-				{
-					core.Minesweeper.Puzzle = Manager.Data.CreateRandom(10);
-					core.Minesweeper.UI.Show();
-					Console.Console.Log("Started new Minesweeper game");
-				},
-				["uncover_all"] = () =>
-				{
-					core.Minesweeper.UI.Tiles.ShowAll();
-					core.Minesweeper.UI.Show();
-					Console.Console.Log("Started new Minesweeper game");
-				}
-			}
-		},
 		dialogueCommand = new()
 		{
 			Default = () => Console.Console.Log("Current Dialogue: " + Dialogues.Container.Visible),
@@ -196,11 +178,10 @@ public sealed partial class Core : Node
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
 			("quit", quitCommand),
-			("minesweeper", minesweeperCommand),
 			("dialogue", dialogueCommand),
 			("nonogram", nonogramCommand)
 		];
-		Console.Console.Add("\\", configs);
+		Console.Console.Add(DefaultCommandPrefix, configs);
 
 		static bool TryConvertDialogueName(object obj, [MaybeNullWhen(false)] out string name)
 		{
@@ -231,7 +212,6 @@ public sealed partial class Core : Node
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
 
-
 	public CoreUI Container
 	{
 		get
@@ -246,7 +226,6 @@ public sealed partial class Core : Node
 				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 		}
 	}
-
 
 	private EventHandler Handler => field ??= new(this);
 	private Manager Minesweeper
@@ -271,6 +250,25 @@ public sealed partial class Core : Node
 				ui.Hide();
 				Container.Menu.Show();
 			};
+			Console.Console.Command command = new()
+			{
+				Flags = new()
+				{
+					["new"] = () =>
+					{
+						minesweeper.Puzzle = Manager.Data.CreateRandom(10);
+						minesweeper.UI.Show();
+						Console.Console.Log("Started new Minesweeper game");
+					},
+					["uncover_all"] = () =>
+					{
+						minesweeper.UI.Tiles.ShowAll();
+						minesweeper.UI.Show();
+						Console.Console.Log("Started new Minesweeper game");
+					}
+				}
+			};
+			Console.Console.Add(DefaultCommandPrefix, ("minesweeper", command));
 
 			return field = minesweeper;
 		}
@@ -281,10 +279,6 @@ public sealed partial class Core : Node
 		Name = nameof(Core);
 		Dialogues.Instance.BuildDialogues();
 
-		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
-			(Key.Escape, Container.EscapePressed, "Toggle Main Menu"),
-			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
-		);
 		InitConsole(this);
 
 		PuzzleManager.Current.Type = Display.Type.Game;
