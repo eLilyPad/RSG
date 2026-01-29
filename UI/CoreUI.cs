@@ -44,11 +44,33 @@ public sealed partial class CoreUI : Control
 		}
 	}
 
-	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
+	private const int MenuIndex = 0, LoadingIndex = 1;
+	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer
+	{
+		Name = "Loading Screen",
+		TopLevel = true,
+		ZIndex = LoadingIndex
+	}
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
-
+	public MainMenu Menu
+	{
+		get
+		{
+			if (field is not null) return field;
+			field = new MainMenu
+			{
+				Name = "MainMenu",
+				TopLevel = true,
+				ZIndex = MenuIndex
+			}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+			AddChild(field);
+			Input.Bind(bindsContainer: field.Settings.Input.InputsContainer,
+				(Key.Escape, EscapePressed, "Toggle Main Menu"),
+				(Key.Backslash, ToggleConsole, "Toggle Console")
+			);
+			return field;
+		}
+	}
 	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
 
 	private UIEventHandler Handler => field ??= new(UI: this);
@@ -59,7 +81,6 @@ public sealed partial class CoreUI : Control
 			nonogram,
 			Dialogues.Container,
 			Console.Container,
-			Menu,
 			LoadingScreen
 		);
 		nonogram.CompletionScreen.Value.Signals = Handler;
