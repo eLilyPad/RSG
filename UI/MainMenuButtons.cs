@@ -8,6 +8,7 @@ public sealed partial class MainMenuButtons : HBoxContainer
 	{
 		void PlayPressed();
 		void PlayMinesweeperPressed();
+		void StudioPressed();
 		void LevelsPressed();
 		void DialoguesPressed();
 		void SettingsPressed();
@@ -74,6 +75,8 @@ public sealed partial class MainMenuButtons : HBoxContainer
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 	public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+	public BaseButton Studio { get; } = new MainButton(nameof(Studio))
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 	public BaseButton Levels { get; } = new MainButton(nameof(Levels))
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 	public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
@@ -93,6 +96,7 @@ public sealed partial class MainMenuButtons : HBoxContainer
 		{
 			Play.Pressed += value.PlayPressed;
 			PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
+			Studio.Pressed += value.StudioPressed;
 			Levels.Pressed += value.LevelsPressed;
 			Dialogues.Pressed += value.DialoguesPressed;
 			Settings.Pressed += value.SettingsPressed;
@@ -104,6 +108,7 @@ public sealed partial class MainMenuButtons : HBoxContainer
 			}
 			Play.Pressed -= field.PlayPressed;
 			PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
+			Studio.Pressed -= value.StudioPressed;
 			Levels.Pressed -= field.LevelsPressed;
 			Dialogues.Pressed -= field.DialoguesPressed;
 			Settings.Pressed -= field.SettingsPressed;
@@ -112,7 +117,7 @@ public sealed partial class MainMenuButtons : HBoxContainer
 	}
 
 	public override void _Ready() => this.Add(
-			Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
+			Container.Add(Play, PlayMinesweeper, Studio, Levels, Dialogues, Settings, Quit),
 			Spacer
 		);
 }
