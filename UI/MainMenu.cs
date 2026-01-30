@@ -37,6 +37,7 @@ public sealed partial class MainMenu : Container
 		Name = "Dialogue Selector",
 		Visible = false
 	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
+	public StudioContainer Studio { get; } = new StudioContainer { Name = "Studio" };
 
 	public IReceiveSignals Signals
 	{
