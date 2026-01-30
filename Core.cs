@@ -217,13 +217,13 @@ public sealed partial class Core : Node
 		get
 		{
 			if (field is not null) return field;
-			CoreUI ui = new() { Name = "Core UI", Colours = Colours };
+			CoreUI ui = new CoreUI() { Name = "Core UI", Colours = Colours }
+				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 			AddChild(ui);
 			ui.Menu.Signals = Handler;
 			ui.Menu.Buttons.OnPressed = Handler;
 			ui.Menu.Settings.Nonogram.SettingsChanger = Handler;
-			return field = ui
-				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+			return field = ui;
 		}
 	}
 
@@ -243,7 +243,6 @@ public sealed partial class Core : Node
 			Container.AddChild(ui);
 			ui.Tiles.Provider = minesweeper;
 
-			ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
 			ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
 			{
 				ui.CompletionScreen.Hide();
@@ -264,7 +263,7 @@ public sealed partial class Core : Node
 					{
 						minesweeper.UI.Tiles.ShowAll();
 						minesweeper.UI.Show();
-						Console.Console.Log("Started new Minesweeper game");
+						Console.Console.Log("Uncovering all tiles");
 					}
 				}
 			};

@@ -132,6 +132,8 @@ public sealed partial class MinesweeperContainer : PanelContainer
 	{
 		Tiles = new(parent: Display.TilesGrid, colours);
 		Background.ColorBackground.Color = colours.MinesweeperBackground;
+
+		Resized += () => Background.Border.TextureBorder((Vector2I)Size);
 	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }
