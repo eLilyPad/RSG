@@ -26,8 +26,6 @@ public sealed partial class CoreUI : Control
 		{
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
 			Dialogues.Start(name: current.CompletionDialogueName);
-			UI.Menu.Show();
-			UI.Menu.Buttons.Show();
 			current.UI.CompletionScreen.Hide();
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()

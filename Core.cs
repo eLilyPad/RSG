@@ -222,6 +222,7 @@ public sealed partial class Core : Node
 	}
 
 	private EventHandler Handler => field ??= new(this);
+
 	private Manager Minesweeper
 	{
 		get
