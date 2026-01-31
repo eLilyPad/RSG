@@ -25,14 +25,14 @@ public sealed partial class CoreUI : Control
 		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
 		{
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			Dialogues.Start(name: current.CompletionDialogueName);
+			Dialogues.Start(name: current.Puzzle.Expected.DialogueName);
 			current.UI.CompletionScreen.Hide();
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
 		{
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
 			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
-			string name = current.CompletionDialogueName;
+			string name = current.Puzzle.Expected.DialogueName;
 			bool hasDialogue = Dialogues.Contains(name);
 			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
 			if (hasDialogue)

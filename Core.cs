@@ -11,7 +11,7 @@ using Dialogue;
 public sealed partial class Core : Node
 {
 	private sealed class EventHandler(Core core) :
-	PuzzleManager.IHaveEvents,
+	IManagePuzzle,
 	IHandleEvents,
 	MainMenuButtons.IPress,
 	MainMenu.IReceiveSignals,
@@ -53,23 +53,36 @@ public sealed partial class Core : Node
 		public void PlayPressed()
 		{
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			switch (current)
+			if (current.PuzzleReady)
 			{
-				case { PuzzleReady: true }:
-					core.Container.Menu.Hide();
-					PuzzleManager.Current.UI.Show();
-					break;
-				case { PuzzleReady: false }:
-					core.Container.Menu.Levels.Show();
-					core.Container.Menu.Show();
-					break;
-				default:
-					break;
+				core.Container.Menu.Hide();
+				current.UI.Show();
+				current.Type = Display.Type.Game;
+			}
+			else
+			{
+				core.Container.Menu.Levels.Show();
+				core.Container.Menu.Show();
 			}
 			core.Container.Menu.Buttons.Hide();
 		}
-		public void StudioPressed() { }
-		public void LevelsPressed() => core.Container.Menu.Levels.Show();
+		public void StudioPressed()
+		{
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+
+			core.Container.Menu.Hide();
+			core.Container.Menu.Buttons.Hide();
+
+			current.UI.Show();
+			current.Type = Display.Type.Paint;
+			current.Puzzle = new(new(10));
+		}
+		public void LevelsPressed()
+		{
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			core.Container.Menu.Levels.Show();
+			PuzzleManager.Current.Type = Display.Type.Game;
+		}
 		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
 		public void SettingsPressed() => core.Container.Menu.Settings.Show();
 		public void QuitPressed() => core.GetTree().Quit();
@@ -222,6 +235,8 @@ public sealed partial class Core : Node
 	}
 
 	private EventHandler Handler => field ??= new(this);
+
+
 
 	private Manager Minesweeper
 	{

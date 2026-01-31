@@ -36,6 +36,7 @@ public sealed partial class NonogramContainer : PanelContainer
 			Hints.TileSize = Tiles.TileSize;
 			Hints.Update(value);
 			Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
+			Display.TilesGrid.Columns = value;
 		}
 	}
 
