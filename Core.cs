@@ -168,12 +168,10 @@ public sealed partial class Core : Node
 		},
 		nonogramCommand = new()
 		{
-			Default = () => Console.Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
+			Default = () => Console.Console.Log("do nothing, show help"),
 			Flags = new()
 			{
-				["game"] = () => ChangeDisplayType(Display.Type.Game),
-				["paint"] = () => ChangeDisplayType(Display.Type.Paint),
-				["display"] = () => ChangeDisplayType(Display.Type.Display),
+
 			}
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
@@ -198,11 +196,6 @@ public sealed partial class Core : Node
 			}
 			name = value;
 			return true;
-		}
-		static void ChangeDisplayType(Display.Type type)
-		{
-			PuzzleManager.Current.Type = type;
-			Console.Console.Log($"Display changed too {type.AsName()}");
 		}
 	}
 
