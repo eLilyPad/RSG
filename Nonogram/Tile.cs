@@ -19,9 +19,9 @@ public sealed partial class Tile : PanelContainer
 	}
 	internal sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
 	{
+		const int chunkSize = 5;
 		public required Locker LockRules { get; init; }
 		public Vector2 TileSize { get; private set; } = Vector2.One;
-
 
 		public void Update(int size)
 		{
@@ -33,6 +33,13 @@ public sealed partial class Tile : PanelContainer
 
 				tile.Mode = Provider.State(position);
 				tile.Locked = LockRules.ShouldLock(position);
+				tile.IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0;
+				Node parent = Provider.Parent();
+				if (parent.HasChild(tile))
+				{
+					parent.RemoveChild(tile);
+				}
+				parent.AddChild(tile);
 
 				if (firstTile)
 				{
@@ -46,15 +53,13 @@ public sealed partial class Tile : PanelContainer
 		protected override Node Parent(Vector2I position) => Provider.Parent();
 		protected override Tile Create(Vector2I position)
 		{
-			const int chunkSize = 5;
 			Tile tile = new Tile
 			{
 				Name = $"Tile (X: {position.X}, Y: {position.Y})",
-				IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0,
 				Colours = Colours,
 				Mode = TileMode.Clear,
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-			Provider.Parent().AddChild(tile);
+
 
 			tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
 			tile.Button.ButtonDown += () => Provider.OnActivate(position, tile);
@@ -97,7 +102,7 @@ public sealed partial class Tile : PanelContainer
 	public Button Button { get; } = new Button { Text = EmptyText, ButtonMask = mask }
 		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 
-	public bool IsAlternative { get; private init; } = false;
+	public bool IsAlternative { get; set => ChangeAlternative(field = value); } = false;
 	public required IColours Colours { private get; set; }
 	[Export] public bool Locked { get; set => ChangeLocked(field = value); } = false;
 	[Export] public bool Hovering { get; set => ChangeHovering(field = value); } = false;
@@ -107,6 +112,20 @@ public sealed partial class Tile : PanelContainer
 	public override void _Ready() => this.Add(Button);
 
 	private void ChangeHovering(bool value) => Button.Scale = Vector2.One * (value ? .9f : 1);
+	private void ChangeAlternative(bool value)
+	{
+		Button.OverrideStyle(modify: (StyleBoxFlat style) =>
+		{
+			style.BgColor = Colours.NonogramTileBackground(mode: Mode, alternative: IsAlternative);
+			return style;
+		});
+		Button.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+		{
+			style.BgColor = Colours.NonogramTileBackground(mode: Mode, alternative: IsAlternative);
+
+			return style;
+		});
+	}
 	private void ChangeLocked(bool value)
 	{
 		Button.OverrideStyle((StyleBoxFlat style) =>
