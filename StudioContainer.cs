@@ -17,19 +17,9 @@ public sealed partial class StudioContainer : Container
 	public TabContainer Tabs { get; } = new TabContainer { Name = "Tabs" }
 		.Preset(LayoutPreset.FullRect);
 
-	public required NonogramPainter Nonogram { get; init; }
-
-	public required IColours Colours
-	{
-		private get; set
-		{
-			Nonogram.Background.ColorBackground.Color = value.NonogramBackground;
-			field = value;
-		}
-	}
 	public override void _Ready()
 	{
-		this.Add(Tabs.Add(Nonogram));
+		AddChild(Tabs);
 	}
 
 }
