@@ -68,6 +68,7 @@ public sealed partial class Core : Node
 			}
 			core.Container.Menu.Buttons.Hide();
 		}
+		public void StudioPressed() { }
 		public void LevelsPressed() => core.Container.Menu.Levels.Show();
 		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
 		public void SettingsPressed() => core.Container.Menu.Settings.Show();
@@ -275,6 +276,8 @@ public sealed partial class Core : Node
 
 		PuzzleManager.Current.Type = Display.Type.Game;
 		PuzzleManager.Current.EventHandler = Handler;
+
+		Container.LoadingScreen.Show();
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 	}
