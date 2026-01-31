@@ -126,14 +126,33 @@ public sealed record SaveData : Display.Data
 		public required PuzzleTimer Timer { private get; init; }
 		public required Tile.Pool Tiles { private get; init; }
 
-		public void GameInput(SaveData save, Vector2I position, Settings settings, PuzzleManager.IHaveEvents? eventHandler)
+		public void PaintInput(SaveData save, Vector2I position, Tile tile)
+		{
+			if (!TryProcessInput(save, position, tile, out Mode input)) return;
+
+			input.PlayAudio();
+			save.ChangeState(position, mode: tile.Mode = input);
+		}
+		public void GameInput(SaveData save, Vector2I position, Tile tile, Settings settings, IManagePuzzle? eventHandler)
+		{
+			if (!TryProcessInput(save, position, tile, out Mode input)) return;
+			if (tile.Locked) return;
+
+			//input.PlayAudio();
+			save.ChangeState(position, mode: tile.Mode = input);
+			Completer.BlockCompletedLines(save, position, settings);
+
+			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
+			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
+			if (save.IsComplete) eventHandler?.Completed(save);
+		}
+		private static bool TryProcessInput(SaveData save, Vector2I position, Tile tile, out Mode input)
 		{
 			const Mode defaultValue = Mode.NULL;
 
-			Mode input = Display.PressedMode;
-			if (input is defaultValue) return;
+			input = Display.PressedMode;
+			if (input is defaultValue) return false;
 			IImmutableDictionary<Vector2I, Mode> saved = save.States;
-			Tile tile = Tiles.GetOrCreate(position);
 
 			Assert(saved.ContainsKey(position), $"No current tile in the data");
 			Mode current = saved[position];
@@ -141,15 +160,9 @@ public sealed record SaveData : Display.Data
 
 			input = input == current ? Mode.Clear : input;
 
-			if (Mode.Clear.AllEqual(current, input)) return;
-			if (tile.Locked) return;
-			input.PlayAudio();
-			save.ChangeState(position, mode: tile.Mode = input);
-			Completer.BlockCompletedLines(save, position, settings);
+			if (Mode.Clear.AllEqual(current, input)) return false;
 
-			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
-			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
-			if (save.IsComplete) eventHandler?.Completed(save);
+			return true;
 		}
 	}
 
