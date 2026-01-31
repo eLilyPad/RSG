@@ -19,11 +19,17 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 		foreach (HintPosition position in hintValues)
 		{
 			Hint hint = GetOrCreate(position);
-			ApplyText(position, hint);
+			hint.Label.Text = Provider.Text(position);
 		}
 		Clear(exceptions: hintValues);
 	}
-	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
+	public void Refresh()
+	{
+		foreach ((HintPosition position, Hint hint) in _nodes)
+		{
+			hint.Label.Text = Provider.Text(position);
+		}
+	}
 	protected override Node Parent(HintPosition position) => Provider.Parent(position);
 	protected override Hint Create(HintPosition position)
 	{
