@@ -5,6 +5,26 @@ namespace RSG.Nonogram;
 public abstract partial class Display : AspectRatioContainer
 {
 	public sealed partial class Default : Display { }
+	public sealed partial class DisplaySpacer : PanelContainer
+	{
+		public TimerContainer Timer { get; } = new TimerContainer { Name = "Timer" }
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		public Type Type
+		{
+			set
+			{
+				switch (value)
+				{
+					case Type.Game:
+						this.Add(Timer);
+						break;
+					case Type.Paint:
+						this.Remove(free: false, Timer);
+						break;
+				}
+			}
+		}
+	}
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
@@ -18,7 +38,7 @@ public abstract partial class Display : AspectRatioContainer
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public Container Spacer { get; } = new PanelContainer { Name = "Spacer" }
+	public DisplaySpacer Spacer { get; } = new DisplaySpacer { Name = "Spacer" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public TimerContainer Timer { get; } = new TimerContainer { Name = "Timer" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
