@@ -28,19 +28,13 @@ public sealed partial class PuzzleSelector : PanelContainer
 		{
 			return (config, root) => Create(config, root, current);
 		}
-		public static PackDisplay Create(
-			Config config,
-			CanvasItem root,
-			PuzzleManager.CurrentPuzzle current
-		)
+		public static PackDisplay Create(Config config, CanvasItem root, PuzzleManager.CurrentPuzzle current)
 		{
-			var display = new PackDisplay { Name = config.Name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			display.Puzzles.Label.Text = config.Name;
+			PackDisplay display = new() { Name = config.Name };
 			foreach (SaveData save in config.Data)
 			{
 				PuzzleDisplay puzzle = PuzzleDisplay.Create(save, root, current);
-				display.Puzzles.Value.Add(puzzle);
+				display.Puzzles.Value.AddChild(puzzle);
 			}
 
 			return display;
@@ -56,14 +50,23 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Vertical = true
 		}.Preset(LayoutPreset.FullRect);
 
-		//public
-
+		public new StringName Name
+		{
+			get => base.Name;
+			set => Puzzles.Label.Text = base.Name = value;
+		}
 		internal PackDisplay() { }
-		public override void _Ready() => this.Add(Puzzles);
+		public override void _Ready() => this
+			.Add(Puzzles)
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 	}
 	public sealed partial class PuzzleDisplay : PanelContainer
 	{
-		public static PuzzleDisplay Create(Display.Data puzzle, CanvasItem root, PuzzleManager.CurrentPuzzle current)
+		public static PuzzleDisplay Create(
+			Display.Data puzzle,
+			CanvasItem root,
+			PuzzleManager.CurrentPuzzle current
+		)
 		{
 			Color statusColor = puzzle switch
 			{
