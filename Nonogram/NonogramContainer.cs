@@ -43,11 +43,11 @@ public sealed partial class NonogramContainer : PanelContainer
 	internal Tile.Pool Tiles { get; init; }
 	internal Hints Hints { get; init; }
 
-	internal NonogramContainer(IColours colours, List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
+	internal NonogramContainer(IColours colours, PuzzleManager.CurrentPuzzle puzzle)
 	{
 		Colours = colours;
 		Hints = new(Provider: puzzle, Colours: colours);
-		Tiles = new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = rules } };
+		Tiles = new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = puzzle.Rules } };
 	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }

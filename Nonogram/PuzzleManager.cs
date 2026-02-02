@@ -60,7 +60,7 @@ public sealed partial class PuzzleManager
 		private readonly SaveData.UserInput _playerCompleter;
 		internal CurrentPuzzle()
 		{
-			UI = new NonogramContainer(Core.Colours, Rules, this)
+			UI = new NonogramContainer(Core.Colours, this)
 			{
 				Name = "Nonogram",
 				Visible = false
