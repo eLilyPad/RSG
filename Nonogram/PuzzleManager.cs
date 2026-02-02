@@ -19,7 +19,15 @@ public sealed partial class PuzzleManager
 		public PuzzleTimer Timer { get; }
 		public IManagePuzzle? EventHandler { get; set; }
 		public bool PuzzleReady { get; private set; } = false;
-		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Game;
+		public Type Type
+		{
+			get; set
+			{
+				UI.Display.Name = value.AsName();
+				UI.Display.Spacer.Type = value;
+				field = value;
+			}
+		} = Type.Game;
 		public Settings Settings
 		{
 			get; set
