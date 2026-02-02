@@ -230,9 +230,9 @@ public sealed record PuzzleData : Display.Data
 			//	static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
 			//}
 		}
-		public static (string Name, IEnumerable<SaveData> Puzzles) Convert(Pack pack)
+		public static PuzzleSelector.PackDisplay.Config Convert(Pack pack)
 		{
-			return (pack.Name, pack.Puzzles.Select(puzzle => new SaveData(expected: puzzle)));
+			return new(pack.Name, pack.Puzzles.Select(puzzle => new SaveData(expected: puzzle)));
 		}
 
 		public string Name { get; init; } = "Pack";

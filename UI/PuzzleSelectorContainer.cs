@@ -23,28 +23,24 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public sealed partial class PackDisplay : PanelContainer
 	{
-		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
+		public readonly record struct Config(string Name, IEnumerable<SaveData> Data);
+		public static Func<Config, CanvasItem, PackDisplay> Create(PuzzleManager.CurrentPuzzle current)
 		{
-			return Create(config.name, root, config.data);
+			return (config, root) => Create(config, root, current);
 		}
-		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
+		public static PackDisplay Create(
+			Config config,
+			CanvasItem root,
+			PuzzleManager.CurrentPuzzle current
+		)
 		{
-			PackDisplay display = new PackDisplay { Name = name }
+			var display = new PackDisplay { Name = config.Name }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			display.Puzzles.Label.Text = name;
-			foreach (SaveData puzzle in data)
+			display.Puzzles.Label.Text = config.Name;
+			foreach (SaveData save in config.Data)
 			{
-				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
-				puzzleDisplay.Button.Pressed += pressed;
-				display.Puzzles.Value.Add(puzzleDisplay);
-
-				void pressed()
-				{
-					if (!IsInstanceValid(root)) return;
-					PuzzleManager.Current.Puzzle = puzzle;
-					PuzzleManager.Current.UI.Show();
-					root.Hide();
-				}
+				PuzzleDisplay puzzle = PuzzleDisplay.Create(save, root, current);
+				display.Puzzles.Value.Add(puzzle);
 			}
 
 			return display;
@@ -58,14 +54,16 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Value = new VBoxContainer { Name = "Puzzles Container" }
 				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
 			Vertical = true
-		}
-			.Preset(LayoutPreset.FullRect);
+		}.Preset(LayoutPreset.FullRect);
+
+		//public
+
 		internal PackDisplay() { }
 		public override void _Ready() => this.Add(Puzzles);
 	}
 	public sealed partial class PuzzleDisplay : PanelContainer
 	{
-		public static PuzzleDisplay Create(Display.Data puzzle)
+		public static PuzzleDisplay Create(Display.Data puzzle, CanvasItem root, PuzzleManager.CurrentPuzzle current)
 		{
 			Color statusColor = puzzle switch
 			{
@@ -80,6 +78,19 @@ public sealed partial class PuzzleSelector : PanelContainer
 					.Preset(LayoutPreset.LeftWide)
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+			if (puzzle is SaveData save)
+			{
+				display.Button.Pressed += pressed;
+
+				void pressed()
+				{
+					if (!IsInstanceValid(root)) return;
+					current.Puzzle = save;
+					current.UI.Show();
+					root.Hide();
+				}
+			}
 
 			display.Button.OverrideStyle((StyleBoxFlat style) =>
 			{

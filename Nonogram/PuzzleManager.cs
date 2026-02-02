@@ -115,8 +115,8 @@ public sealed partial class PuzzleManager
 	public static CurrentPuzzle Current => field ??= new();
 	internal static PuzzleManager Instance => field ??= new();
 
-	public static IEnumerable<(string Name, IEnumerable<SaveData> Data)> SelectorConfigs => [
-		("Saved Puzzles", GetSavedPuzzles()),
+	public static IEnumerable<PuzzleSelector.PackDisplay.Config> SelectorConfigs => [
+		new PuzzleSelector.PackDisplay.Config("Saved Puzzles", GetSavedPuzzles()),
 		.. GetPuzzlePacks().Select(Pack.Convert)
 	];
 	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];

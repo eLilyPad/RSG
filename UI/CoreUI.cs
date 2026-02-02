@@ -69,19 +69,16 @@ public sealed partial class CoreUI : Control
 			return field;
 		}
 	}
-	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
+	public required ColourPack Colours { set => Menu.Colours = value; }
 
-	private UIEventHandler Handler => field ??= new(UI: this);
+	public PuzzleCompleteScreen.IHandleSignals Handler => field ??= new UIEventHandler(UI: this);
 	public override void _Ready()
 	{
-		NonogramContainer nonogram = PuzzleManager.Current.UI;
 		this.Add(
-			nonogram,
 			Dialogues.Container,
 			Console.Container,
 			LoadingScreen
 		);
-		nonogram.CompletionScreen.Value.Signals = Handler;
 	}
 
 	public void EscapePressed()
