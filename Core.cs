@@ -81,7 +81,7 @@ public sealed partial class Core : Node
 		{
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
 			core.Container.Menu.Levels.Show();
-			PuzzleManager.Current.Type = Display.Type.Game;
+			current.Type = Display.Type.Game;
 		}
 		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
 		public void SettingsPressed() => core.Container.Menu.Settings.Show();
