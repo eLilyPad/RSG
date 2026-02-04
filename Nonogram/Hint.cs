@@ -4,9 +4,9 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPosition, Hint>
+public sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPosition, Hint>
 {
-	internal interface IProvider
+	public interface IProvider
 	{
 		Node Parent(HintPosition position);
 		string Text(HintPosition position);
@@ -28,6 +28,7 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 		foreach ((HintPosition position, Hint hint) in _nodes)
 		{
 			hint.Label.Text = Provider.Text(position);
+			hint.CustomMinimumSize = TileSize;
 		}
 	}
 	protected override Node Parent(HintPosition position) => Provider.Parent(position);

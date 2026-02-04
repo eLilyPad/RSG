@@ -4,26 +4,12 @@ namespace RSG.Nonogram;
 
 public abstract partial class Display : AspectRatioContainer
 {
-	public sealed partial class Default : Display { }
+	internal sealed partial class Default(Tile.Pool tiles, Hints hints) : Display(tiles, hints) { }
 	public sealed partial class DisplaySpacer : PanelContainer
 	{
 		public TimerContainer Timer { get; } = new TimerContainer { Name = "Timer" }
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public Type Type
-		{
-			set
-			{
-				switch (value)
-				{
-					case Type.Game:
-						this.Add(Timer);
-						break;
-					case Type.Paint:
-						this.Remove(free: false, Timer);
-						break;
-				}
-			}
-		}
+		public Type Type { set => this.ChangeType(value); }
 	}
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
@@ -49,23 +35,13 @@ public abstract partial class Display : AspectRatioContainer
 	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
+	internal Tile.Pool Tiles { get; }
+	internal Hints Hints { get; }
 
-	public Container HintsParent(Side side) => side switch { Side.Row => Rows, Side.Column => Columns, _ => this };
+	public int PuzzleSize { set => this.ChangePuzzleSize(value); }
+
+	private Display(Tile.Pool tiles, Hints hints) => (Hints, Tiles) = (hints, tiles);
 	public override sealed void _Ready() => this.Add(
 		Margin.Add(Grid.Add(Spacer.Add(Timer), Columns, Rows, TilesGrid))
 	);
-	public void ResetTheme()
-	{
-		const int marginValue = 100, spacerValue = 1;
-		Grid.AddThemeConstantOverride("h_separation", 1);
-		Grid.AddThemeConstantOverride("v_separation", 1);
-		Rows.AddThemeConstantOverride("separation", spacerValue);
-		Columns.AddThemeConstantOverride("separation", spacerValue);
-		Margin.AddThemeConstantOverride("margin_top", marginValue);
-		Margin.AddThemeConstantOverride("margin_bottom", marginValue / 2);
-		TilesGrid.AddThemeConstantOverride("h_separation", 0);
-		TilesGrid.AddThemeConstantOverride("v_separation", 0);
-		TilesGrid.AddThemeConstantOverride("h_separation", spacerValue);
-		TilesGrid.AddThemeConstantOverride("v_separation", spacerValue);
-	}
 }

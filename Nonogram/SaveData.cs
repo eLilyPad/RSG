@@ -98,7 +98,7 @@ public sealed record SaveData : Display.Data
 			}
 		}
 	}
-	internal sealed class AutoCompleter
+	public sealed class AutoCompleter
 	{
 		public required Tile.Pool Tiles { private get; init; }
 		public void BlockCompletedLines(SaveData save, Vector2I position, Settings settings)
@@ -120,10 +120,10 @@ public sealed record SaveData : Display.Data
 			}
 		}
 	}
-	internal sealed class UserInput
+	public sealed class UserInput
 	{
 		public required AutoCompleter Completer { private get; init; }
-		public required PuzzleTimer Timer { private get; init; }
+		public required IPuzzleTimer Timer { private get; init; }
 		public required Tile.Pool Tiles { private get; init; }
 
 		public void PaintInput(SaveData save, Vector2I position, Tile tile)
@@ -138,12 +138,12 @@ public sealed record SaveData : Display.Data
 			if (!TryProcessInput(save, position, tile, out Mode input)) return;
 			if (tile.Locked) return;
 
-			//input.PlayAudio();
+			input.PlayAudio();
 			save.ChangeState(position, mode: tile.Mode = input);
 			Completer.BlockCompletedLines(save, position, settings);
 
-			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
-			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
+			Tiles.TryLock(position);
+			if (input is Mode.Filled) Timer.TryRun();
 			if (save.IsComplete) eventHandler?.Completed(save);
 		}
 		private static bool TryProcessInput(SaveData save, Vector2I position, Tile tile, out Mode input)

@@ -6,23 +6,52 @@ using static Display;
 
 public sealed partial class Tile : PanelContainer
 {
-	public sealed class Locker
+	public interface ILocker
 	{
-		public required List<Func<Vector2I, bool>> Rules { private get; init; }
-		public bool ShouldLock(Vector2I position) => Rules.Any(rule => rule(position));
+		IImmutableList<Func<Vector2I, bool>> Rules { get; }
+		bool ShouldLock(Vector2I position) => Rules.Any(rule => rule(position));
+		Locker Add(params IEnumerable<Func<Vector2I, bool>> values);
+		Locker Remove(params IEnumerable<Func<Vector2I, bool>> values);
 	}
-	internal interface IProvider
+	public sealed class Locker : ILocker
+	{
+		public IImmutableList<Func<Vector2I, bool>> Rules => [.. _rules];
+		private readonly List<Func<Vector2I, bool>> _rules = [];
+		public Locker Add(params IEnumerable<Func<Vector2I, bool>> values)
+		{
+			foreach (var value in values)
+			{
+				if (Rules.Contains(value)) { continue; }
+				Rules.Add(value);
+			}
+			return this;
+		}
+		public Locker Remove(params IEnumerable<Func<Vector2I, bool>> values)
+		{
+			foreach (var value in values)
+			{
+				Rules.Remove(value);
+			}
+			return this;
+		}
+	}
+	public interface IProvider
 	{
 		Node Parent();
 		void OnActivate(Vector2I position, Tile tile) { }
 		TileMode State(Vector2I position) => TileMode.Clear;
 	}
-	internal sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
+	public sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
 	{
 		const int chunkSize = 5;
-		public required Locker LockRules { get; init; }
+		public ILocker LockRules { get; init; } = new Locker();
 		public Vector2 TileSize { get; private set; } = Vector2.One;
 
+		public void TryLock(Vector2I position)
+		{
+			Tile tile = GetOrCreate(position);
+			if (LockRules.ShouldLock(position)) tile.Locked = true;
+		}
 		public void Update(int size)
 		{
 			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();

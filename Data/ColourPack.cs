@@ -2,6 +2,11 @@ using Godot;
 
 namespace RSG;
 
+public static class ColoursPackExtensions
+{
+
+}
+
 public sealed partial class ColourPack : Resource, Nonogram.IColours, Minesweeper.IColours
 {
 	public static ColourPack Default { get; } = new ColourPack();

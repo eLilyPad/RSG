@@ -28,6 +28,33 @@ public static class HintExtensions
 }
 public static class DisplayExtensions
 {
+	public static Container HintsParent(this Display d, Side side) => side switch
+	{
+		Side.Row => d.Rows,
+		Side.Column => d.Columns,
+		_ => d
+	};
+	internal static void ChangePuzzleSize(this Display d, int value)
+	{
+		d.Tiles.Update(value);
+		d.Hints.TileSize = d.Tiles.TileSize;
+		d.Hints.Update(value);
+		d.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * d.Tiles.TileSize;
+		d.TilesGrid.Columns = value;
+	}
+	public static Type ChangeType(this DisplaySpacer spacer, Type value)
+	{
+		switch (value)
+		{
+			case Type.Game:
+				spacer.Add(spacer.Timer);
+				break;
+			case Type.Paint:
+				spacer.Remove(free: false, spacer.Timer);
+				break;
+		}
+		return value;
+	}
 	public static string AsName(this Type type) => type switch
 	{
 		Type.Game => "Game",

@@ -16,38 +16,17 @@ public sealed partial class NonogramContainer : PanelContainer
 
 	public NonogramBackground Background { get; } = new NonogramBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public Display.Default Display { get; } = new Display.Default { }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public required Display Display { get; init; }
+	public IColours Colours { set => ChangeColours(value); }
+	//public NonogramContainer(string name, Display display) => (Name, Display) = (name, display);
 
-	public IColours Colours
-	{
-		private get; set
-		{
-			Background.ColorBackground.Color = value.NonogramBackground;
-			Display.Timer.Background.Color = value.NonogramTimerBackground;
-			field = value;
-		}
-	}
-	public int PuzzleSize
-	{
-		set
-		{
-			Tiles.Update(value);
-			Hints.TileSize = Tiles.TileSize;
-			Hints.Update(value);
-			Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
-			Display.TilesGrid.Columns = value;
-		}
-	}
+	public override void _Ready() => this
+		.Add(Background, Display, CompletionScreen)
+		.Preset(LayoutPreset.FullRect);
 
-	internal Tile.Pool Tiles { get; init; }
-	internal Hints Hints { get; init; }
-
-	internal NonogramContainer(IColours colours, PuzzleManager.CurrentPuzzle puzzle)
+	private void ChangeColours(IColours value)
 	{
-		Colours = colours;
-		Hints = new(Provider: puzzle, Colours: colours);
-		Tiles = new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = puzzle.Rules } };
+		Background.ColorBackground.Color = value.NonogramBackground;
+		Display.Timer.Background.Color = value.NonogramTimerBackground;
 	}
-	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }
