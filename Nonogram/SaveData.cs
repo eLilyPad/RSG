@@ -9,6 +9,7 @@ using Mode = Display.TileMode;
 
 public sealed record SaveData : Display.Data
 {
+	public interface IHave { SaveData Puzzle { get; } }
 	public sealed class Converter : JsonConverter<SaveData>
 	{
 		public const string ExpectedProp = "Expected";
