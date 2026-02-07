@@ -192,23 +192,23 @@ public sealed record SaveData : Display.Data
 	public bool IsCorrectlyBlocked(Vector2I position, Mode? current = null, Mode? expected = null)
 	{
 		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
-		Assert(States.ContainsKey(position), $"No current tile in the data");
+		Assert(Tiles.ContainsKey(position), $"No current tile in the data");
 
-		return (current ?? States[position]) is Mode.Blocked
+		return (current ?? Tiles[position]) is Mode.Blocked
 			&& (expected ?? Expected.States[position]) is Mode.Clear;
 	}
 	public bool IsCorrectlyFilled(Vector2I position, Mode? current = null, Mode? expected = null)
 	{
 		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
-		Assert(States.ContainsKey(position), $"No current tile in the data");
+		Assert(Tiles.ContainsKey(position), $"No current tile in the data");
 
 		return Mode.Filled.AllEqual(
 			expected ?? Expected.States[position],
-			current ?? States[position]
+			current ?? Tiles[position]
 		);
 	}
 
-	private void ChangeState(Vector2I position, Mode mode)
+	internal void ChangeState(Vector2I position, Mode mode)
 	{
 		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
 		Tiles[position] = mode;
