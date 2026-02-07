@@ -4,6 +4,7 @@ namespace RSG.Nonogram;
 
 public sealed partial class TimerContainer : PanelContainer
 {
+	public interface IHave { TimerContainer Timer { get; } }
 	public RichTextLabel Time { get; } = new RichTextLabel
 	{
 		Name = "Label",
