@@ -25,7 +25,6 @@ public static class GDX
 			}
 		}
 	}
-
 	public static T LoadOrCreateResource<T>(this string path) where T : Resource, new()
 	{
 		var resource = GD.Load<T>(path);
@@ -36,8 +35,6 @@ public static class GDX
 		}
 		return resource;
 	}
-
-
 	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children)
@@ -60,13 +57,20 @@ public static class GDX
 	{
 		foreach (Node node in children)
 		{
-			//if (!parent.HasChild(node)) { continue; }
+			if (!parent.HasChild(node)) { continue; }
 			if (node.IsAncestorOf(parent)) { continue; }
 			if (!GodotObject.IsInstanceValid(parent)) { continue; }
 			if (!GodotObject.IsInstanceValid(node)) { continue; }
 			parent.RemoveChild(node);
 			if (free) node.QueueFree();
 		}
+		return parent;
+	}
+	public static T ReAdd<T>(this T parent, params IEnumerable<Node> children)
+	where T : Node
+	{
+		parent.Remove(false, children);
+		parent.Add(children);
 		return parent;
 	}
 	public static T AddOrRemove<T>(this T parent, bool add, bool free = false, params IEnumerable<Node> children) where T : Node
