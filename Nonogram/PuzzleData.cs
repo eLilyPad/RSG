@@ -245,6 +245,7 @@ public sealed record PuzzleData : Display.Data
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
 	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 		.GridRange().ToDictionary(elementSelector: _ => Display.TileMode.Clear);
+	public bool IsEmpty => !States.Values.Any(mode => !mode.IsEmpty());
 
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
