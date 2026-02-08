@@ -1,5 +1,6 @@
 using Godot;
 
+
 namespace RSG;
 
 public interface IGetParent<TKey, TConfig> where TKey : notnull
@@ -51,7 +52,6 @@ public abstract class NodePool<TKey, TValue, TConfig> :
 	}
 	public virtual void Refresh(TKey key, TConfig config) { }
 	public abstract Node Parent(TKey key, TConfig config);
-	public void Clear(TConfig config) => Remove(config, _nodes.Keys);
 	public void Clear(TConfig config, params IEnumerable<TKey> exceptions)
 	{
 		IEnumerable<TKey> keys = _nodes.Keys.Where(key => !exceptions.Contains(key));
@@ -64,15 +64,6 @@ public abstract class NodePool<TKey, TValue, TConfig> :
 			Assert(_nodes.ContainsKey(key));
 			TValue value = _nodes[key];
 			Node parent = Parent(key, config);
-			GD.Print($"deleting");
-			if (value is Nonogram.Hint)
-			{
-				GD.Print($"deleting hint");
-			}
-			if (value is Nonogram.Tile)
-			{
-				GD.Print($"deleting tile");
-			}
 			parent.Remove(true, value);
 			_nodes.Remove(key);
 		}
