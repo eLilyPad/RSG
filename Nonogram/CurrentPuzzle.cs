@@ -92,96 +92,28 @@ public sealed record class CurrentPuzzle :
 	public PuzzleTiles Tiles => field ??= new();
 	public PuzzleHints Hints => field ?? new();
 	public IManagePuzzle? EventHandler { get; set; }
-	public bool PuzzleReady => Puzzle.Expected.States.Values.Any(mode => !mode.IsEmpty());
+	public bool PuzzleReady => !Puzzle.Expected.IsEmpty;
 	public Type Type { get; set => ChangeType(value: field = value); } = Type.Game;
 	public Settings Settings { get; set => ChangeSettings(value: field = value); } = new();
-	public SaveData Puzzle
-	{
-		get; set
-		{
-			field = value;
-			//this.ChangePuzzle<CurrentPuzzle, PuzzleTiles, PuzzleHints>(value: field = value);
-			Assert(value is not null, "null save given unable to change");
-			Save(value);
-
-			IEnumerable<Vector2I> tileKeys = (Vector2I.One * value.Size).GridRange();
-			IEnumerable<HintPosition> hintKeys = HintPosition.AsRange(value.Size);
-
-
-			Timer.Elapsed = value.TimeTaken;
-			Tiles.ReplaceAll<Vector2I, Tile, CurrentPuzzle, PuzzleTiles>(this, tileKeys);
-			Hints.TileSize = Tiles.TileSize;
-
-			UI.Display.HintsParent(Side.Row).RemoveChildren(true);
-			UI.Display.HintsParent(Side.Column).RemoveChildren(true);
-			Hints.ReplaceAll<HintPosition, Hint, CurrentPuzzle, PuzzleHints>(this, hintKeys);
-			Hints.Clear(this);
-			//foreach (HintPosition hintKey in hintKeys)
-			//{
-			//	Hint hint = Hints.GetOrCreate(hintKey, this);
-			//	Hints.Refresh(hintKey, this);
-			//	Container parent = UI.Display.HintsParent(hintKey.Side);
-			//	if (hint.IsInsideTree()) { continue; }
-			//	if (parent.HasChild(hint)) { continue; }
-
-			//	parent.Add(hint);
-			//}
-			//Assert(!Hints.Keys.Any());
-
-			UI.Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value.Size) * Tiles.TileSize;
-			UI.Display.TilesGrid.Columns = value.Size;
-		}
-	} = new();
+	public SaveData Puzzle { get; set => ChangePuzzle(value: field = value); } = new();
 
 	public IImmutableList<Func<Vector2I, bool>> Rules => field ??= [
 		(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
-			(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
-		];
+		(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
+	];
 
 	public CurrentPuzzle() { }
-	//public void Update(int value)
-	//{
-	//	const Display.TileMode defaultValue = Display.TileMode.Clear;
-
-	//	Node parent = UI.Display.TilesGrid;
-	//	int chunkSize = PuzzleTiles<CurrentPuzzle>.ChunkSize;
-
-	//	IEnumerable<Vector2I> tileValues = (Vector2I.One * value).GridRange();
-	//	Tiles.ReplaceAll(tileValues);
-	//	bool firstTile = true;
-	//	foreach ((Vector2I position, Tile tile) in Tiles)
-	//	{
-	//		tile.Mode = Puzzle.States.GetValueOrDefault(position, defaultValue);
-	//		tile.Locked = (this as Tile.ILocker).ShouldLock(position);
-	//		tile.IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0;
-	//		parent.ReAdd(tile);
-	//		if (firstTile) (Hints.TileSize, firstTile) = (tile.Size, false);
-	//	}
-
-	//	Tiles.Clear(exceptions: tileValues);
-
-	//	IEnumerable<Display.HintPosition> hintValues = Display.HintPosition.AsRange(value);
-	//	Hints.ReplaceAll(hintValues);
-	//	Refresh();
-	//}
-	//public void Refresh()
-	//{
-	//	foreach ((Display.HintPosition position, Hint hint) in Hints)
-	//	{
-	//		hint.Label.Text = Type switch
-	//		{
-	//			Type.Game => Puzzle.Expected.States.CalculateHints(position),
-	//			Type.Paint => Puzzle.States.CalculateHints(position),
-	//			_ => Hint.Empty
-	//		};
-	//		hint.CustomMinimumSize = Hints.TileSize;
-	//	}
-	//}
 	private void ChangeSettings(Settings value) => EventHandler?.SettingsChanged();
 	private void ChangeType(Type value)
 	{
 		UI.Display.Name = value.AsName();
 		UI.Display.Spacer.ChangeType(value);
+	}
+	private void ChangePuzzle(SaveData value)
+	{
+		Save(value);
+		Timer.Elapsed = value.TimeTaken;
+		this.DisplayPuzzle<CurrentPuzzle, PuzzleTiles, PuzzleHints>();
 	}
 }
 
