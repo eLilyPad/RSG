@@ -6,6 +6,7 @@ using static Display;
 
 public static class TileExtensions
 {
+	public static bool IsEmpty(this TileMode mode) => mode is TileMode.NULL or TileMode.Clear;
 	public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
 		expected == current
 		&& !(newValue is TileMode.Blocked && current is TileMode.Clear);
@@ -41,9 +42,9 @@ public static class TileExtensions
 	};
 	public static TileMode FromText(this string mode) => mode switch
 	{
-		BlockText => TileMode.Blocked,
-		FillText => TileMode.Filled,
-		EmptyText => TileMode.Clear,
+		Tile.BlockText => TileMode.Blocked,
+		Tile.FillText => TileMode.Filled,
+		Tile.EmptyText => TileMode.Clear,
 		_ => TileMode.NULL
 	};
 	public static void PlayAudio(this TileMode mode)
@@ -62,8 +63,8 @@ public static class TileExtensions
 	}
 	public static string AsText(this TileMode mode) => mode switch
 	{
-		TileMode.Blocked => BlockText,
-		TileMode.Filled => FillText,
-		_ => EmptyText,
+		TileMode.Blocked => Tile.BlockText,
+		TileMode.Filled => Tile.FillText,
+		_ => Tile.EmptyText,
 	};
 }

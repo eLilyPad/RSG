@@ -7,7 +7,7 @@ using UI;
 using Nonogram;
 using Minesweeper;
 using Dialogue;
-using CurrentNonogram = Nonogram.PuzzleManager.CurrentPuzzle;
+
 
 public sealed partial class Core : Node
 {
@@ -27,14 +27,14 @@ public sealed partial class Core : Node
 		}
 		public void OnPlayDialoguePressed()
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			Dialogues.Start(name: current.Puzzle.Expected.DialogueName);
 			current.UI.CompletionScreen.Hide();
 			current.UI.Hide();
 		}
 		public void OnVisibilityChanged()
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
 			string name = current.Puzzle.Expected.DialogueName;
 			bool hasDialogue = Dialogues.Contains(name);
@@ -87,12 +87,12 @@ public sealed partial class Core : Node
 		}
 		public void PlayPressed()
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			if (current.PuzzleReady)
 			{
 				core.Container.Menu.Hide();
 				current.UI.Show();
-				current.Type = Display.Type.Game;
+				current.Type = PuzzleManager.Type.Game;
 			}
 			else
 			{
@@ -103,37 +103,37 @@ public sealed partial class Core : Node
 		}
 		public void StudioPressed()
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 
 			core.Container.Menu.Hide();
 			core.Container.Menu.Buttons.Hide();
 
 			current.UI.Show();
-			current.Type = Display.Type.Paint;
+			current.Type = PuzzleManager.Type.Paint;
 			current.Puzzle = new(new(10));
 		}
 		public void LevelsPressed()
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			core.Container.Menu.Levels.Show();
-			current.Type = Display.Type.Game;
+			current.Type = PuzzleManager.Type.Game;
 		}
 		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
 		public void SettingsPressed() => core.Container.Menu.Settings.Show();
 		public void QuitPressed() => core.GetTree().Quit();
 		public void ToggledLockFilledTiles(bool toggled)
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
 		}
 		public void ToggledLockBlockedTiles(bool toggled)
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
 		}
 		public void ToggledBlockCompleteLines(bool toggled)
 		{
-			CurrentNonogram current = core.Nonogram;
+			CurrentPuzzle current = core.Nonogram;
 			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
 		}
 
@@ -295,13 +295,8 @@ public sealed partial class Core : Node
 	private EventHandler Handler => field ??= new(this);
 	private NonogramEvents NonogramHandler => field ??= new(this);
 
-	private CurrentNonogram Nonogram => field ??= CurrentNonogram.Create(
-		NonogramHandler,
-		Container,
-		Colours
-	);
+	private CurrentPuzzle Nonogram => field ??= NonogramHandler.Create(Container, Colours);
 	private Manager Minesweeper => field ??= CreateMinesweeper();
-
 
 	public override void _Ready()
 	{
@@ -310,7 +305,7 @@ public sealed partial class Core : Node
 
 		InitConsole(this);
 
-		Nonogram.Type = Display.Type.Game;
+		Nonogram.Type = PuzzleManager.Type.Game;
 		Nonogram.EventHandler = NonogramHandler;
 
 		Container.LoadingScreen.Show();

@@ -24,11 +24,11 @@ public sealed partial class PuzzleSelector : PanelContainer
 	public sealed partial class PackDisplay : PanelContainer
 	{
 		public readonly record struct Config(string Name, IEnumerable<SaveData> Data);
-		public static Func<Config, CanvasItem, PackDisplay> Create(PuzzleManager.CurrentPuzzle current)
+		public static Func<Config, CanvasItem, PackDisplay> Create(CurrentPuzzle current)
 		{
 			return (config, root) => Create(config, root, current);
 		}
-		public static PackDisplay Create(Config config, CanvasItem root, PuzzleManager.CurrentPuzzle current)
+		public static PackDisplay Create(Config config, CanvasItem root, CurrentPuzzle current)
 		{
 			PackDisplay display = new() { Name = config.Name };
 			foreach (SaveData save in config.Data)
@@ -62,11 +62,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 	}
 	public sealed partial class PuzzleDisplay : PanelContainer
 	{
-		public static PuzzleDisplay Create(
-			Display.Data puzzle,
-			CanvasItem root,
-			PuzzleManager.CurrentPuzzle current
-		)
+		public static PuzzleDisplay Create(Display.Data puzzle, CanvasItem root, CurrentPuzzle current)
 		{
 			Color statusColor = puzzle switch
 			{

@@ -4,51 +4,16 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-public sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPosition, Hint>
-{
-	public interface IProvider
-	{
-		Node Parent(HintPosition position);
-		string Text(HintPosition position);
-	}
-	public Vector2 TileSize { get; set; } = Vector2.Zero;
-
-	public void Update(int size)
-	{
-		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(size);
-		foreach (HintPosition position in hintValues)
-		{
-			Hint hint = GetOrCreate(position);
-			hint.Label.Text = Provider.Text(position);
-		}
-		Clear(exceptions: hintValues);
-	}
-	public void Refresh()
-	{
-		foreach ((HintPosition position, Hint hint) in _nodes)
-		{
-			hint.Label.Text = Provider.Text(position);
-			hint.CustomMinimumSize = TileSize;
-		}
-	}
-	protected override Node Parent(HintPosition position) => Provider.Parent(position);
-	protected override Hint Create(HintPosition position)
-	{
-		Hint hint = Hint.Create(position, Colours);
-		Provider.Parent(position).AddChild(hint);
-		hint.CustomMinimumSize = TileSize;
-		return hint;
-	}
-}
-
 public sealed partial class Hint : PanelContainer
 {
+	public const string Empty = "0";
+
 	public static Hint Create(HintPosition position, IColours colours)
 	{
 		Hint hint = new Hint
 		{
 			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
-			Label = new RichTextLabel { Name = "Label", Text = EmptyHint, FitContent = true }
+			Label = new RichTextLabel { Name = "Label", Text = Empty, FitContent = true }
 				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 		(hint.Label.HorizontalAlignment, hint.Label.VerticalAlignment) = position.Alignment();

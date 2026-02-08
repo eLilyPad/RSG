@@ -2,6 +2,13 @@ namespace RSG.Nonogram;
 
 public interface IPuzzleTimer
 {
+	public interface IHave { IPuzzleTimer Timer { get; } }
+	public interface IProvider
+	{
+		void TimeChanged(string value) { }
+		void TimeChanged(TimeSpan value) => TimeChanged($"{value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}");
+	}
+
 	TimeSpan Elapsed { get; set; }
 	bool Running { get; set; }
 	void TryRun() => Running = !Running || Running;
@@ -9,20 +16,5 @@ public interface IPuzzleTimer
 	{
 		if (!Running) return;
 		Elapsed += TimeSpan.FromSeconds(delta);
-	}
-}
-
-public sealed class PuzzleTimer : IPuzzleTimer
-{
-	public interface IProvider : IHavePuzzleSettings
-	{
-		void TimeChanged(string value) { }
-	}
-	public required IProvider Provider { get; init; }
-	public TimeSpan Elapsed { get; set => ChangeTime(field = value); }
-	public bool Running { get; set; } = false;
-	private void ChangeTime(TimeSpan time)
-	{
-		Provider.TimeChanged($"{time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}");
 	}
 }

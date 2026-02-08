@@ -28,37 +28,25 @@ public static class HintExtensions
 }
 public static class DisplayExtensions
 {
-	public static Container HintsParent(this Display d, Side side) => side switch
-	{
-		Side.Row => d.Rows,
-		Side.Column => d.Columns,
-		_ => d
-	};
-	internal static void ChangePuzzleSize(this Display d, int value)
-	{
-		d.Tiles.Update(value);
-		d.Hints.TileSize = d.Tiles.TileSize;
-		d.Hints.Update(value);
-		d.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * d.Tiles.TileSize;
-		d.TilesGrid.Columns = value;
-	}
-	public static Type ChangeType(this DisplaySpacer spacer, Type value)
+
+	public static PuzzleManager.Type ChangeType<T>(this T spacer, PuzzleManager.Type value)
+	where T : Container, TimerContainer.IHave
 	{
 		switch (value)
 		{
-			case Type.Game:
+			case PuzzleManager.Type.Game:
 				spacer.Add(spacer.Timer);
 				break;
-			case Type.Paint:
+			case PuzzleManager.Type.Paint:
 				spacer.Remove(free: false, spacer.Timer);
 				break;
 		}
 		return value;
 	}
-	public static string AsName(this Type type) => type switch
+	public static string AsName(this PuzzleManager.Type type) => type switch
 	{
-		Type.Game => "Game",
-		Type.Paint => "Paint",
+		PuzzleManager.Type.Game => "Game",
+		PuzzleManager.Type.Paint => "Paint",
 		_ => "Puzzle Display"
 	};
 
@@ -74,20 +62,6 @@ public static class DisplayExtensions
 	)
 	{
 		return tiles.Where(pair => pair.Key.EitherEqual(position));
-	}
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, TileMode>> AllInLine(
-		this IEnumerable<KeyValuePair<Vector2I, TileMode>> tiles,
-		Vector2I position,
-		Side side,
-		TileMode without = TileMode.NULL
-	)
-	{
-		return tiles
-			.Where(
-				pair => side.IndexFrom(pair.Key) == side.IndexFrom(position)
-				&& pair.Value != without
-			)
-			.OrderBy(pair => side.OrderFrom(pair.Key));
 	}
 	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
@@ -105,7 +79,7 @@ public static class DisplayExtensions
 	}
 	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
 	{
-		return tiles.CalculateHints(position, selector: value => value.Button.Text is FillText ? 1 : 0);
+		return tiles.CalculateHints(position, selector: value => value.Button.Text is Tile.FillText ? 1 : 0);
 	}
 	private static string CalculateHints<TValue>(
 		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
@@ -128,7 +102,7 @@ public static class DisplayExtensions
 		builder.FlushRun(position.Side, ref run);
 		return builder.Length > 0
 			? builder.ToString()
-			: EmptyHint + position.Side.AsFormat();
+			: Hint.Empty + position.Side.AsFormat();
 	}
 	private static void FlushRun(this StringBuilder builder, Side side, ref int run)
 	{

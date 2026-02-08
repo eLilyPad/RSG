@@ -2,8 +2,19 @@ using Godot;
 
 namespace RSG.Nonogram;
 
+
 public sealed partial class NonogramContainer : PanelContainer
 {
+	public interface IHave
+	{
+		NonogramContainer UI { get; }
+		void SetTimeText(TimeSpan time) => UI.Display.Timer.Time.Text = "[font_size=30]" + time;
+		Container HintsParent(Display.Side side) => side switch
+		{
+			Display.Side.Row => UI.Display.Rows,
+			_ => UI.Display.Columns
+		};
+	}
 	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
 		Name = "PuzzleCompleteScreen",
@@ -16,9 +27,8 @@ public sealed partial class NonogramContainer : PanelContainer
 
 	public NonogramBackground Background { get; } = new NonogramBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public required Display Display { get; init; }
+	public Display Display { get; init; } = new Display.Default();
 	public IColours Colours { set => ChangeColours(value); }
-	//public NonogramContainer(string name, Display display) => (Name, Display) = (name, display);
 
 	public override void _Ready() => this
 		.Add(Background, Display, CompletionScreen)

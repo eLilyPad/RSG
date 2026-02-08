@@ -1,20 +1,31 @@
 using Godot;
 
+
 namespace RSG.Nonogram;
 
-public abstract partial class Display : AspectRatioContainer
+using static Display;
+
+public interface IDisplayPools<TTiles, THints>
 {
-	internal sealed partial class Default(Tile.Pool tiles, Hints hints) : Display(tiles, hints) { }
-	public sealed partial class DisplaySpacer : PanelContainer
+	TTiles Tiles { get; }
+	THints Hints { get; }
+}
+
+public interface IDisplayHints
+{
+	VBoxContainer Rows { get; }
+	HBoxContainer Columns { get; }
+	Container HintsParent(Side side);
+}
+public abstract partial class Display : AspectRatioContainer, IDisplayHints
+{
+	internal sealed partial class Default : Display { }
+	public sealed partial class DisplaySpacer : PanelContainer, TimerContainer.IHave
 	{
 		public TimerContainer Timer { get; } = new TimerContainer { Name = "Timer" }
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-		public Type Type { set => this.ChangeType(value); }
 	}
-
-	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
-	public enum Type { Game, Display, Paint }
 
 	public static TileMode PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Blocked
 		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Filled
@@ -35,13 +46,13 @@ public abstract partial class Display : AspectRatioContainer
 	public HBoxContainer Columns { get; } = new HBoxContainer { Name = "ColumnHints" }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 
-	internal Tile.Pool Tiles { get; }
-	internal Hints Hints { get; }
-
-	public int PuzzleSize { set => this.ChangePuzzleSize(value); }
-
-	private Display(Tile.Pool tiles, Hints hints) => (Hints, Tiles) = (hints, tiles);
+	private Display() { }
 	public override sealed void _Ready() => this.Add(
 		Margin.Add(Grid.Add(Spacer.Add(Timer), Columns, Rows, TilesGrid))
 	);
+	public Container HintsParent(Side side) => side switch
+	{
+		Side.Row => Rows,
+		_ => Columns
+	};
 }

@@ -9,122 +9,68 @@ public sealed partial class Tile : PanelContainer
 	public interface ILocker
 	{
 		IImmutableList<Func<Vector2I, bool>> Rules { get; }
-		bool ShouldLock(Vector2I position) => Rules.Any(rule => rule(position));
-		Locker Add(params IEnumerable<Func<Vector2I, bool>> values);
-		Locker Remove(params IEnumerable<Func<Vector2I, bool>> values);
-	}
-	public sealed class Locker : ILocker
-	{
-		public IImmutableList<Func<Vector2I, bool>> Rules => [.. _rules];
-		private readonly List<Func<Vector2I, bool>> _rules = [];
-		public Locker Add(params IEnumerable<Func<Vector2I, bool>> values)
+		bool ShouldLock(Vector2I position)
 		{
-			foreach (var value in values)
+			foreach (Func<Vector2I, bool> rule in Rules)
 			{
-				if (Rules.Contains(value)) { continue; }
-				Rules.Add(value);
+				if (rule(position)) return true;
 			}
-			return this;
-		}
-		public Locker Remove(params IEnumerable<Func<Vector2I, bool>> values)
-		{
-			foreach (var value in values)
-			{
-				Rules.Remove(value);
-			}
-			return this;
+			return false;
 		}
 	}
+	public interface ISize { Vector2 TileSize { get; set; } }
 	public interface IProvider
 	{
 		Node Parent();
 		void OnActivate(Vector2I position, Tile tile) { }
 		TileMode State(Vector2I position) => TileMode.Clear;
 	}
-	public sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
+
+	public const string BlockText = "X", FillText = "O", EmptyText = " ";
+
+	public static Tile CreatePooled(
+		Vector2I position,
+		IColours colours,
+		Action<bool> hover,
+		Action<Vector2I, Tile> activate
+	)
 	{
-		const int chunkSize = 5;
-		public ILocker LockRules { get; init; } = new Locker();
-		public Vector2 TileSize { get; private set; } = Vector2.One;
-
-		public void TryLock(Vector2I position)
+		Tile tile = new Tile
 		{
-			Tile tile = GetOrCreate(position);
-			if (LockRules.ShouldLock(position)) tile.Locked = true;
-		}
-		public void Update(int size)
+			Name = $"Tile (X: {position.X}, Y: {position.Y})",
+			Colours = colours,
+			Mode = TileMode.Clear,
+		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+
+		tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
+		tile.Button.ButtonDown += () => activate(position, tile);
+		tile.Button.MouseExited += () => hover(false);
+		tile.Button.MouseEntered += () =>
 		{
-			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
-			bool firstTile = true;
-			foreach (Vector2I position in tileValues)
+			activate(position, tile);
+			hover(true);
+		};
+
+		tile.Button
+			.OverrideStyle(modify: (StyleBoxFlat style) =>
 			{
-				Tile tile = GetOrCreate(position);
-
-				tile.Mode = Provider.State(position);
-				tile.Locked = LockRules.ShouldLock(position);
-				tile.IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0;
-				Node parent = Provider.Parent();
-				if (parent.HasChild(tile))
-				{
-					parent.RemoveChild(tile);
-				}
-				parent.AddChild(tile);
-
-				if (firstTile)
-				{
-					TileSize = tile.Size;
-					firstTile = false;
-				}
-			}
-
-			Clear(exceptions: tileValues);
-		}
-		protected override Node Parent(Vector2I position) => Provider.Parent();
-		protected override Tile Create(Vector2I position)
-		{
-			Tile tile = new Tile
+				style.CornerDetail = 1;
+				style.SetCornerRadiusAll(0);
+				return style;
+			})
+			.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
 			{
-				Name = $"Tile (X: {position.X}, Y: {position.Y})",
-				Colours = Colours,
-				Mode = TileMode.Clear,
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+				style.CornerDetail = 1;
+				style.SetCornerRadiusAll(0);
+				style.BgColor = Colors.Transparent;
+				return style;
+			})
+			.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty())
+			.AddAllFontThemeOverride(Colors.Transparent);
+		tile.Button.AddThemeFontSizeOverride("font_size", 10);
 
-
-			tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
-			tile.Button.ButtonDown += () => Provider.OnActivate(position, tile);
-			tile.Button.MouseExited += () => HoverTile(false);
-			tile.Button.MouseEntered += () =>
-			{
-				Provider.OnActivate(position, tile);
-				HoverTile(true);
-			};
-
-			tile.Button
-				.OverrideStyle(modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.SetCornerRadiusAll(0);
-					return style;
-				})
-				.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.SetCornerRadiusAll(0);
-					style.BgColor = Colors.Transparent;
-					return style;
-				})
-				.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty())
-				.AddAllFontThemeOverride(Colors.Transparent);
-			tile.Button.AddThemeFontSizeOverride("font_size", 10);
-
-			return tile;
-
-			void HoverTile(bool hovering)
-			{
-				var tiles = _nodes.AllInLines(position);
-				foreach ((Vector2I _, Tile tile) in tiles) tile.Hovering = hovering;
-			}
-		}
+		return tile;
 	}
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
 

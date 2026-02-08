@@ -9,6 +9,28 @@ using Mode = Display.TileMode;
 
 public sealed record SaveData : Display.Data
 {
+	public static void HandleInput(SaveData save, Vector2I position, Tile tile, Mode input)
+	{
+		input.PlayAudio();
+		save.ChangeState(position, mode: tile.Mode = input);
+	}
+	public static void BlockCompletedLine<TCurrent, TTiles, THints>(TCurrent current, Display.Side side, Vector2I position)
+		where TCurrent : ICurrentData, IDisplayPools<TTiles, THints>, Tile.ILocker
+		where TTiles : NodePool<Vector2I, Tile, TCurrent>
+		where THints : NodePool<Display.HintPosition, Hint, TCurrent>
+	{
+		SaveData save = current.Puzzle;
+		if (!current.Puzzle.IsLineComplete(position, side)) { return; }
+		foreach ((Vector2I linePosition, Mode lineMode) in save.States.InLine(position, side))
+		{
+			if (lineMode is Mode.Filled) continue;
+			Tile tile = current.Tiles.GetOrCreate(linePosition, current);
+			if (tile.Mode is Mode.Blocked) continue;
+			save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
+			tile.Locked = current.ShouldLock(linePosition);
+		}
+	}
+
 	public interface IHave { SaveData Puzzle { get; } }
 	public sealed class Converter : JsonConverter<SaveData>
 	{
@@ -99,75 +121,6 @@ public sealed record SaveData : Display.Data
 			}
 		}
 	}
-	public sealed class AutoCompleter
-	{
-		public required Tile.Pool Tiles { private get; init; }
-		public void BlockCompletedLines(SaveData save, Vector2I position, Settings settings)
-		{
-			if (!settings.LineCompleteBlockRest) return;
-			BlockCompletedLine(save, position, side: Display.Side.Row);
-			BlockCompletedLine(save, position, side: Display.Side.Column);
-		}
-		private void BlockCompletedLine(SaveData save, Vector2I position, Display.Side side)
-		{
-			if (!save.IsLineComplete(position, side)) { return; }
-			foreach ((Vector2I linePosition, Mode lineMode) in save.Tiles.InLine(position, side))
-			{
-				if (lineMode is Mode.Filled) continue;
-				Tile tile = Tiles.GetOrCreate(linePosition);
-				if (tile.Mode is Mode.Blocked) continue;
-				save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				tile.Locked = Tiles.LockRules.ShouldLock(position);
-			}
-		}
-	}
-	public sealed class UserInput
-	{
-		public required AutoCompleter Completer { private get; init; }
-		public required IPuzzleTimer Timer { private get; init; }
-		public required Tile.Pool Tiles { private get; init; }
-
-		public void PaintInput(SaveData save, Vector2I position, Tile tile)
-		{
-			if (!TryProcessInput(save, position, tile, out Mode input)) return;
-
-			input.PlayAudio();
-			save.ChangeState(position, mode: tile.Mode = input);
-		}
-		public void GameInput(SaveData save, Vector2I position, Tile tile, Settings settings, IManagePuzzle? eventHandler)
-		{
-			if (!TryProcessInput(save, position, tile, out Mode input)) return;
-			if (tile.Locked) return;
-
-			input.PlayAudio();
-			save.ChangeState(position, mode: tile.Mode = input);
-			Completer.BlockCompletedLines(save, position, settings);
-
-			Tiles.TryLock(position);
-			if (input is Mode.Filled) Timer.TryRun();
-			if (save.IsComplete) eventHandler?.Completed(save);
-		}
-		private static bool TryProcessInput(SaveData save, Vector2I position, Tile tile, out Mode input)
-		{
-			const Mode defaultValue = Mode.NULL;
-
-			input = Display.PressedMode;
-			if (input is defaultValue) return false;
-			IImmutableDictionary<Vector2I, Mode> saved = save.States;
-
-			Assert(saved.ContainsKey(position), $"No current tile in the data");
-			Mode current = saved[position];
-			Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
-
-			input = input == current ? Mode.Clear : input;
-
-			if (Mode.Clear.AllEqual(current, input)) return false;
-
-			return true;
-		}
-	}
-
-
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
@@ -208,7 +161,7 @@ public sealed record SaveData : Display.Data
 		);
 	}
 
-	internal void ChangeState(Vector2I position, Mode mode)
+	private void ChangeState(Vector2I position, Mode mode)
 	{
 		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
 		Tiles[position] = mode;
