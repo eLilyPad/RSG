@@ -8,6 +8,29 @@ using static SaveData;
 public static class SaveDataExtensions
 {
 	const Mode defaultValue = Mode.NULL;
+	public static void DisplayPuzzle<TConfig, TTiles, THints>(this TConfig config)
+	where THints : NodePool<Display.HintPosition, Hint, TConfig>, Tile.ISize
+	where TTiles : NodePool<Vector2I, Tile, TConfig>, Tile.ISize
+	where TConfig : IDisplayPools<TTiles, THints>, ICurrentPuzzle, NonogramContainer.IHave
+	{
+		TTiles tiles = config.Tiles;
+		THints hints = config.Hints;
+		Display display = config.UI.Display;
+		int length = config.Puzzle.Size;
+
+		IEnumerable<Vector2I> tileKeys = (Vector2I.One * length).GridRange();
+		IEnumerable<Display.HintPosition> hintKeys = Display.HintPosition.AsRange(length);
+
+		tiles.ReplaceAll<Vector2I, Tile, TConfig, TTiles>(config, tileKeys);
+
+		display.HintsParent(Display.Side.Row).RemoveChildren(true);
+		display.HintsParent(Display.Side.Column).RemoveChildren(true);
+
+		hints.ReplaceAll<Display.HintPosition, Hint, TConfig, THints>(config, hintKeys);
+
+		display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(length) * tiles.TileSize;
+		display.TilesGrid.Columns = length;
+	}
 	public static Action<Vector2I, Tile> Input<TCurrent, TTiles, THints>(
 		this TCurrent current,
 		TTiles tiles,
