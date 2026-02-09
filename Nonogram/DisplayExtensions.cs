@@ -28,21 +28,6 @@ public static class HintExtensions
 }
 public static class DisplayExtensions
 {
-
-	public static PuzzleManager.Type ChangeType<T>(this T spacer, PuzzleManager.Type value)
-	where T : Container, TimerContainer.IHave
-	{
-		switch (value)
-		{
-			case PuzzleManager.Type.Game:
-				spacer.Add(spacer.Timer);
-				break;
-			case PuzzleManager.Type.Paint:
-				spacer.Remove(free: false, spacer.Timer);
-				break;
-		}
-		return value;
-	}
 	public static string AsName(this PuzzleManager.Type type) => type switch
 	{
 		PuzzleManager.Type.Game => "Game",
