@@ -5,6 +5,7 @@ namespace RSG.Minesweeper;
 
 public sealed partial class MinesweeperContainer : PanelContainer
 {
+	public interface IHave { MinesweeperContainer UI { get; } }
 	public sealed partial class CompletionOptions : HBoxContainer
 	{
 		public Button MainMenu { get; } = new() { Name = "MainMenu", Text = "Main Menu" };
