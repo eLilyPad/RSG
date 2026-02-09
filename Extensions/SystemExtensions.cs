@@ -26,6 +26,8 @@ public static class SystemExtensions
 		}
 		return hints;
 	}
+	public static IEnumerable<T> Exclude<T>(this IEnumerable<T> list, IEnumerable<T> exceptions) => list
+		.Where(v => !exceptions.Contains(v));
 	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> create)
 	where TKey : notnull
 	{
