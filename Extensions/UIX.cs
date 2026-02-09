@@ -1,4 +1,5 @@
 using Godot;
+using Godot.Collections;
 using static Godot.Control;
 
 namespace RSG.Extensions;
@@ -23,6 +24,17 @@ public sealed partial class Backgrounded<T> : Container where T : Control
 }
 public static class UIX
 {
+	public static T UniformMinimum<T>(this GridContainer grid, T a)
+	{
+		Array<Node> children = grid.GetChildren();
+		Vector2 size = Vector2.One * grid.Size.X / grid.Columns;
+		foreach (Node child in children)
+		{
+			if (child is not Control control) continue;
+			control.CustomMinimumSize = size;
+		}
+		return a;
+	}
 	public static void Refill<TConfig, TNode>(
 		this CanvasItem root,
 		Node parent,
