@@ -24,7 +24,7 @@ public sealed partial class Backgrounded<T> : Container where T : Control
 }
 public static class UIX
 {
-	public static T UniformMinimum<T>(this GridContainer grid, T a)
+	public static GridContainer UniformMinimum(this GridContainer grid)
 	{
 		Array<Node> children = grid.GetChildren();
 		Vector2 size = Vector2.One * grid.Size.X / grid.Columns;
@@ -33,7 +33,7 @@ public static class UIX
 			if (child is not Control control) continue;
 			control.CustomMinimumSize = size;
 		}
-		return a;
+		return grid;
 	}
 	public static void Refill<TConfig, TNode>(
 		this CanvasItem root,
