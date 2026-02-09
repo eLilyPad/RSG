@@ -312,7 +312,6 @@ public sealed partial class Core : Node
 		InitConsole(this);
 
 		Nonogram.Type = PuzzleManager.Type.Game;
-
 		Container.LoadingScreen.Show();
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
