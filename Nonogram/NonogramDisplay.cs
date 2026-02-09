@@ -3,8 +3,6 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static Display;
-
 public interface IDisplayPools<TTiles, THints>
 {
 	TTiles Tiles { get; }
