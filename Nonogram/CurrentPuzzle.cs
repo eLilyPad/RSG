@@ -1,5 +1,6 @@
 using GameTools;
 using Godot;
+using RSG.Console;
 
 
 namespace RSG.Nonogram;
@@ -43,16 +44,15 @@ public sealed record class CurrentPuzzle :
 		{
 			Assert(config.Type is Type.Game or Type.Paint);
 			Hint hint = GetOrCreate(position, config);
-			hint.Label.Text = config.Type switch
+			IImmutableDictionary<Vector2I, TileMode> states = config.Type switch
 			{
-				Type.Game => config.Puzzle.Expected.States.CalculateHints(position),
-				Type.Paint => config.Puzzle.States.CalculateHints(position),
-				_ => Hint.Empty
+				Type.Paint => config.Puzzle.States,
+				_ => config.Puzzle.Expected.States,
 			};
+			hint.Label.Text = states.CalculateHints(position);
 			hint.CustomMinimumSize = TileSize;
 		}
-		public override Node Parent(HintPosition position, CurrentPuzzle value) => value.UI.Display
-			.HintsParent(side: position.Side);
+		public override Node Parent(HintPosition position, CurrentPuzzle value) => value.HintsParent(side: position.Side);
 		protected override Hint Create(HintPosition position, CurrentPuzzle value) => Hint
 			.Create(position, Core.Colours);
 	}
@@ -86,6 +86,14 @@ public sealed record class CurrentPuzzle :
 			}
 		}
 	}
+
+	public static CurrentPuzzle Create(Node parent)
+	{
+		CurrentPuzzle current = new();
+		parent.AddChild(current.UI);
+		return current;
+	}
+
 	public IPuzzleTimer Timer => field ??= new GameTimer<CurrentPuzzle>(Current: this);
 	public NonogramContainer UI { get; init; } = new NonogramContainer { Name = "Nonogram", Visible = false }
 		.Preset(Control.LayoutPreset.FullRect);
@@ -93,27 +101,15 @@ public sealed record class CurrentPuzzle :
 	public PuzzleHints Hints => field ?? new();
 	public IManagePuzzle? EventHandler { get; set; }
 	public bool PuzzleReady => !Puzzle.Expected.IsEmpty;
-	public Type Type { get; set => ChangeType(value: field = value); } = Type.Game;
+	public Type Type { get; set => this.ChangeType(ref field, value); } = Type.Game;
 	public Settings Settings { get; set => ChangeSettings(value: field = value); } = new();
-	public SaveData Puzzle { get; set => ChangePuzzle(value: field = value); } = new();
-
+	public SaveData Puzzle { get; set => this.ChangePuzzle(field = value, Tiles, Hints); } = new();
 	public IImmutableList<Func<Vector2I, bool>> Rules => field ??= [
 		(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
 		(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
 	];
 
-	public CurrentPuzzle() { }
+	private CurrentPuzzle() { }
 	private void ChangeSettings(Settings value) => EventHandler?.SettingsChanged();
-	private void ChangeType(Type value)
-	{
-		UI.Display.Name = value.AsName();
-		UI.Display.Spacer.ChangeType(value);
-	}
-	private void ChangePuzzle(SaveData value)
-	{
-		Save(value);
-		Timer.Elapsed = value.TimeTaken;
-		this.DisplayPuzzle<CurrentPuzzle, PuzzleTiles, PuzzleHints>();
-	}
 }
 

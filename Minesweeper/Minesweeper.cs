@@ -7,8 +7,10 @@ public interface IHandleEvents
 	void Failed(Manager.Data data);
 	void Completed(Manager.Data data);
 }
-public sealed partial class Manager : Tile.IProvider
+public interface ICurrentPuzzle { Manager.Data Puzzle { set; } }
+public sealed partial class Manager : Tile.IProvider, MinesweeperContainer.IHave, ICurrentPuzzle
 {
+	public interface IHave { Manager Minesweeper { get; } }
 	public sealed class Data
 	{
 		public static Data CreateRandom(int size = 5)
@@ -26,10 +28,27 @@ public sealed partial class Manager : Tile.IProvider
 		public int Size => (int)Mathf.Sqrt(State.Count);
 		public required IImmutableDictionary<Vector2I, (Tile.Mode mode, bool covered)> State { get; init; }
 	}
-	public Data Puzzle
+	public static Manager Create(Node parent, IColours colours, IHandleEvents events, Control menu)
 	{
-		private get; set => UI.PuzzleSize = (field = value).Size;
-	} = Data.CreateRandom();
+		MinesweeperContainer ui = new MinesweeperContainer(colours)
+		{
+			Name = "Minesweeper",
+			Visible = false,
+		}.Preset(Control.LayoutPreset.FullRect);
+		Manager minesweeper = new() { UI = ui, EventHandler = events };
+
+		parent.AddChild(ui);
+		ui.Tiles.Provider = minesweeper;
+
+		ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
+		{
+			ui.CompletionScreen.Hide();
+			ui.Hide();
+			menu.Show();
+		};
+		return minesweeper;
+	}
+	public Data Puzzle { private get; set => UI.PuzzleSize = (field = value).Size; } = Data.CreateRandom();
 	public required MinesweeperContainer UI { get; init; }
 	public required IHandleEvents EventHandler { get; set; }
 	public bool IsCompleted => UI.Tiles.AllEmptyUnCovered();

@@ -7,7 +7,7 @@ using UI;
 using Nonogram;
 using Minesweeper;
 using Dialogue;
-
+using RSG.Console;
 
 public sealed partial class Core : Node
 {
@@ -295,8 +295,14 @@ public sealed partial class Core : Node
 	private EventHandler Handler => field ??= new(this);
 	private NonogramEvents NonogramHandler => field ??= new(this);
 
-	private CurrentPuzzle Nonogram => field ??= NonogramHandler.Create(Container, Colours);
-	private Manager Minesweeper => field ??= CreateMinesweeper();
+	private CurrentPuzzle Nonogram => field ??= CurrentPuzzle
+		.Create(Container)
+		.ChangeEvents(NonogramHandler)
+		.ChangeColour(Colours)
+		.AddNonogramCommands();
+	private Manager Minesweeper => field ??= Manager
+		.Create(Container, Colours, Handler, Container.Menu)
+		.AddMinesweeperCommands();
 
 	public override void _Ready()
 	{
@@ -306,7 +312,6 @@ public sealed partial class Core : Node
 		InitConsole(this);
 
 		Nonogram.Type = PuzzleManager.Type.Game;
-		Nonogram.EventHandler = NonogramHandler;
 
 		Container.LoadingScreen.Show();
 
@@ -332,47 +337,6 @@ public sealed partial class Core : Node
 		Input.RunEvent(input);
 
 		void DialogueFinished() => Container.Menu.Show();
-	}
-
-	private Manager CreateMinesweeper()
-	{
-		MinesweeperContainer ui = new MinesweeperContainer(Colours)
-		{
-			Name = "Minesweeper",
-			Visible = false,
-		}.Preset(LayoutPreset.FullRect);
-		Manager minesweeper = new() { UI = ui, EventHandler = Handler };
-
-		Container.AddChild(ui);
-		ui.Tiles.Provider = minesweeper;
-
-		ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
-		{
-			ui.CompletionScreen.Hide();
-			ui.Hide();
-			Container.Menu.Show();
-		};
-		Console.Console.Command command = new()
-		{
-			Flags = new()
-			{
-				["new"] = () =>
-				{
-					minesweeper.Puzzle = Manager.Data.CreateRandom(10);
-					minesweeper.UI.Show();
-					Console.Console.Log("Started new Minesweeper game");
-				},
-				["uncover_all"] = () =>
-				{
-					minesweeper.UI.Tiles.ShowAll();
-					minesweeper.UI.Show();
-					Console.Console.Log("Uncovering all tiles");
-				}
-			}
-		};
-		Console.Console.Add(DefaultCommandPrefix, ("minesweeper", command));
-
-		return minesweeper;
 	}
 }
 
