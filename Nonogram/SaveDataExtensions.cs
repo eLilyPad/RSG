@@ -13,9 +13,9 @@ public static class SaveDataExtensions
 		TTiles tiles,
 		THints hints
 	)
-	where THints : NodePool<Display.HintPosition, Hint, TConfig>, Tile.ISize
-	where TTiles : NodePool<Vector2I, Tile, TConfig>, Tile.ISize
-	where TConfig : ICurrentPuzzle, NonogramContainer.IHave
+		where THints : NodePool<Display.HintPosition, Hint, TConfig>, Tile.ISize
+		where TTiles : NodePool<Vector2I, Tile, TConfig>, Tile.ISize
+		where TConfig : ICurrentPuzzle, NonogramContainer.IHave
 	{
 		Display display = config.UI.Display;
 		int length = config.Puzzle.Size;
@@ -23,14 +23,11 @@ public static class SaveDataExtensions
 		IEnumerable<Vector2I> tileKeys = (Vector2I.One * length).GridRange();
 		IEnumerable<Display.HintPosition> hintKeys = Display.HintPosition.AsRange(length);
 
-		tiles.ReplaceAll<Vector2I, Tile, TConfig, TTiles>(config, tileKeys);
-
+		tiles.ReplaceAll(config, tileKeys);
 		config.HintsParent(Display.Side.Row).RemoveChildren(true);
 		config.HintsParent(Display.Side.Column).RemoveChildren(true);
+		hints.ReplaceAll(config, hintKeys);
 
-		hints.ReplaceAll<Display.HintPosition, Hint, TConfig, THints>(config, hintKeys);
-
-		display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(length) * tiles.TileSize;
 		display.TilesGrid.Columns = length;
 	}
 	public static void ChangePuzzle<TConfig, TTiles, THints>(
@@ -39,16 +36,13 @@ public static class SaveDataExtensions
 		TTiles tiles,
 		THints hints
 	)
-	where THints : NodePool<Display.HintPosition, Hint, TConfig>, Tile.ISize
-	where TTiles : NodePool<Vector2I, Tile, TConfig>, Tile.ISize
-	where TConfig : ICurrentPuzzle, IDisplayPools<TTiles, THints>, NonogramContainer.IHave, IPuzzleTimer.IHave
+		where THints : NodePool<Display.HintPosition, Hint, TConfig>, Tile.ISize
+		where TTiles : NodePool<Vector2I, Tile, TConfig>, Tile.ISize
+		where TConfig : ICurrentPuzzle, NonogramContainer.IHave, IPuzzleTimer.IHave
 	{
 		PuzzleManager.Save(save);
-		if (config is IPuzzleTimer.IHave { Timer: { } timer })
-		{
-			timer.Elapsed = save.TimeTaken;
-		}
-		config.DisplayPuzzle(config.Tiles, config.Hints);
+		config.Timer.Elapsed = save.TimeTaken;
+		config.DisplayPuzzle(tiles, hints);
 	}
 	public static Action<Vector2I, Tile> Input<TCurrent, TTiles, THints>(
 		this TCurrent current,
@@ -83,7 +77,7 @@ public static class SaveDataExtensions
 					}
 					break;
 				case PuzzleManager.Type.Paint:
-					hints.Refresh<Display.HintPosition, Hint, TCurrent, THints>(current);
+					hints.Refresh(current);
 					break;
 			}
 			PuzzleManager.Save(save);
