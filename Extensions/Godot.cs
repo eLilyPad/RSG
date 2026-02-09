@@ -39,7 +39,8 @@ public static class GDX
 	{
 		foreach (Node node in children)
 		{
-			if (node.GetParent() == parent) { continue; }
+			if (node.GetParent() == parent) continue;
+			if (parent.HasChild(node)) continue;
 			parent.AddChild(node);
 			if (Engine.IsEditorHint())
 			{
