@@ -4,6 +4,17 @@ namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
 
+public static class ColourExtensions
+{
+	public static T ChangeColour<T>(this T a, IColours value)
+	where T : NonogramContainer.IHave
+	{
+		a.UI.Background.ColorBackground.Color = value.NonogramBackground;
+		a.UI.Display.Spacer.Timer.Background.Color = value.NonogramTimerBackground;
+		return a;
+	}
+}
+
 public interface IColours
 {
 	Color NonogramBackground { get; }
