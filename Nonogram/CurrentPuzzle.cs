@@ -61,14 +61,12 @@ public sealed record class CurrentPuzzle :
 		public const int ChunkSize = 5;
 		const TileMode defaultValue = TileMode.Clear;
 		public Vector2 TileSize { get; set; } = Vector2.Zero;
-		public override void Refresh(Vector2I position, CurrentPuzzle current)
+		public override void Refresh(Vector2I position, Tile tile, CurrentPuzzle current)
 		{
 			Tile.ILocker locker = current;
-			Tile tile = GetOrCreate(position, current);
 			tile.Mode = current.Puzzle.States.GetValueOrDefault(position, defaultValue);
 			tile.IsAlternative = (position.X / ChunkSize + position.Y / ChunkSize) % 2 == 0;
 			tile.Locked = locker.ShouldLock(position);
-			tile.CustomMinimumSize = TileSize = tile.Size;
 		}
 		public override Node Parent(Vector2I key, CurrentPuzzle value) => value.UI.Display.TilesGrid;
 		protected override Tile Create(Vector2I position, CurrentPuzzle value)
