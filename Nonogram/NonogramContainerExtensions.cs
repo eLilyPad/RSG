@@ -9,7 +9,7 @@ public static class NonogramContainerExtensions
 {
 	public static string SetTimeText<T>(this T a, TimeSpan time) where T : IHave
 	{
-		string text = $"[font_size=30]{(int)time.TotalHours:00}:{time: mm\\:ss}";
+		string text = $"[font_size=30]{time}";
 		return a.UI.Display.Spacer.Timer.Time.Text = text;
 	}
 	public static Node HintsParent<T>(this T a, Display.Side side) where T : IHave
