@@ -8,34 +8,6 @@ public interface IGetParent<TKey, TConfig> where TKey : notnull
 	Node Parent(TKey key, TConfig value);
 }
 
-public static class PoolExtensions
-{
-	public static void Refresh<TKey, TValue, TConfig, TPool>(this TPool pool, TConfig config)
-	where TKey : notnull
-	where TValue : Node
-	where TPool : IEnumerable<KeyValuePair<TKey, TValue>>, Nonogram.IRefresh<TKey, TConfig>
-	{
-		foreach ((TKey key, TValue _) in pool)
-		{
-			pool.Refresh(key, config);
-		}
-	}
-	public static void ReplaceAll<TKey, TValue, TConfig, TPool>(this TPool pool, TConfig config, IEnumerable<TKey> keys)
-	where TKey : notnull
-	where TValue : Node
-	where TPool : NodePool<TKey, TValue, TConfig>
-	{
-		foreach (TKey key in keys)
-		{
-			TValue value = pool.GetOrCreate(key, config);
-			Node parent = pool.Parent(key, config);
-			pool.Refresh(key, config);
-			parent.ReAdd(value);
-		}
-		pool.Clear(config, keys);
-		Assert(pool.Keys.SequenceEqual(keys));
-	}
-}
 public abstract class NodePool<TKey, TValue, TConfig> :
 	IEnumerable<KeyValuePair<TKey, TValue>>,
 	IGetParent<TKey, TConfig>,
@@ -45,12 +17,31 @@ public abstract class NodePool<TKey, TValue, TConfig> :
 {
 	public IEnumerable<TKey> Keys => [.. _nodes.Keys];
 	protected readonly Dictionary<TKey, TValue> _nodes = [];
+	public void Refresh(TConfig config)
+	{
+		foreach ((TKey key, TValue _) in _nodes)
+		{
+			Refresh(key, config);
+		}
+	}
+	public IEnumerable<KeyValuePair<TKey, TValue>> ReplaceAll(TConfig config, params IEnumerable<TKey> keys)
+	{
+		foreach (TKey key in keys)
+		{
+			TValue value = GetOrCreate(key, config);
+			Parent(key, config).ReAdd(value);
+			Refresh(key, config);
+		}
+		Remove(config, _nodes.Keys.Exclude(exceptions: keys));
+		return _nodes;
+	}
 	public TValue GetOrCreate(TKey key, TConfig config)
 	{
 		if (_nodes.TryGetValue(key, out TValue? value)) return value;
 		return _nodes[key] = Create(key, config);
 	}
-	public virtual void Refresh(TKey key, TConfig config) { }
+	public virtual void Refresh(TKey key, TValue value, TConfig config) { }
+	public virtual void Refresh(TKey key, TConfig config) => Refresh(key, GetOrCreate(key, config), config);
 	public abstract Node Parent(TKey key, TConfig config);
 	public void Clear(TConfig config, params IEnumerable<TKey> exceptions)
 	{
