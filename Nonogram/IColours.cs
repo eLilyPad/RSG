@@ -6,12 +6,33 @@ using Mode = Display.TileMode;
 
 public static class ColourExtensions
 {
-	public static T ChangeColour<T>(this T a, IColours value)
-	where T : NonogramContainer.IHave
+	private static readonly IColours _backup = Core.Colours;
+	public static T SetColours<T>(this T a, IColours? value = null) where T : NonogramContainer.IHave
 	{
+		value ??= _backup;
 		a.UI.Background.ColorBackground.Color = value.NonogramBackground;
 		a.UI.Display.Spacer.Timer.Background.Color = value.NonogramTimerBackground;
 		return a;
+	}
+	public static Tile SetColours(this Tile tile, IColours? value = null)
+	{
+		value ??= _backup;
+		bool isAlternative = tile.IsAlternative;
+		Mode mode = tile.Mode;
+		Color tileColour = value.NonogramTileBackground(mode, alternative: isAlternative);
+		Color lockedColour = value.NonogramLockedBorder(mode);
+		tile.Button.OverrideStyle(modify: (StyleBoxFlat style) =>
+		{
+			style.BorderColor = lockedColour;
+			style.BgColor = tileColour;
+			return style;
+		});
+		tile.Button.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+		{
+			style.BgColor = tileColour;
+			return style;
+		});
+		return tile;
 	}
 }
 
