@@ -16,6 +16,7 @@ public abstract class NodePool<TKey, TValue, TConfig> :
 	where TValue : Node
 {
 	public IEnumerable<TKey> Keys => [.. _nodes.Keys];
+	public IEnumerable<TValue> Values => [.. _nodes.Values];
 	protected readonly Dictionary<TKey, TValue> _nodes = [];
 	public void Refresh(TConfig config)
 	{
