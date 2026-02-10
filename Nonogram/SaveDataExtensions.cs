@@ -58,7 +58,7 @@ public static class SaveDataExtensions
 		TTiles tiles,
 		THints hints,
 		Vector2I position,
-		Tile tile
+		Tile? tile = null
 	)
 		where TTiles : NodePool<Vector2I, Tile, TCurrent>, IRefresh<Vector2I, TCurrent>
 		where THints : NodePool<Display.HintPosition, Hint, TCurrent>, IRefresh<Display.HintPosition, TCurrent>, Tile.ISize
@@ -68,6 +68,7 @@ public static class SaveDataExtensions
 		Settings settings = current.Settings;
 		IPuzzleTimer timer = current.Timer;
 		IManagePuzzle? events = current.EventHandler;
+		tile ??= tiles.GetOrCreate(position, current);
 
 		if (!TryProcessInput(position, tile, out Mode input)) return;
 		if (current.Type is PuzzleManager.Type.Game && tile.Locked) return;
