@@ -42,17 +42,16 @@ public sealed partial class MainMenu : Container
 	{
 		set
 		{
+			if (field is not null)
+			{
+				VisibilityChanged -= field.MenuVisibilityChanged;
+				Levels.VisibilityChanged -= field.PuzzleSelectorVisibilityChanged;
+				Dialogues.VisibilityChanged -= field.DialogueSelectorVisibilityChanged;
+			}
 			VisibilityChanged += value.MenuVisibilityChanged;
 			Levels.VisibilityChanged += value.PuzzleSelectorVisibilityChanged;
 			Dialogues.VisibilityChanged += value.DialogueSelectorVisibilityChanged;
-			if (field is null)
-			{
-				field = value;
-				return;
-			}
-			VisibilityChanged -= field.MenuVisibilityChanged;
-			Levels.VisibilityChanged -= field.PuzzleSelectorVisibilityChanged;
-			Dialogues.VisibilityChanged -= field.DialogueSelectorVisibilityChanged;
+			field = value;
 		}
 	}
 
