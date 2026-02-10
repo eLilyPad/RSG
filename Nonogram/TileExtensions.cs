@@ -4,7 +4,25 @@ namespace RSG.Nonogram;
 
 using static Display;
 
+
 public static class TileExtensions
+{
+	public static Button SetHovering(this Button tile, bool hovering)
+	{
+		tile.Scale = Vector2.One * (hovering ? .9f : 1);
+		return tile;
+	}
+	public static Button SetLocked(this Button tile, bool locked)
+	{
+		tile.OverrideStyle((StyleBoxFlat style) =>
+		{
+			style.SetBorderWidthAll(locked ? 2 : 0);
+			return style;
+		});
+		return tile;
+	}
+}
+public static class TileModeExtensions
 {
 	public static bool IsEmpty(this TileMode mode) => mode is TileMode.NULL or TileMode.Clear;
 	public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
