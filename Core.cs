@@ -298,7 +298,7 @@ public sealed partial class Core : Node
 	private CurrentPuzzle Nonogram => field ??= CurrentPuzzle
 		.Create(Container)
 		.ChangeEvents(NonogramHandler)
-		.ChangeColour(Colours)
+		.SetColours(Colours)
 		.AddNonogramCommands();
 	private Manager Minesweeper => field ??= Manager
 		.Create(Container, Colours, Handler, Container.Menu)
