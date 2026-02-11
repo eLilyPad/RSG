@@ -4,6 +4,11 @@ namespace RSG.Extensions;
 
 public static class ThemeExtensions
 {
+	public static Button AddFontSizeOverride(this Button button, int value)
+	{
+		button.AddThemeFontSizeOverride("font_size", value);
+		return button;
+	}
 	public static Button AddAllFontThemeOverride(this Button button, Color color)
 	{
 		button.AddThemeColorOverride("font_color", color);
