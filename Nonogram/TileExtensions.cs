@@ -4,9 +4,20 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-
+public interface ITiles<T, TConfig> where T : NodePool<Vector2I, Tile, TConfig> { T Tiles { get; } }
 public static class TileExtensions
 {
+	public static TConfig SetTileHovering<TPool, TConfig>(this TConfig config, Vector2I position, bool value)
+	where TPool : NodePool<Vector2I, Tile, TConfig>
+	where TConfig : ITiles<TPool, TConfig>
+	{
+		IEnumerable<KeyValuePair<Vector2I, Tile>> tiles = config.Tiles.AllInLines(position);
+		foreach ((Vector2I _, Tile tile) in tiles)
+		{
+			tile.Button.SetHovering(hovering: value);
+		}
+		return config;
+	}
 	public static Button SetHovering(this Button tile, bool hovering)
 	{
 		tile.Scale = Vector2.One * (hovering ? .9f : 1);
@@ -19,6 +30,32 @@ public static class TileExtensions
 			style.SetBorderWidthAll(locked ? 2 : 0);
 			return style;
 		});
+		return tile;
+	}
+	public static Tile SetDisplay<T, TPool>(this T config, Vector2I position, Tile? tile = null)
+	where T : SaveData.IHave, Tile.ILocker, ITiles<TPool, T>
+	where TPool : NodePool<Vector2I, Tile, T>
+	{
+		Tile backup = config.Tiles.GetOrCreate(position, config);
+		tile ??= backup;
+		Assert(tile == backup);
+		return tile.SetDisplay(position, config);
+	}
+	public static Tile SetDisplay<T>(this Tile tile, Vector2I position, T config)
+	where T : SaveData.IHave, Tile.ILocker
+	{
+		const TileMode defaultValue = TileMode.Clear;
+		TileMode tileMode = config.Puzzle.States.GetValueOrDefault(position, defaultValue);
+		tile.SetColours(Core.Colours);
+		tile.Locked = config.ShouldLock(position);
+		Assert(tile.Mode == tileMode);
+		return tile;
+	}
+	public static Tile SetGridPosition(this Tile tile, Vector2I position, in int chunkSize)
+	{
+		(int x, int y) = position;
+		tile.IsAlternative = (x / chunkSize + y / chunkSize) % 2 == 0;
+		tile.Name = $"Tile (X: {x}, Y: {y})";
 		return tile;
 	}
 }
