@@ -9,12 +9,12 @@ public interface IDisplayPools<TTiles, THints>
 	THints Hints { get; }
 }
 
-public interface IDisplayHints
+public interface IContainHints
 {
 	VBoxContainer Rows { get; }
 	HBoxContainer Columns { get; }
 }
-public abstract partial class Display : AspectRatioContainer, IDisplayHints
+public abstract partial class Display : AspectRatioContainer, IContainHints
 {
 	internal sealed partial class Default : Display { }
 	public sealed partial class DisplaySpacer : PanelContainer, TimerContainer.IHave
