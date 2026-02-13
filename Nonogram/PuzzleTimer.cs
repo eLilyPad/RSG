@@ -1,5 +1,10 @@
 namespace RSG.Nonogram;
 
+public static class PuzzleTimerExtensions
+{
+
+}
+
 public interface IPuzzleTimer
 {
 	public interface IHave { IPuzzleTimer Timer { get; } }
@@ -11,6 +16,7 @@ public interface IPuzzleTimer
 
 	TimeSpan Elapsed { get; set; }
 	bool Running { get; set; }
+	void TryRun(Display.TileMode input) { if (input is Display.TileMode.Filled) TryRun(); }
 	void TryRun() => Running = !Running || Running;
 	void Tick(double delta)
 	{
