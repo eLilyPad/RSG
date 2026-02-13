@@ -240,12 +240,13 @@ public sealed record PuzzleData : Display.Data
 	}
 
 	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
+	private static bool IsEmptyTile(Display.TileMode mode) => mode is Display.TileMode.NULL or Display.TileMode.Clear;
 
 	public string DialogueName { get; init; } = string.Empty;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
 	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
 		.GridRange().ToDictionary(elementSelector: _ => Display.TileMode.Clear);
-	public bool IsEmpty => !States.Values.Any(mode => !mode.IsEmpty());
+	public bool IsEmpty => States.Values.All(IsEmptyTile);
 
 	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
 	public PuzzleData(int size = DefaultSize) : base(size) { }
