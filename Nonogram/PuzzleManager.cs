@@ -1,5 +1,3 @@
-using Godot;
-
 namespace RSG.Nonogram;
 
 using static PuzzleData;
@@ -10,7 +8,6 @@ public interface IRefresh<TNode, TConfig>
 }
 public sealed partial class PuzzleManager
 {
-	public enum Type { Game, Display, Paint }
 
 	internal static PuzzleManager Instance => field ??= new();
 
