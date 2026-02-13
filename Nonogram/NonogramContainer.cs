@@ -17,23 +17,7 @@ public sealed partial class NonogramContainer : PanelContainer
 	public NonogramBackground Background { get; } = new NonogramBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Display Display { get; } = new Display.Default();
-
-	private PuzzleManager.Type _type;
-
 	public override void _Ready() => this
 		.Add(Background, Display, CompletionScreen)
 		.Preset(LayoutPreset.FullRect);
-
-	public void SetType(PuzzleManager.Type value, IColours colours)
-	{
-		switch (_type)
-		{
-
-		}
-		_type = value;
-		switch (value)
-		{
-
-		}
-	}
 }
