@@ -4,6 +4,8 @@ namespace RSG.Nonogram;
 
 using static Display;
 
+public interface IHints<T> { NodePool<HintPosition, Hint, T> Hints { get; } }
+
 public sealed partial class Hint : PanelContainer
 {
 	public const string Empty = "0";
