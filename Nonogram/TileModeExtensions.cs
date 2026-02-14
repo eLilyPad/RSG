@@ -2,20 +2,21 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static Display;
+using Mode = Display.TileMode;
 
 public static class TileModeExtensions
 {
-	public static void PlayAudio(this TileMode mode)
+	public static void PlayAudio(this Mode mode)
 	{
 		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
 	}
-	public static AudioStream? AsAudioStream(this TileMode mode) => mode switch
+	public static AudioStream? AsAudioStream(this Mode mode) => mode switch
 	{
-		TileMode.Filled => Audio.NonogramSounds.FillTileClicked,
-		TileMode.Blocked => Audio.NonogramSounds.BlockTileClicked,
+		Mode.Filled => Audio.NonogramSounds.FillTileClicked,
+		Mode.Blocked => Audio.NonogramSounds.BlockTileClicked,
 		_ => null
 	};
+	public static Mode Normalize(this Mode value) => value switch { Mode.Blocked => Mode.Clear, _ => value };
 	//public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
 	//	expected == current
 	//	&& !(newValue is TileMode.Blocked && current is TileMode.Clear);
