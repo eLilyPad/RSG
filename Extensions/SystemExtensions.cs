@@ -1,3 +1,5 @@
+using System.Data;
+
 namespace RSG.Extensions;
 
 public static class SystemExtensions
@@ -25,6 +27,19 @@ public static class SystemExtensions
 			}
 		}
 		return hints;
+	}
+	public static void ForceMatch<TKey, TValue>(this IDictionary<TKey, TValue> value, IImmutableDictionary<TKey, TValue> other, Func<TValue> match)
+	{
+		foreach (TKey position in value.Keys)
+		{
+			if (other.ContainsKey(position)) continue;
+			value[position] = match();
+		}
+		IEnumerable<TKey> excess = value.Keys.Exclude(other.Keys);
+		foreach (TKey position in excess)
+		{
+			value.Remove(position);
+		}
 	}
 	public static IEnumerable<T> Exclude<T>(this IEnumerable<T> list, IEnumerable<T> exceptions) => list
 		.Where(v => !exceptions.Contains(v));
