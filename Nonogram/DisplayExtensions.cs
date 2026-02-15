@@ -44,27 +44,19 @@ public static class DisplayExtensions
 	public static IEnumerable<KeyValuePair<Vector2I, T>> AllInLines<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position
-	)
-	{
-		return tiles.Where(pair => pair.Key.EitherEqual(position));
-	}
+	) => tiles.Where(pair => pair.Key.EitherEqual(position));
 	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position,
 		Side side
-	)
+	) => tiles
+		.Where(pair => side.IndexFrom(pair.Key) == side.IndexFrom(position))
+		.OrderBy(pair => side.OrderFrom(pair.Key));
+	public static string CalculateHints(this IEnumerable<KeyValuePair<Vector2I, TileMode>> tiles, HintPosition position)
 	{
-		return tiles
-			.Where(pair => side.IndexFrom(pair.Key) == side.IndexFrom(position))
-			.OrderBy(pair => side.OrderFrom(pair.Key));
-	}
-	public static string CalculateHints(this IImmutableDictionary<Vector2I, TileMode> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value is TileMode.Filled ? 1 : 0);
-	}
-	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value.Button.Text is Tile.FillText ? 1 : 0);
+		return tiles.CalculateHints(position, selector);
+		static int selector(TileMode value) => value is TileMode.Filled ? 1 : 0;
+
 	}
 	private static string CalculateHints<TValue>(
 		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
