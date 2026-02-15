@@ -3,6 +3,11 @@ using Godot;
 
 namespace RSG.Nonogram;
 
+public interface ICalculateHints
+{
+	string CalculateHints(Display.HintPosition position) => Hint.Empty;
+}
+
 public abstract partial class Display
 {
 	public readonly record struct HintPosition(Side Side, int Index)
@@ -30,7 +35,7 @@ public abstract partial class Display
 		);
 	}
 
-	public abstract record Data
+	public abstract record Data : ICalculateHints
 	{
 		public static class PropertyNames
 		{
@@ -63,6 +68,33 @@ public abstract partial class Display
 			Tiles = (Vector2I.One * size).GridRange().ToDictionary(
 				elementSelector: position => selector(position) ? TileMode.Filled : TileMode.Clear
 			);
+		}
+		public string CalculateHints(HintPosition position)
+		{
+			System.Text.StringBuilder builder = new();
+			int run = 0;
+			string format = position.Side.AsFormat();
+			foreach ((Vector2I _, TileMode mode) in Tiles.OrderedLine(position))
+			{
+				if ((mode is TileMode.Filled ? 1 : 0) > 0)
+				{
+					run++;
+					continue;
+				}
+				if (run <= 0) continue;
+				builder.Append(run);
+				builder.Append(format);
+				run = 0;
+
+			}
+			if (run > 0)
+			{
+				builder.Append(run);
+				builder.Append(format);
+			}
+			return builder.Length > 0
+				? builder.ToString()
+				: Hint.Empty + format;
 		}
 	}
 
