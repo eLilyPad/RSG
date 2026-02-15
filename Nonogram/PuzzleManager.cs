@@ -17,20 +17,12 @@ public sealed partial class PuzzleManager
 	];
 	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
 	public static IList<SaveData> GetSavedPuzzles() => FileManager.GetSaved();
-	public static void Save(OneOf<PuzzleData, SaveData> puzzle)
+	public static SaveData Save(SaveData puzzle)
 	{
-		puzzle.Switch(Puzzle, Savable);
-		static void Savable(SaveData save)
-		{
-			save = save with { Name = save.Name + " save" };
-			FileManager.Save(save);
-			Instance.Puzzles[save.Name] = save;
-		}
-		static void Puzzle(PuzzleData data)
-		{
-			FileManager.Save(data);
-			Instance.Puzzles[data.Name] = data;
-		}
+		puzzle = puzzle with { Name = puzzle.Name + " save" };
+		FileManager.Save(puzzle);
+		Instance.Puzzles[puzzle.Name] = puzzle;
+		return puzzle;
 	}
 
 	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];
