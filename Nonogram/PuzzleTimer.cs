@@ -2,7 +2,12 @@ namespace RSG.Nonogram;
 
 public static class PuzzleTimerExtensions
 {
-
+	public static SaveData DisplayTimer<T>(this SaveData save, T config)
+	where T : IPuzzleTimer.IHave
+	{
+		config.Timer.Elapsed = save.TimeTaken;
+		return save;
+	}
 }
 
 public interface IPuzzleTimer
