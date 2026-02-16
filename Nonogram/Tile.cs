@@ -22,8 +22,6 @@ public sealed partial class Tile : PanelContainer
 		public required Locker LockRules { get; init; }
 		public Vector2 TileSize { get; private set; } = Vector2.One;
 
-		//public 
-
 		public void Update(int size)
 		{
 			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
