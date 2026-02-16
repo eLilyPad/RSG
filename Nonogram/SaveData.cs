@@ -41,7 +41,7 @@ public sealed partial record SaveData : Display.Data
 			BlockCompletedLine(side: Display.Side.Row);
 			BlockCompletedLine(side: Display.Side.Column);
 		}
-		if (!timer.Running && mode is Mode.Filled) timer.Running = true;
+		timer.TryStart(inputMode: mode);
 		if (IsComplete) eventHandler?.Completed(this);
 
 		void BlockCompletedLine(Display.Side side)

@@ -34,4 +34,12 @@ public sealed class PuzzleTimer
 		if (!Running) return;
 		Elapsed += TimeSpan.FromSeconds(delta);
 	}
+	public void TryStart(Display.TileMode inputMode)
+	{
+		if (Running || inputMode is not Display.TileMode.Filled)
+		{
+			return;
+		}
+		Running = true;
+	}
 }

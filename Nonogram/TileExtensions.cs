@@ -21,6 +21,11 @@ public static class TileExtensions
 	{
 		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
 	}
+	public static bool IsValidInput(this TileMode current, ref TileMode next)
+	{
+		next = next == current ? TileMode.Clear : next;
+		return !TileMode.Clear.AllEqual(current, next);
+	}
 	public static AudioStream? AsAudioStream(this TileMode mode) => mode switch
 	{
 		TileMode.Filled => Audio.NonogramSounds.FillTileClicked,
