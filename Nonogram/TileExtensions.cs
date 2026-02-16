@@ -27,10 +27,4 @@ public static class TileExtensions
 		TileMode.Blocked => Audio.NonogramSounds.BlockTileClicked,
 		_ => null
 	};
-	public static string AsText(this TileMode mode) => mode switch
-	{
-		TileMode.Blocked => BlockText,
-		TileMode.Filled => FillText,
-		_ => EmptyText,
-	};
 }
