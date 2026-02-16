@@ -3,12 +3,6 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-public interface IDisplayPools<TTiles, THints>
-{
-	TTiles Tiles { get; }
-	THints Hints { get; }
-}
-
 public interface IContainHints
 {
 	VBoxContainer Rows { get; }

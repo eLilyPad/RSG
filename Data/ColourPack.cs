@@ -10,8 +10,15 @@ using Mode = Nonogram.Display.TileMode;
 public static class ColoursPackExtensions
 {
 	public static TCore SetColours<TCore, TNonogram>(this TCore config)
-	where TCore : IHaveColours<Nonogram.IColours>, IHaveCurrent<TNonogram>
-	where TNonogram : NonogramContainer.IHave, IAlternate, SaveData.IHave, IDisplayType, ITiles<NodePool<Vector2I, Nonogram.Tile, TNonogram>, TNonogram>
+	where TCore :
+		IHaveColours<Nonogram.IColours>,
+		IHaveCurrent<TNonogram>
+	where TNonogram :
+		NonogramContainer.IHave,
+		IAlternate,
+		SaveData.IHave,
+		IDisplayType,
+		ITiles<TNonogram>
 	{
 		config.Nonogram.SetColours(config.Colours);
 		return config;
@@ -22,18 +29,18 @@ public static class ColoursPackExtensions
 		SaveData.IHave,
 		IAlternate,
 		IDisplayType,
-		ITiles<NodePool<Vector2I, Nonogram.Tile, TCurrent>, TCurrent>
+		ITiles<TCurrent>
 	{
 		value ??= ColourPack.Default;
 		config.UI.Background.ColorBackground.Color = config.Type.Background(value);
 		config.UI.Display.Spacer.Timer.Background.Color = value.NonogramTimerBackground;
 		foreach ((Vector2I position, Nonogram.Tile tile) in config.Tiles)
 		{
-			tile.SetColours(position, config, value);
+			config.SetColours(tile, position, value);
 		}
 		return config;
 	}
-	public static Nonogram.Tile SetColours<T>(this Nonogram.Tile tile, Vector2I position, T config, Nonogram.IColours? value = null)
+	public static Nonogram.Tile SetColours<T>(this T config, Nonogram.Tile tile, Vector2I position, Nonogram.IColours? value = null)
 	where T : SaveData.IHave, IAlternate
 	{
 		Mode mode = config.Puzzle.States.GetValueOrDefault(position);
@@ -43,7 +50,6 @@ public static class ColoursPackExtensions
 	{
 		value ??= ColourPack.Default;
 
-		//mode ??= tile.Mode;
 		Color tileColour = value.NonogramTileBackground(mode, alternative: isAlternative);
 		Color lockedColour = value.NonogramLockedBorder(mode);
 		tile.Button.OverrideStyle(modify: (StyleBoxFlat style) =>

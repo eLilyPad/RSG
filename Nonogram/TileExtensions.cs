@@ -4,122 +4,91 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-public interface ITiles<T, TConfig> where T : NodePool<Vector2I, Tile, TConfig> { T Tiles { get; } }
+public interface ITiles<T> { NodePool<Vector2I, Tile, T> Tiles { get; } }
 public static class TileExtensions
 {
-	public static TConfig SetTileHovering<TPool, TConfig>(this TConfig config, Vector2I position, bool value)
-	where TPool : NodePool<Vector2I, Tile, TConfig>
-	where TConfig : ITiles<TPool, TConfig>
+	const int UnlockedWidth = 0, LockedWidth = 2;
+	public static bool TryLock<T>(this T config, Vector2I position)
+	where T : ITiles<T>, Tile.ILocker, IDisplayType
 	{
-		IEnumerable<KeyValuePair<Vector2I, Tile>> tiles = config.Tiles.AllInLines(position);
-		foreach ((Vector2I _, Tile tile) in tiles)
-		{
-			tile.Button.SetHovering(hovering: value);
-		}
-		return config;
+		Tile tile = config.Tiles.GetOrCreate(position, config);
+		bool shouldLock = config.ShouldLock(position);
+		if (!shouldLock) return false;
+		tile.Button.SetLocked(locked: shouldLock);
+		return true;
 	}
-	public static Button SetHovering(this Button tile, bool hovering)
+	public static bool TryGetLocked<TConfig>(this TConfig config, Vector2I position)
+	where TConfig : ITiles<TConfig>, SaveData.IHave
 	{
-		tile.Scale = Vector2.One * (hovering ? .9f : 1);
+		config.Tiles.GetOrCreate(position, config).Button.IsLocked(out bool locked);
+		return locked;
+	}
+	public static Button IsLocked(this Button tile, out bool locked)
+	{
+		int width = -1;
+		tile.OverrideStyle((StyleBoxFlat style) =>
+		{
+			width = style.GetBorderWidthMin();
+			return style;
+		});
+		locked = width is LockedWidth;
 		return tile;
 	}
 	public static Button SetLocked(this Button tile, bool locked)
 	{
 		tile.OverrideStyle((StyleBoxFlat style) =>
 		{
-			style.SetBorderWidthAll(locked ? 2 : 0);
+			style.SetBorderWidthAll(locked ? LockedWidth : UnlockedWidth);
 			return style;
 		});
 		return tile;
 	}
-	public static Tile SetDisplay<T, TPool>(this T config, Vector2I position, Tile? tile = null)
-	where T : SaveData.IHave, Tile.ILocker, ITiles<TPool, T>
-	where TPool : NodePool<Vector2I, Tile, T>
-	{
-		Tile backup = config.Tiles.GetOrCreate(position, config);
-		tile ??= backup;
-		Assert(tile == backup);
-		return tile.SetDisplay(position, config);
-	}
-	public static Tile SetDisplay<T>(this Tile tile, Vector2I position, T config)
-	where T : SaveData.IHave, Tile.ILocker
-	{
-		const TileMode defaultValue = TileMode.Clear;
-		TileMode tileMode = config.Puzzle.States.GetValueOrDefault(position, defaultValue);
-		tile.SetColours(Core.Colours);
-		tile.Locked = config.ShouldLock(position);
-		Assert(tile.Mode == tileMode);
-		return tile;
-	}
-	public static Tile SetGridPosition(this Tile tile, Vector2I position, in int chunkSize)
-	{
-		(int x, int y) = position;
-		tile.IsAlternative = (x / chunkSize + y / chunkSize) % 2 == 0;
-		tile.Name = $"Tile (X: {x}, Y: {y})";
-		return tile;
-	}
-}
-public static class TileModeExtensions
-{
-	public static bool IsEmpty(this TileMode mode) => mode is TileMode.NULL or TileMode.Clear;
-	public static bool ShouldIgnore(this TileMode expected, TileMode current, TileMode newValue) =>
-		expected == current
-		&& !(newValue is TileMode.Blocked && current is TileMode.Clear);
-	public static bool IsCorrect<TKey>(this IImmutableDictionary<TKey, TileMode> tiles, TKey position, TileMode current)
-	{
-		if (!tiles.TryGetValue(position, out TileMode expected)) return false;
-		return current.IsCorrectMode(expected);
-	}
-	public static bool IsCorrectMode(this TileMode current, TileMode expected) => expected switch
-	{
-		TileMode.Filled when current is TileMode.Filled => true,
-		TileMode.Clear when current is TileMode.Clear or TileMode.Blocked => true,
-		_ => false
-	};
 
-	public static double ToDouble(this TileMode mode) => mode switch
+	public static bool TryGetMode<TConfig>(this TConfig config, Vector2I position, out TileMode value)
+	where TConfig : ITiles<TConfig>, SaveData.IHave
 	{
-		TileMode.Blocked => 2,
-		TileMode.Filled => 1,
-		_ => 0,
-	};
-	public static TileMode Change(this TileMode input, TileMode currents) => input switch
-	{
-		TileMode.NULL => currents,
-		TileMode mode when mode == currents => TileMode.Clear,
-		TileMode mode => mode
-	};
-	public static TileMode ToTileMode(this int mode) => mode switch
-	{
-		2 => TileMode.Blocked,
-		1 => TileMode.Filled,
-		_ => 0,
-	};
-	public static TileMode FromText(this string mode) => mode switch
-	{
-		Tile.BlockText => TileMode.Blocked,
-		Tile.FillText => TileMode.Filled,
-		Tile.EmptyText => TileMode.Clear,
-		_ => TileMode.NULL
-	};
-	public static void PlayAudio(this TileMode mode)
-	{
-		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
+		value = TileMode.NULL;
+		TileMode expectedMode = config.Puzzle.States.GetValueOrDefault(position);
+		Tile tile = config.Tiles.GetOrCreate(key: position, config);
+		IColours colours = Core.DefaultColours;
+		Color expectedColour = colours.NonogramTileBackground(expectedMode, false);
+		Color expectedColourOther = colours.NonogramTileBackground(expectedMode, true);
+		Color currentColour = Colors.Transparent;
+		tile.OverrideStyle((StyleBoxFlat style) =>
+		{
+			currentColour = style.BgColor;
+			return style;
+		});
+		bool isSameMode = expectedColour == currentColour || expectedColourOther == currentColour;
+		if (isSameMode)
+		{
+			value = expectedMode;
+			return true;
+		}
+		return false;
 	}
-	public static AudioStream? AsAudioStream(this TileMode mode) => mode switch
+
+	public static TConfig SetTileHovering<TConfig>(this TConfig config, Vector2I position, bool value)
+	where TConfig : ITiles<TConfig>
 	{
-		TileMode.Filled => Audio.NonogramSounds.FillTileClicked,
-		TileMode.Blocked => Audio.NonogramSounds.BlockTileClicked,
-		_ => null
-	};
-	public static string AsText<T>(this IImmutableDictionary<T, TileMode> modes, T position) where T : notnull
-	{
-		return modes.GetValueOrDefault(position, TileMode.Clear).AsText();
+		IEnumerable<KeyValuePair<Vector2I, Tile>> tiles = config.Tiles.AllInLines(position);
+		foreach ((Vector2I _, Tile tile) in tiles)
+		{
+			tile.Button.Scale = Vector2.One * (value ? .9f : 1);
+		}
+		return config;
 	}
-	public static string AsText(this TileMode mode) => mode switch
+
+	public static T SetDisplay<T>(this T config, Vector2I position)
+	where T : SaveData.IHave, Tile.ILocker, IAlternate, ITiles<T>
 	{
-		TileMode.Blocked => Tile.BlockText,
-		TileMode.Filled => Tile.FillText,
-		_ => Tile.EmptyText,
-	};
+		Tile tile = config.Tiles.GetOrCreate(position, config);
+		TileMode mode = config.Puzzle.States.GetValueOrDefault(position);
+		(int x, int y) = position;
+		tile.Name = $"Tile (X: {x}, Y: {y})";
+		bool isAlternative = config.IsAlternative(position);
+		tile.SetColours(mode, isAlternative, Core.DefaultColours);
+		tile.Button.SetLocked(locked: config.ShouldLock(position));
+		return config;
+	}
 }

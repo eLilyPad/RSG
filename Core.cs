@@ -9,7 +9,7 @@ using Minesweeper;
 using Dialogue;
 using RSG.Console;
 
-public sealed partial class Core : Node
+public sealed partial class Core : Node, IHaveCurrent<CurrentPuzzle>, IHaveColours<ColourPack>
 {
 	private sealed class NonogramEvents(Core core) : IManagePuzzle, PuzzleCompleteScreen.IHandleSignals
 	{
@@ -110,7 +110,7 @@ public sealed partial class Core : Node
 
 			current.UI.Show();
 			current.Type = PuzzleManager.Type.Paint;
-			current.Puzzle = new(new(10));
+			current.Puzzle = new SaveData { Expected = new(10) };
 		}
 		public void LevelsPressed()
 		{
@@ -244,14 +244,14 @@ public sealed partial class Core : Node
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	MinesweeperTexturesPath = "res://Data/MinesweeperTextures.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
-	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
+	public static ColourPack DefaultColours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
 
 	public CoreUI Container
 	{
 		get
 		{
 			if (field is not null) return field;
-			CoreUI ui = new CoreUI() { Name = "Core UI", Colours = Colours }
+			CoreUI ui = new CoreUI() { Name = "Core UI", Colours = DefaultColours }
 				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 			AddChild(ui);
 			ui.Menu.Signals = Handler;
@@ -292,16 +292,18 @@ public sealed partial class Core : Node
 		}
 	}
 
+	public ColourPack Colours { get; set; } = DefaultColours;
+
 	private EventHandler Handler => field ??= new(this);
 	private NonogramEvents NonogramHandler => field ??= new(this);
 
-	private CurrentPuzzle Nonogram => field ??= CurrentPuzzle
+	public CurrentPuzzle Nonogram => field ??= CurrentPuzzle
 		.Create(Container)
 		.ChangeEvents(NonogramHandler)
-		.SetColours(Colours)
+		.SetColours()
 		.AddNonogramCommands();
 	private Manager Minesweeper => field ??= Manager
-		.Create(Container, Colours, Handler, Container.Menu)
+		.Create(Container, DefaultColours, Handler, Container.Menu)
 		.AddMinesweeperCommands();
 
 	public override void _Ready()

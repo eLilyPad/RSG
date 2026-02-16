@@ -232,14 +232,14 @@ public sealed record PuzzleData : Display.Data
 		}
 		public static PuzzleSelector.PackDisplay.Config Convert(Pack pack)
 		{
-			return new(pack.Name, pack.Puzzles.Select(puzzle => new SaveData(expected: puzzle)));
+			return new(pack.Name, pack.Puzzles.Select(puzzle => new SaveData { Expected = puzzle }));
 		}
 
 		public string Name { get; init; } = "Pack";
 		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
 
-	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
+	public static explicit operator SaveData(PuzzleData puzzle) => new() { Expected = puzzle };
 	private static bool IsEmptyTile(Display.TileMode mode) => mode is Display.TileMode.NULL or Display.TileMode.Clear;
 
 	public string DialogueName { get; init; } = string.Empty;

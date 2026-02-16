@@ -1,32 +1,36 @@
-using GameTools;
 using Godot;
-using RSG.Console;
-
 
 namespace RSG.Nonogram;
 
 using static PuzzleManager;
-using static CurrentPuzzle;
 using static Display;
 
-public interface ICurrentData : IPuzzleTimer.IHave, Settings.IHave, SaveData.IHave;
-public interface IDisplay : IDisplayType, NonogramContainer.IHave;
-public interface ICurrentPuzzle : IDisplay, ICurrentData, Tile.ILocker, IHavePuzzleEvents;
-public interface IDisplayType { Type Type { get; set; } }
 public interface IReadyPuzzle { bool PuzzleReady { get; } }
-public interface IManagePuzzle
+public interface IManageGamePuzzle
 {
 	void Completed(SaveData puzzle);
+}
+public interface IManagePuzzle : IManageGamePuzzle
+{
 	void SettingsChanged();
 }
+public interface IAlternate { bool IsAlternative(Vector2I position); }
 public interface IHavePuzzleEvents { IManagePuzzle? EventHandler { get; set; } }
+public interface IHaveCurrent<T> { T Nonogram { get; } }
 public sealed record class CurrentPuzzle :
-	ICurrentPuzzle,
+	NonogramContainer.IHave,
+	ITiles<CurrentPuzzle>,
+	IHints<CurrentPuzzle>,
+	IPuzzleTimer.IHave,
+	IHavePuzzleEvents,
+	Settings.IHave,
+	SaveData.IHave,
+	IDisplayType,
 	IReadyPuzzle,
 	Tile.ILocker,
-	IDisplayPools<PuzzleTiles, PuzzleHints>
+	IAlternate
 {
-	public sealed class GameTimer<T>(T Current) : IPuzzleTimer
+	private sealed class GameTimer<T>(T Current) : IPuzzleTimer
 	where T : NonogramContainer.IHave, SaveData.IHave, IPuzzleTimer.IHave
 	{
 		public TimeSpan Elapsed { get; set => ChangeTime(field = value); }
@@ -37,77 +41,118 @@ public sealed record class CurrentPuzzle :
 			Current.SetTimeText(time: value);
 		}
 	}
-	public sealed class PuzzleHints : NodePool<HintPosition, Hint, CurrentPuzzle>, Tile.ISize
+	private sealed class PuzzleHints : NodePool<HintPosition, Hint, CurrentPuzzle>, Tile.ISize
 	{
 		public Vector2 TileSize { get; set; } = Vector2.Zero;
 		public override void Refresh(HintPosition position, CurrentPuzzle config)
 		{
 			Assert(config.Type is Type.Game or Type.Paint);
 			Hint hint = GetOrCreate(position, config);
-			IImmutableDictionary<Vector2I, TileMode> states = config.Type switch
-			{
-				Type.Paint => config.Puzzle.States,
-				_ => config.Puzzle.Expected.States,
-			};
-			hint.Label.Text = states.CalculateHints(position);
+			hint.Label.Text = config.Puzzle.CalculateHints(position);
 			hint.CustomMinimumSize = TileSize;
 		}
 		public override Node Parent(HintPosition position, CurrentPuzzle value) => value.HintsParent(side: position.Side);
 		protected override Hint Create(HintPosition position, CurrentPuzzle value) => Hint
-			.Create(position, Core.Colours);
+			.Create(position, Core.DefaultColours);
 	}
-	public sealed class PuzzleTiles : NodePool<Vector2I, Tile, CurrentPuzzle>, Tile.ISize
+	private sealed class PuzzleTiles : NodePool<Vector2I, Tile, CurrentPuzzle>, Tile.ISize
 	{
 		public const int ChunkSize = 5;
-		const TileMode defaultValue = TileMode.Clear;
 		public Vector2 TileSize { get; set; } = Vector2.Zero;
-		public override void Refresh(Vector2I position, Tile tile, CurrentPuzzle current)
+		public override void Refresh(Vector2I position, Tile tile, CurrentPuzzle current) => current
+			.SetDisplay(position)
+			.SetColours(tile, position, value: Core.DefaultColours);
+
+		public override Node Parent(Vector2I key, CurrentPuzzle current) => current.UI.Display.TilesGrid;
+		protected override Tile Create(Vector2I position, CurrentPuzzle current)
 		{
-			Tile.ILocker locker = current;
-			tile.Mode = current.Puzzle.States.GetValueOrDefault(position, defaultValue);
-			tile.IsAlternative = (position.X / ChunkSize + position.Y / ChunkSize) % 2 == 0;
-			tile.Locked = locker.ShouldLock(position);
-		}
-		public override Node Parent(Vector2I key, CurrentPuzzle value) => value.UI.Display.TilesGrid;
-		protected override Tile Create(Vector2I position, CurrentPuzzle value)
-		{
-			return Tile.CreatePooled(
-				position,
-				colours: Core.Colours,
-				hover: HoverTile,
-				activate: value.Input(tiles: value.Tiles, hints: value.Hints)
-			);
-			void HoverTile(bool hovering)
-			{
-				var tiles = _nodes.AllInLines(position);
-				foreach ((Vector2I _, Tile tile) in tiles) tile.Hovering = hovering;
-			}
+			Tile tile = new() { ButtonSignals = new TileConnection(position, current) };
+			current
+				.SetDisplay(position)
+				.SetColours(tile, position, value: Core.DefaultColours);
+			return tile
+				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 		}
 	}
+	private sealed class TileConnection(Vector2I position, CurrentPuzzle current) : Tile.IConnectButton
+	{
+		public void Pressed() => current.Input(position);
+		public void MouseExited() => current.SetTileHovering(position, false);
+		public void MouseEntered() => current
+			.SetTileHovering(position, true)
+			.Input(position);
+	}
+	private sealed class DataConnection<T>(T Current) : SaveData.IEvents
+	where T :
+		IHints<T>,
+		ITiles<T>,
+		NonogramContainer.IHave,
+		IDisplayType,
+		Settings.IHave,
+		IPuzzleTimer.IHave,
+		IHavePuzzleEvents,
+		SaveData.IHave,
+		Tile.ILocker,
+		IAlternate
+	{
+		public void Changed(Vector2I position)
+		{
+			TileMode currentMode = Current.Puzzle.States.GetValueOrDefault(position);
+			Current.SetDisplay(position);
+			switch (Current.Type)
+			{
+				case Type.Game:
+					Current.Timer.TryRun(currentMode);
+					break;
+				case Type.Paint:
+					Current.Hints.Refresh(Current);
+					break;
+			}
+		}
 
+		public void Completed() => Current.EventHandler?.Completed(Current.Puzzle);
+	}
 	public static CurrentPuzzle Create(Node parent)
 	{
 		CurrentPuzzle current = new();
 		parent.AddChild(current.UI);
 		return current;
 	}
-
 	public IPuzzleTimer Timer => field ??= new GameTimer<CurrentPuzzle>(Current: this);
 	public NonogramContainer UI { get; init; } = new NonogramContainer { Name = "Nonogram", Visible = false }
 		.Preset(Control.LayoutPreset.FullRect);
-	public PuzzleTiles Tiles => field ??= new();
-	public PuzzleHints Hints => field ?? new();
+	public NodePool<Vector2I, Tile, CurrentPuzzle> Tiles => field ??= new PuzzleTiles();
+	public NodePool<HintPosition, Hint, CurrentPuzzle> Hints => field ?? new PuzzleHints();
 	public IManagePuzzle? EventHandler { get; set; }
 	public bool PuzzleReady => !Puzzle.Expected.IsEmpty;
 	public Type Type { get; set => this.ChangeType(ref field, value); } = Type.Game;
-	public Settings Settings { get; set => ChangeSettings(value: field = value); } = new();
-	public SaveData Puzzle { get; set => this.ChangePuzzle(field = value, Tiles, Hints); } = new();
+	public Settings Settings { get; set => Set(ref field, value); } = new();
+	public SaveData Puzzle { get; set => Set(ref field, value); } = new();
 	public IImmutableList<Func<Vector2I, bool>> Rules => field ??= [
-		(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
-		(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
+		(position) => Type is Type.Game && Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
+		(position) => Type is Type.Game && Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
 	];
 
+	private SaveData.IEvents SaveEvents => field ??= new DataConnection<CurrentPuzzle>(this);
+
 	private CurrentPuzzle() { }
-	private void ChangeSettings(Settings value) => EventHandler?.SettingsChanged();
+	public bool IsAlternative(Vector2I position)
+	{
+		return (position.X / PuzzleTiles.ChunkSize + position.Y / PuzzleTiles.ChunkSize) % 2 == 0;
+	}
+
+	private void Set(ref Settings field, Settings value)
+	{
+		field = value;
+		EventHandler?.SettingsChanged();
+	}
+	private void Set(ref SaveData field, SaveData value)
+	{
+		field.Disconnect(SaveEvents);
+		field = Save(value)
+			.ConnectTo(SaveEvents)
+			.DisplayTimer(config: this)
+			.DisplayPuzzle(config: this);
+	}
 }
 
