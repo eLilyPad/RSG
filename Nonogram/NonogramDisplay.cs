@@ -38,18 +38,4 @@ public abstract partial class Display : AspectRatioContainer
 	public override sealed void _Ready() => this.Add(
 		Margin.Add(Grid.Add(Spacer.Add(Timer), Columns, Rows, TilesGrid))
 	);
-	public void ResetTheme()
-	{
-		const int marginValue = 100, spacerValue = 1;
-		Grid.AddThemeConstantOverride("h_separation", 1);
-		Grid.AddThemeConstantOverride("v_separation", 1);
-		Rows.AddThemeConstantOverride("separation", spacerValue);
-		Columns.AddThemeConstantOverride("separation", spacerValue);
-		Margin.AddThemeConstantOverride("margin_top", marginValue);
-		Margin.AddThemeConstantOverride("margin_bottom", marginValue / 2);
-		TilesGrid.AddThemeConstantOverride("h_separation", 0);
-		TilesGrid.AddThemeConstantOverride("v_separation", 0);
-		TilesGrid.AddThemeConstantOverride("h_separation", spacerValue);
-		TilesGrid.AddThemeConstantOverride("v_separation", spacerValue);
-	}
 }
