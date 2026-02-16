@@ -98,61 +98,59 @@ public sealed record SaveData : Display.Data
 			}
 		}
 	}
-	internal sealed class AutoCompleter
+	internal readonly record struct InputEvent(
+		Vector2I Position,
+		Settings Settings,
+		Display.Type Type,
+		Mode Mode
+	);
+	internal void HandleUserInput(
+		InputEvent input,
+		Tile.Pool tiles,
+		PuzzleTimer timer,
+		PuzzleManager.IHaveEvents? eventHandler
+	)
 	{
-		public required Tile.Pool Tiles { private get; init; }
-		public void BlockCompletedLines(SaveData save, Vector2I position, Settings settings)
+		const Mode defaultValue = Mode.NULL;
+		(Vector2I position, Settings settings, Display.Type _, Mode mode) = input;
+
+		if (mode is defaultValue) return;
+		Tile tile = tiles.GetOrCreate(position);
+
+		Assert(States.ContainsKey(position), $"No current tile in the data");
+		Mode current = States[position];
+		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
+
+		mode = mode == current ? Mode.Clear : mode;
+
+		if (Mode.Clear.AllEqual(current, mode)) return;
+		if (tile.Locked) return;
+		mode.PlayAudio();
+		ChangeState(position, mode: tile.Mode = mode);
+		BlockCompletedLines(tiles, position, settings);
+
+		if (tiles.LockRules.ShouldLock(position)) tile.Locked = true;
+		if (!timer.Running && mode is Mode.Filled) timer.Running = true;
+		if (IsComplete) eventHandler?.Completed(this);
+	}
+	private void BlockCompletedLines(Tile.Pool tiles, Vector2I position, Settings settings)
+	{
+		if (!settings.LineCompleteBlockRest) return;
+		BlockCompletedLine(side: Display.Side.Row);
+		BlockCompletedLine(side: Display.Side.Column);
+		void BlockCompletedLine(Display.Side side)
 		{
-			if (!settings.LineCompleteBlockRest) return;
-			BlockCompletedLine(save, position, side: Display.Side.Row);
-			BlockCompletedLine(save, position, side: Display.Side.Column);
-		}
-		private void BlockCompletedLine(SaveData save, Vector2I position, Display.Side side)
-		{
-			if (!save.IsLineComplete(position, side)) { return; }
-			foreach ((Vector2I linePosition, Mode lineMode) in save.Tiles.InLine(position, side))
+			if (!IsLineComplete(position, side)) { return; }
+			foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
 			{
 				if (lineMode is Mode.Filled) continue;
-				Tile tile = Tiles.GetOrCreate(linePosition);
+				Tile tile = tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
-				save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				tile.Locked = Tiles.LockRules.ShouldLock(position);
+				ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
+				tile.Locked = tiles.LockRules.ShouldLock(position);
 			}
 		}
 	}
-	internal sealed class UserInput
-	{
-		public required AutoCompleter Completer { private get; init; }
-		public required PuzzleTimer Timer { private get; init; }
-		public required Tile.Pool Tiles { private get; init; }
-
-		public void GameInput(SaveData save, Vector2I position, Settings settings, PuzzleManager.IHaveEvents? eventHandler)
-		{
-			const Mode defaultValue = Mode.NULL;
-
-			Mode input = Display.PressedMode;
-			if (input is defaultValue) return;
-			IImmutableDictionary<Vector2I, Mode> saved = save.States;
-			Tile tile = Tiles.GetOrCreate(position);
-
-			Assert(saved.ContainsKey(position), $"No current tile in the data");
-			Mode current = saved[position];
-			Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
-
-			input = input == current ? Mode.Clear : input;
-
-			if (Mode.Clear.AllEqual(current, input)) return;
-			if (tile.Locked) return;
-			input.PlayAudio();
-			save.ChangeState(position, mode: tile.Mode = input);
-			Completer.BlockCompletedLines(save, position, settings);
-
-			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
-			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
-			if (save.IsComplete) eventHandler?.Completed(save);
-		}
-	}
-
 
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
