@@ -20,13 +20,12 @@ public sealed partial record SaveData : Display.Data
 		PuzzleManager.IHaveEvents? eventHandler
 	)
 	{
-		const Mode defaultValue = Mode.NULL;
 		(Vector2I position, Settings settings, Display.Type _, Mode mode) = input;
+		Assert(States.ContainsKey(position), $"No current tile in the data");
+		Assert(mode is not Mode.NULL);
 
-		if (mode is defaultValue) return;
 		Tile tile = tiles.GetOrCreate(position);
 
-		Assert(States.ContainsKey(position), $"No current tile in the data");
 		Mode current = States[position];
 		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
 
@@ -35,14 +34,13 @@ public sealed partial record SaveData : Display.Data
 		if (Mode.Clear.AllEqual(current, mode)) return;
 		if (tile.Locked) return;
 		mode.PlayAudio();
-		ChangeState(position, mode: tile.Mode = mode);
-
+		ChangeState(position, mode);
+		tile.Mode = mode;
 		if (settings.LineCompleteBlockRest)
 		{
 			BlockCompletedLine(side: Display.Side.Row);
 			BlockCompletedLine(side: Display.Side.Column);
 		}
-
 		if (tiles.LockRules.ShouldLock(position)) tile.Locked = true;
 		if (!timer.Running && mode is Mode.Filled) timer.Running = true;
 		if (IsComplete) eventHandler?.Completed(this);
