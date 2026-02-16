@@ -25,12 +25,11 @@ public sealed partial record SaveData : Display.Data
 		Assert(States.ContainsKey(position), $"No current tile in the data");
 
 		Tile tile = tiles.GetOrCreate(position);
-
 		Mode current = States[position];
+
 		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
 
 		mode = mode == current ? Mode.Clear : mode;
-
 		if (Mode.Clear.AllEqual(current, mode)) return;
 		if (tile.Locked) return;
 
