@@ -21,8 +21,8 @@ public sealed partial record SaveData : Display.Data
 	)
 	{
 		(Vector2I position, Settings settings, Display.Type _, Mode mode) = input;
+		if (mode is Mode.NULL) return;
 		Assert(States.ContainsKey(position), $"No current tile in the data");
-		Assert(mode is not Mode.NULL);
 
 		Tile tile = tiles.GetOrCreate(position);
 
@@ -33,15 +33,15 @@ public sealed partial record SaveData : Display.Data
 
 		if (Mode.Clear.AllEqual(current, mode)) return;
 		if (tile.Locked) return;
+
 		mode.PlayAudio();
-		ChangeState(position, mode);
-		tile.Mode = mode;
+		ChangeMode(position, tile, mode);
+
 		if (settings.LineCompleteBlockRest)
 		{
 			BlockCompletedLine(side: Display.Side.Row);
 			BlockCompletedLine(side: Display.Side.Column);
 		}
-		if (tiles.LockRules.ShouldLock(position)) tile.Locked = true;
 		if (!timer.Running && mode is Mode.Filled) timer.Running = true;
 		if (IsComplete) eventHandler?.Completed(this);
 
@@ -53,10 +53,16 @@ public sealed partial record SaveData : Display.Data
 				if (lineMode is Mode.Filled) continue;
 				Tile tile = tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
-				ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				tile.Locked = tiles.LockRules.ShouldLock(position);
+				ChangeMode(position: linePosition, tile, mode: Mode.Blocked);
 			}
 		}
+		void ChangeMode(Vector2I position, Tile tile, Mode mode)
+		{
+			tile.Mode = mode;
+			ChangeState(position, mode);
+			_ = tiles.TryLock(position);
+		}
+
 	}
 
 	public PuzzleData Expected { get; init; } = new();

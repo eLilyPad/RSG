@@ -21,7 +21,13 @@ public sealed partial class Tile : PanelContainer
 	{
 		public required Locker LockRules { get; init; }
 		public Vector2 TileSize { get; private set; } = Vector2.One;
-
+		public bool TryLock(Vector2I position)
+		{
+			Tile tile = GetOrCreate(position);
+			bool locked = LockRules.ShouldLock(position);
+			if (locked) tile.Locked = true;
+			return locked;
+		}
 		public void Update(int size)
 		{
 			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
