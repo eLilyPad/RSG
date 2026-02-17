@@ -28,13 +28,6 @@ public static class HintExtensions
 }
 public static class DisplayExtensions
 {
-	public static string AsName(this Type type) => type switch
-	{
-		Type.Game => "Game",
-		Type.Paint => "Paint",
-		_ => "Puzzle Display"
-	};
-
 	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> OrderedLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		HintPosition position

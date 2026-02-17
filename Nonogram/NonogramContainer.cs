@@ -28,6 +28,8 @@ public sealed partial class NonogramContainer : PanelContainer
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public HBoxContainer Container { get; } = new HBoxContainer { Name = "Container" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public StudioBar Studio { get; } = new StudioBar { Name = "Studio" }
+		.Preset(LayoutPreset.FullRect);
 
 	public IColours Colours
 	{
