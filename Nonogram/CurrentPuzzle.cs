@@ -36,16 +36,16 @@ public sealed partial class PuzzleManager
 			}
 		}
 		public string CompletionDialogueName => Puzzle.Expected.DialogueName;
-		public List<Func<Vector2I, bool>> Rules => [
-			(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
-			(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
-		];
 
 		public NonogramContainer UI;
 
 		internal CurrentPuzzle()
 		{
-			UI = new NonogramContainer(Core.Colours, Rules, this) { Name = "Nonogram", Visible = false }
+			List<Func<Vector2I, bool>> rules = [
+				(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
+				(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
+			];
+			UI = new NonogramContainer(rules, puzzle: this) { Name = "Nonogram", Visible = false }
 				.Preset(Control.LayoutPreset.FullRect)
 				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 			Timer = new() { Provider = this };

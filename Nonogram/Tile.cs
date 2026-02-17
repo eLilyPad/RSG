@@ -17,10 +17,11 @@ public sealed partial class Tile : PanelContainer
 		void OnActivate(Vector2I position, Tile tile) { }
 		TileMode State(Vector2I position) => TileMode.Clear;
 	}
-	internal sealed class Pool(IProvider Provider, IColours Colours) : NodePool<Vector2I, Tile>
+	internal sealed class Pool(IProvider Provider) : NodePool<Vector2I, Tile>
 	{
 		public required Locker LockRules { get; init; }
 		public Vector2 TileSize { get; private set; } = Vector2.One;
+		public IColours Colours { private get; set; } = Core.Colours;
 		public bool TryLock(Vector2I position)
 		{
 			Tile tile = GetOrCreate(position);

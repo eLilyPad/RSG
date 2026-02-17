@@ -25,9 +25,10 @@ public sealed partial class NonogramContainer : PanelContainer
 		{
 			Background.ColorBackground.Color = value.NonogramBackground;
 			Display.Timer.Background.Color = value.NonogramTimerBackground;
+			Tiles.Colours = Hints.Colours = value;
 			field = value;
 		}
-	}
+	} = Core.Colours;
 	public int PuzzleSize
 	{
 		set
@@ -42,11 +43,10 @@ public sealed partial class NonogramContainer : PanelContainer
 	internal Tile.Pool Tiles { get; init; }
 	internal Hints Hints { get; init; }
 
-	internal NonogramContainer(IColours colours, List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
+	internal NonogramContainer(List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
 	{
-		Colours = colours;
-		Hints = new(Provider: puzzle, Colours: colours);
-		Tiles = new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = rules } };
+		Hints = new(Provider: puzzle);
+		Tiles = new(Provider: puzzle) { LockRules = new() { Rules = rules } };
 	}
 	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
 }

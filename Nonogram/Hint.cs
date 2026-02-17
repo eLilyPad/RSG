@@ -4,7 +4,7 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPosition, Hint>
+sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 {
 	internal interface IProvider
 	{
@@ -12,6 +12,7 @@ sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPo
 		string Text(HintPosition position);
 	}
 	public Vector2 TileSize { get; set; } = Vector2.Zero;
+	public IColours Colours { private get; set; } = Core.Colours;
 
 	public void Update(int size)
 	{
