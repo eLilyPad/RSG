@@ -46,10 +46,8 @@ public sealed partial record SaveData : Display.Data
 
 		void BlockCompletedLine(Display.Side side)
 		{
-			if (!IsLineComplete(position, side)) { return; }
-			foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
+			foreach (var linePosition in InLine(position, side))
 			{
-				if (lineMode is Mode.Filled) continue;
 				Tile tile = tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
 				ChangeMode(position: linePosition, tile, mode: Mode.Blocked);
@@ -77,6 +75,15 @@ public sealed partial record SaveData : Display.Data
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
+	public IEnumerable<Vector2I> InLine(Vector2I position, Display.Side side, Mode without = Mode.Filled)
+	{
+		if (!IsLineComplete(position, side)) { yield break; }
+		foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
+		{
+			if (lineMode == without) continue;
+			yield return linePosition;
+		}
+	}
 	public bool IsLineComplete(Vector2I position, Display.Side side)
 	{
 		foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
