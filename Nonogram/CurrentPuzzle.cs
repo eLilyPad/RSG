@@ -43,21 +43,12 @@ public sealed partial class PuzzleManager
 
 		public NonogramContainer UI;
 
-		private readonly SaveData.AutoCompleter _autoCompleter;
-		private readonly SaveData.UserInput _playerCompleter;
 		internal CurrentPuzzle()
 		{
 			UI = new NonogramContainer(Core.Colours, Rules, this) { Name = "Nonogram", Visible = false }
 				.Preset(Control.LayoutPreset.FullRect)
 				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 			Timer = new() { Provider = this };
-			_autoCompleter = new() { Tiles = UI.Tiles, };
-			_playerCompleter = new()
-			{
-				Timer = Timer,
-				Tiles = UI.Tiles,
-				Completer = _autoCompleter,
-			};
 			Puzzle = new() { };
 			PuzzleReady = false;
 		}
@@ -75,10 +66,8 @@ public sealed partial class PuzzleManager
 		}
 		void Tile.IProvider.OnActivate(Vector2I position, Tile tile)
 		{
-			if (Type is Type.Game)
-			{
-				_playerCompleter.GameInput(save: Puzzle, position, settings: Settings, eventHandler: EventHandler);
-			}
+			SaveData.InputEvent input = new(position, Settings, Type, PressedMode);
+			Puzzle.HandleUserInput(input, UI.Tiles, Timer, EventHandler);
 			Save(Puzzle);
 		}
 	}

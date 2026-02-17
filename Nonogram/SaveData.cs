@@ -1,158 +1,68 @@
-using static System.Text.Json.JsonSerializer;
 using System.Text.Json.Serialization;
-using System.Text.Json;
 using Godot;
 
 namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
 
-public sealed record SaveData : Display.Data
+public sealed partial record SaveData : Display.Data
 {
-	public sealed class Converter : JsonConverter<SaveData>
+	internal readonly record struct InputEvent(
+		Vector2I Position,
+		Settings Settings,
+		Display.Type Type,
+		Mode Mode
+	);
+	internal void HandleUserInput(
+		InputEvent input,
+		Tile.Pool tiles,
+		PuzzleTimer timer,
+		PuzzleManager.IHaveEvents? eventHandler
+	)
 	{
-		public const string ExpectedProp = "Expected";
+		(Vector2I position, Settings settings, Display.Type _, Mode mode) = input;
+		if (mode is Mode.NULL) return;
+		Assert(States.ContainsKey(position), $"No current tile in the data");
 
-		public override SaveData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		Tile tile = tiles.GetOrCreate(position);
+		Mode current = States[position];
+
+		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
+
+		mode = mode == current ? Mode.Clear : mode;
+		if (Mode.Clear.AllEqual(current, mode)) return;
+		if (tile.Locked) return;
+
+		mode.PlayAudio();
+		ChangeMode(position, tile, mode);
+
+		if (settings.LineCompleteBlockRest)
 		{
-			if (reader.TokenType != JsonTokenType.StartObject)
-			{
-				GD.PrintErr("SaveData root is not an object");
-				return null;
-			}
-			PuzzleData? expected = null;
-			Dictionary<Vector2I, Mode>? tiles = null;
-			TimeSpan timeTaken = TimeSpan.Zero;
-
-			while (reader.Read())
-			{
-				if (reader.TokenType == JsonTokenType.EndObject) break;
-
-				if (reader.TokenType != JsonTokenType.PropertyName) throw new JsonException();
-
-				string prop = reader.GetString()!;
-				reader.Read();
-
-				switch (prop)
-				{
-					case ExpectedProp:
-						expected = Deserialize<PuzzleData>(ref reader, options);
-						break;
-					case PropertyNames.Tiles:
-						tiles = Deserialize<Dictionary<Vector2I, Mode>>(ref reader, options);
-						break;
-					case PropertyNames.TimeTaken:
-						timeTaken = ReadTimeSpan(ref reader, options);
-						break;
-					default:
-						reader.Skip();
-						break;
-				}
-			}
-
-			if (expected is null)
-			{
-				GD.PrintErr($"Missing property in JSON: {ExpectedProp}");
-				return null;
-			}
-			if (tiles is null) return null;
-
-			return new SaveData
-			{
-				Name = expected.Name,
-				Expected = expected,
-				Tiles = tiles,
-				TimeTaken = timeTaken
-			};
+			BlockCompletedLine(side: Display.Side.Row);
+			BlockCompletedLine(side: Display.Side.Column);
 		}
-		public override void Write(Utf8JsonWriter writer, SaveData value, JsonSerializerOptions options)
-		{
-			writer.WriteStartObject();
-			writer.WritePropertyName(ExpectedProp);
-			Serialize(writer, value.Expected, options);
-			writer.WritePropertyName(PropertyNames.TimeTaken);
-			Serialize(writer, value.TimeTaken, options);
-			writer.WritePropertyName(PropertyNames.Tiles);
-			Serialize(writer, value.Tiles, options);
-			writer.WriteEndObject();
-		}
-		private static TimeSpan ReadTimeSpan(ref Utf8JsonReader reader, JsonSerializerOptions options)
-		{
-			try
-			{
-				return reader.TokenType switch
-				{
-					JsonTokenType.String =>
-						Deserialize<TimeSpan>(ref reader, options),
+		timer.TryStart(inputMode: mode);
+		if (IsComplete) eventHandler?.Completed(this);
 
-					JsonTokenType.Number =>
-						TimeSpan.FromSeconds(reader.GetDouble()),
-
-					_ => TimeSpan.Zero
-				};
-			}
-			catch (Exception e)
-			{
-				GD.PrintErr($"Invalid TimeTaken value: {e.Message}");
-				return TimeSpan.Zero;
-			}
-		}
-	}
-	internal sealed class AutoCompleter
-	{
-		public required Tile.Pool Tiles { private get; init; }
-		public void BlockCompletedLines(SaveData save, Vector2I position, Settings settings)
+		void BlockCompletedLine(Display.Side side)
 		{
-			if (!settings.LineCompleteBlockRest) return;
-			BlockCompletedLine(save, position, side: Display.Side.Row);
-			BlockCompletedLine(save, position, side: Display.Side.Column);
-		}
-		private void BlockCompletedLine(SaveData save, Vector2I position, Display.Side side)
-		{
-			if (!save.IsLineComplete(position, side)) { return; }
-			foreach ((Vector2I linePosition, Mode lineMode) in save.Tiles.InLine(position, side))
+			if (!IsLineComplete(position, side)) { return; }
+			foreach ((Vector2I linePosition, Mode lineMode) in Tiles.InLine(position, side))
 			{
 				if (lineMode is Mode.Filled) continue;
-				Tile tile = Tiles.GetOrCreate(linePosition);
+				Tile tile = tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
-				save.ChangeState(position: linePosition, mode: tile.Mode = Mode.Blocked);
-				tile.Locked = Tiles.LockRules.ShouldLock(position);
+				ChangeMode(position: linePosition, tile, mode: Mode.Blocked);
 			}
 		}
-	}
-	internal sealed class UserInput
-	{
-		public required AutoCompleter Completer { private get; init; }
-		public required PuzzleTimer Timer { private get; init; }
-		public required Tile.Pool Tiles { private get; init; }
-
-		public void GameInput(SaveData save, Vector2I position, Settings settings, PuzzleManager.IHaveEvents? eventHandler)
+		void ChangeMode(Vector2I position, Tile tile, Mode mode)
 		{
-			const Mode defaultValue = Mode.NULL;
-
-			Mode input = Display.PressedMode;
-			if (input is defaultValue) return;
-			IImmutableDictionary<Vector2I, Mode> saved = save.States;
-			Tile tile = Tiles.GetOrCreate(position);
-
-			Assert(saved.ContainsKey(position), $"No current tile in the data");
-			Mode current = saved[position];
-			Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
-
-			input = input == current ? Mode.Clear : input;
-
-			if (Mode.Clear.AllEqual(current, input)) return;
-			if (tile.Locked) return;
-			input.PlayAudio();
-			save.ChangeState(position, mode: tile.Mode = input);
-			Completer.BlockCompletedLines(save, position, settings);
-
-			if (Tiles.LockRules.ShouldLock(position)) tile.Locked = true;
-			if (!Timer.Running && input is Mode.Filled) Timer.Running = true;
-			if (save.IsComplete) eventHandler?.Completed(save);
+			tile.Mode = mode;
+			ChangeState(position, mode);
+			_ = tiles.TryLock(position);
 		}
-	}
 
+	}
 
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
