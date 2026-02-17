@@ -4,15 +4,11 @@ using Godot;
 namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
+using Type = Display.Type;
 
 public sealed partial record SaveData : Display.Data
 {
-	internal readonly record struct InputEvent(
-		Vector2I Position,
-		Settings Settings,
-		Display.Type Type,
-		Mode Mode
-	);
+	internal readonly record struct InputEvent(Vector2I Position, Settings Settings, Type Type, Mode Mode);
 	internal void HandleUserInput(
 		InputEvent input,
 		Tile.Pool tiles,
@@ -20,7 +16,7 @@ public sealed partial record SaveData : Display.Data
 		PuzzleManager.IHaveEvents? eventHandler
 	)
 	{
-		(Vector2I position, Settings settings, Display.Type _, Mode mode) = input;
+		(Vector2I position, Settings settings, Type _, Mode mode) = input;
 		if (mode is Mode.NULL) return;
 		Assert(States.ContainsKey(position), $"No current tile in the data");
 
@@ -59,9 +55,7 @@ public sealed partial record SaveData : Display.Data
 			ChangeState(position, mode);
 			_ = tiles.TryLock(position);
 		}
-
 	}
-
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
