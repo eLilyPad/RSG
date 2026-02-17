@@ -171,7 +171,6 @@ public sealed partial class Core : Node
 			{
 				["start"] = obj =>
 				{
-
 					if (!TryConvertDialogueName(obj, out string? name)) return;
 					Dialogues.Start(name);
 					Console.Console.Log($"Started Dialogue: {name}");
@@ -186,12 +185,12 @@ public sealed partial class Core : Node
 		},
 		nonogramCommand = new()
 		{
-			Default = () => Console.Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
+			Default = () => PuzzleManager.Current.Type.LogCurrent(),
 			Flags = new()
 			{
-				["game"] = () => ChangeDisplayType(Display.Type.Game),
-				["paint"] = () => ChangeDisplayType(Display.Type.Paint),
-				["display"] = () => ChangeDisplayType(Display.Type.Display),
+				["game"] = () => (PuzzleManager.Current.Type = Display.Type.Game).LogChange(),
+				["paint"] = () => (PuzzleManager.Current.Type = Display.Type.Paint).LogChange(),
+				["display"] = () => (PuzzleManager.Current.Type = Display.Type.Display).LogChange(),
 			}
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
@@ -217,11 +216,6 @@ public sealed partial class Core : Node
 			}
 			name = value;
 			return true;
-		}
-		static void ChangeDisplayType(Display.Type type)
-		{
-			PuzzleManager.Current.Type = type;
-			Console.Console.Log($"Display changed too {type.AsName()}");
 		}
 	}
 
