@@ -10,19 +10,40 @@ public static class DisplayTypeExtensions
 		Type.Paint => "Paint",
 		_ => "Puzzle Display"
 	};
-	public static void ChangeType(this NonogramContainer nonogram, ref Type field, Type value)
+	public static Type ChangeType(this PuzzleManager.CurrentPuzzle puzzle, ref Type field, Type value)
 	{
-		nonogram.Display.Name = value.AsName();
+		NonogramContainer ui = puzzle.UI;
+		ui.Display.Name = value.AsName();
 		switch (field)
 		{
-			case Type.Paint when value is Type.Game:
-				nonogram.RemoveChild(nonogram.Studio);
+			case Type.Paint:
+				switch (value)
+				{
+					case Type.Game:
+						ui.Container.Remove(false, ui.Studio);
+						break;
+				}
 				break;
-			case Type.Game when value is Type.Paint:
-				nonogram.AddChild(nonogram.Studio);
+			case Type.Game:
+				switch (value)
+				{
+					case Type.Paint:
+						ui.Container.Add(ui.Studio);
+						break;
+				}
 				break;
 		}
-		field = value;
+		return field = value;
+	}
+	public static Type LogChange(this Type type)
+	{
+		Console.Console.Log($"Display changed too {type.AsName()}");
+		return type;
+	}
+	public static Type LogCurrent(this Type type)
+	{
+		Console.Console.Log($"Current Display:  {type.AsName()}");
+		return type;
 	}
 }
 
