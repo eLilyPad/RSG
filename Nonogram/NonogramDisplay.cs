@@ -8,7 +8,6 @@ public abstract partial class Display : AspectRatioContainer
 
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
-	public enum Type { Game, Display, Paint }
 
 	public static TileMode PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Blocked
 		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Filled

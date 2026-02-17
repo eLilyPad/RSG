@@ -13,7 +13,14 @@ public sealed partial class PuzzleManager
 		public PuzzleTimer Timer { get; }
 		public IHaveEvents? EventHandler { get; set; }
 		public bool PuzzleReady { get; private set; } = false;
-		public Type Type { get; set => UI.Display.Name = (field = value).AsName(); } = Type.Display;
+		public Type Type
+		{
+			get; set
+			{
+				UI.Display.Name = value.AsName();
+				field = value;
+			}
+		} = Type.Display;
 		public Settings Settings
 		{
 			get; set

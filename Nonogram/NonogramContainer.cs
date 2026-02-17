@@ -4,6 +4,14 @@ namespace RSG.Nonogram;
 
 public sealed partial class NonogramContainer : PanelContainer
 {
+	public sealed partial class StudioBar : Container
+	{
+		public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.AliceBlue }
+			.Preset(LayoutPreset.FullRect);
+		public VBoxContainer Container { get; } = new VBoxContainer { Name = " Container" }
+			.Preset(LayoutPreset.FullRect);
+		public override void _Ready() => this.Add(Background, Container);
+	}
 	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
 		Name = "PuzzleCompleteScreen",
@@ -18,6 +26,8 @@ public sealed partial class NonogramContainer : PanelContainer
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Display.Default Display { get; } = new Display.Default { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public HBoxContainer Container { get; } = new HBoxContainer { Name = "Container" }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public IColours Colours
 	{
@@ -48,5 +58,6 @@ public sealed partial class NonogramContainer : PanelContainer
 		Hints = new(Provider: puzzle);
 		Tiles = new(Provider: puzzle) { LockRules = new() { Rules = rules } };
 	}
-	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
+	public override void _Ready() => this.Add(Background, Container.Add(Display), CompletionScreen);
+
 }
