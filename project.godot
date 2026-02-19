@@ -22,7 +22,6 @@ Core="*res://Core.cs"
 
 [debug]
 
-settings/stdout/verbose_stdout=true
 file_logging/enable_file_logging=true
 
 [display]
