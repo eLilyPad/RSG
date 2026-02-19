@@ -6,7 +6,7 @@ public abstract class NodePool<TKey, TValue> where TKey : notnull where TValue :
 {
 	protected readonly Dictionary<TKey, TValue> _nodes = [];
 	public TValue GetOrCreate(TKey key) => _nodes.GetOrCreate(key, create: Create);
-	public void Clear(IEnumerable<TKey> exceptions)
+	public void Clear(params IEnumerable<TKey> exceptions)
 	{
 		foreach ((TKey key, TValue node) in _nodes)
 		{
