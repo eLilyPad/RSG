@@ -37,6 +37,8 @@ public sealed partial class NonogramContainer : PanelContainer
 	{
 		set
 		{
+			Hints.Clear();
+			Tiles.Clear();
 			Tiles.Update(value);
 			Hints.TileSize = Tiles.TileSize;
 			Hints.Update(value);

@@ -8,7 +8,11 @@ public interface IHavePuzzleSettings { Settings Settings { get; } }
 
 public sealed partial class PuzzleManager
 {
-	public sealed record class CurrentPuzzle : Hints.IProvider, Tile.IProvider, PuzzleTimer.IProvider
+	public sealed record class CurrentPuzzle :
+		Hints.IProvider,
+		Tile.IProvider,
+		PuzzleTimer.IProvider,
+		IChangePuzzle
 	{
 		public PuzzleTimer Timer { get; }
 		public IHaveEvents? EventHandler { get; set; }
@@ -51,6 +55,7 @@ public sealed partial class PuzzleManager
 			Timer = new() { Provider = this };
 			Puzzle = new() { };
 			PuzzleReady = false;
+			UI.Studio.PuzzleTab.Signals = this;
 		}
 		void PuzzleTimer.IProvider.TimeChanged(string value)
 		{
@@ -69,6 +74,32 @@ public sealed partial class PuzzleManager
 			SaveData.InputEvent input = new(position, Settings, Type, PressedMode);
 			Puzzle.HandleUserInput(input, UI.Tiles, Timer, EventHandler);
 			Save(Puzzle);
+		}
+
+		void IChangePuzzle.ModifyName(string value) => Puzzle = Puzzle with { Name = value };
+		void IChangePuzzle.ModifySize(double value)
+		{
+			int size = double.ConvertToInteger<int>(value);
+
+			Dictionary<Vector2I, TileMode> newCurrent = Data.CreateTiles(size);
+			Dictionary<Vector2I, TileMode> newExpected = Data.CreateTiles(size);
+
+			foreach (Vector2I key in newCurrent.Keys)
+			{
+				if (!Puzzle.States.TryGetValue(key, out TileMode mode)) continue;
+				newCurrent[key] = mode;
+			}
+			foreach (Vector2I key in newExpected.Keys)
+			{
+				if (!Puzzle.Expected.States.TryGetValue(key, out TileMode mode)) continue;
+				newExpected[key] = mode;
+			}
+
+			Puzzle = Puzzle with
+			{
+				Tiles = newCurrent,
+				Expected = Puzzle.Expected with { Tiles = newExpected }
+			};
 		}
 	}
 }

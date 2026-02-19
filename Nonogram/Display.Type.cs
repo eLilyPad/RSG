@@ -29,6 +29,13 @@ public static class DisplayTypeExtensions
 				{
 					case Type.Paint:
 						ui.Container.Add(ui.Studio);
+						int puzzleSize = (int)ui.Studio.PuzzleTab.PuzzleSize.Value;
+						string puzzleName = ui.Studio.PuzzleTab.EditableName.Text;
+						puzzle.Puzzle = new()
+						{
+							Name = puzzleName,
+							Expected = new(puzzleSize)
+						};
 						break;
 				}
 				break;
