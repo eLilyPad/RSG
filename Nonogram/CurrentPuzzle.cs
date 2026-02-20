@@ -17,7 +17,7 @@ public sealed partial class PuzzleManager
 		public PuzzleTimer Timer { get; }
 		public IHaveEvents? EventHandler { get; set; }
 		public bool PuzzleReady { get; private set; } = false;
-		public Type Type { get; set => this.ChangeType(ref field, value); } = Type.Display;
+		public Type Type { get; set => this.ChangeType(ref field, value); } = Type.Game;
 		public Settings Settings
 		{
 			get; set
@@ -36,6 +36,8 @@ public sealed partial class PuzzleManager
 				Instance.Puzzles[field.Name] = field;
 				Timer.Elapsed = field.TimeTaken;
 				PuzzleReady = true;
+				UI.Studio.PuzzleTab.EditableName.Text = field.Name;
+				UI.Studio.PuzzleTab.PuzzleSize.Value = field.Size;
 				UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
 			}
 		}
@@ -46,8 +48,12 @@ public sealed partial class PuzzleManager
 		internal CurrentPuzzle()
 		{
 			List<Func<Vector2I, bool>> rules = [
-				(position) => Settings.LockCompletedFilledTiles && Puzzle.IsCorrectlyFilled(position),
-				(position) => Settings.LockCompletedBlockedTiles && Puzzle.IsCorrectlyBlocked(position),
+				(position) => Type is Type.Game
+					&& Settings.LockCompletedFilledTiles
+					&& Puzzle.IsCorrectlyFilled(position),
+				(position) => Type is Type.Game
+					&& Settings.LockCompletedBlockedTiles
+					&& Puzzle.IsCorrectlyBlocked(position),
 			];
 			UI = new NonogramContainer(rules, puzzle: this) { Name = "Nonogram", Visible = false }
 				.Preset(Control.LayoutPreset.FullRect)
@@ -63,7 +69,16 @@ public sealed partial class PuzzleManager
 			UI.Display.Timer.Time.Text = "[font_size=30]" + value;
 		}
 		Node Hints.IProvider.Parent(HintPosition position) => UI.Display.HintsParent(side: position.Side);
-		string Hints.IProvider.Text(HintPosition position) => Puzzle.Expected.States.CalculateHints(position);
+		string Hints.IProvider.Text(HintPosition position)
+		{
+			Data data = Type switch
+			{
+				Type.Game => Puzzle.Expected,
+				_ => Puzzle
+			};
+			return data.States.CalculateHints(position);
+		}
+
 		Node Tile.IProvider.Parent() => UI.Display.TilesGrid;
 		TileMode Tile.IProvider.State(Vector2I position)
 		{
@@ -72,7 +87,7 @@ public sealed partial class PuzzleManager
 		void Tile.IProvider.OnActivate(Vector2I position, Tile tile)
 		{
 			SaveData.InputEvent input = new(position, Settings, Type, PressedMode);
-			Puzzle.HandleUserInput(input, UI.Tiles, Timer, EventHandler);
+			Puzzle.HandleUserInput(input, UI.Tiles, UI.Hints, Timer, EventHandler);
 			Save(Puzzle);
 		}
 

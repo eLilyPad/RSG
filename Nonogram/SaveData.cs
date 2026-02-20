@@ -12,11 +12,12 @@ public sealed partial record SaveData : Display.Data
 	internal void HandleUserInput(
 		InputEvent input,
 		Tile.Pool tiles,
+		Hints hints,
 		PuzzleTimer timer,
 		PuzzleManager.IHaveEvents? eventHandler
 	)
 	{
-		(Vector2I position, Settings settings, Type _, Mode mode) = input;
+		(Vector2I position, Settings settings, Type type, Mode mode) = input;
 		if (mode is Mode.NULL) return;
 		Assert(States.ContainsKey(position), $"No current tile in the data");
 
@@ -32,13 +33,21 @@ public sealed partial record SaveData : Display.Data
 		mode.PlayAudio();
 		ChangeMode(position, tile, mode);
 
-		if (settings.LineCompleteBlockRest)
+		switch (type)
 		{
-			BlockCompletedLine(side: Display.Side.Row);
-			BlockCompletedLine(side: Display.Side.Column);
+			case Type.Paint:
+				hints.Refresh();
+				break;
+			case Type.Game:
+				if (settings.LineCompleteBlockRest)
+				{
+					BlockCompletedLine(side: Display.Side.Row);
+					BlockCompletedLine(side: Display.Side.Column);
+				}
+				timer.TryStart(tile: mode);
+				if (IsComplete) eventHandler?.Completed(this);
+				break;
 		}
-		timer.TryStart(inputMode: mode);
-		if (IsComplete) eventHandler?.Completed(this);
 
 		void BlockCompletedLine(Display.Side side)
 		{

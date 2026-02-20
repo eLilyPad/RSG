@@ -57,7 +57,7 @@ public sealed partial class Core : Node
 			{
 				case { PuzzleReady: true }:
 					core.Container.Menu.Hide();
-					PuzzleManager.Current.UI.Show();
+					current.UI.Show();
 					break;
 				case { PuzzleReady: false }:
 					core.Container.Menu.Levels.Show();
@@ -67,6 +67,13 @@ public sealed partial class Core : Node
 					break;
 			}
 			core.Container.Menu.Buttons.Hide();
+		}
+		public void OpenStudioPressed()
+		{
+			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			core.Container.Menu.Hide();
+			current.Type = Display.Type.Paint;
+			current.UI.Show();
 		}
 		public void LevelsPressed() => core.Container.Menu.Levels.Show();
 		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
@@ -190,7 +197,6 @@ public sealed partial class Core : Node
 			{
 				["game"] = () => (PuzzleManager.Current.Type = Display.Type.Game).LogChange(),
 				["paint"] = () => (PuzzleManager.Current.Type = Display.Type.Paint).LogChange(),
-				["display"] = () => (PuzzleManager.Current.Type = Display.Type.Display).LogChange(),
 			}
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
