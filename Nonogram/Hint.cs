@@ -24,6 +24,13 @@ sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 		}
 		Clear(exceptions: hintValues);
 	}
+	public void Refresh()
+	{
+		foreach ((HintPosition position, Hint hint) in _nodes)
+		{
+			ApplyText(position, hint);
+		}
+	}
 	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
 	protected override Node Parent(HintPosition position) => Provider.Parent(position);
 	protected override Hint Create(HintPosition position)
