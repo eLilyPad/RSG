@@ -1,13 +1,13 @@
 namespace RSG.Nonogram;
 
-using static Display;
-
 public static class TileExtensions
 {
-	public static bool IsCorrect<T, TKey>(this T tiles, TKey position, TileMode current)
-	where T : IImmutableDictionary<TKey, TileMode>
+	public static IEnumerable<KeyValuePair<T, Tile>> HoverTiles<T>(this IEnumerable<KeyValuePair<T, Tile>> tiles, bool value)
 	{
-		if (!tiles.TryGetValue(position, out TileMode expected)) return false;
-		return current.IsCorrectMode(expected);
+		foreach ((T _, Tile tile) in tiles)
+		{
+			tile.Hovering = value;
+		}
+		return tiles;
 	}
 }

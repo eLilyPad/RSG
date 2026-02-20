@@ -64,11 +64,15 @@ public sealed partial class Tile : PanelContainer
 
 			tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
 			tile.Button.ButtonDown += () => Provider.OnActivate(position, tile);
-			tile.Button.MouseExited += () => HoverTile(false);
+			tile.Button.MouseExited += () => _nodes
+				.AllInLines(position)
+				.HoverTiles(false);
 			tile.Button.MouseEntered += () =>
 			{
 				Provider.OnActivate(position, tile);
-				HoverTile(true);
+				_nodes
+					.AllInLines(position)
+					.HoverTiles(true);
 			};
 
 			tile.Button
@@ -90,12 +94,6 @@ public sealed partial class Tile : PanelContainer
 			tile.Button.AddThemeFontSizeOverride("font_size", 10);
 
 			return tile;
-
-			void HoverTile(bool hovering)
-			{
-				var tiles = _nodes.AllInLines(position);
-				foreach ((Vector2I _, Tile tile) in tiles) tile.Hovering = hovering;
-			}
 		}
 	}
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;

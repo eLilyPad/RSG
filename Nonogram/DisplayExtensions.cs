@@ -28,33 +28,10 @@ public static class HintExtensions
 }
 public static class DisplayExtensions
 {
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> OrderedLine<T>(
-		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
-		HintPosition position
-	) => tiles
-		.Where(pair => position.Side.IndexFrom(pair.Key) == position.Index)
-		.OrderBy(pair => position.Side.OrderFrom(pair.Key));
-	public static IEnumerable<KeyValuePair<Vector2I, T>> AllInLines<T>(
-		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
-		Vector2I position
-	)
-	{
-		return tiles.Where(pair => pair.Key.EitherEqual(position));
-	}
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, TileMode>> AllInLine(
+	public static string CalculateHints(
 		this IEnumerable<KeyValuePair<Vector2I, TileMode>> tiles,
-		Vector2I position,
-		Side side,
-		TileMode without = TileMode.NULL
-	)
-	{
-		return tiles
-			.Where(
-				pair => side.IndexFrom(pair.Key) == side.IndexFrom(position)
-				&& pair.Value != without
-			)
-			.OrderBy(pair => side.OrderFrom(pair.Key));
-	}
+		HintPosition position
+	) => tiles.CalculateHints(position, selector: value => value is TileMode.Filled ? 1 : 0);
 	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
 		Vector2I position,
@@ -62,16 +39,10 @@ public static class DisplayExtensions
 	)
 	{
 		return tiles
-			.Where(pair => side.IndexFrom(pair.Key) == side.IndexFrom(position))
-			.OrderBy(pair => side.OrderFrom(pair.Key));
-	}
-	public static string CalculateHints(this IImmutableDictionary<Vector2I, TileMode> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value is TileMode.Filled ? 1 : 0);
-	}
-	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value.Button.Text is FillText ? 1 : 0);
+			.InLine(index: Index(position), indexer: Index)
+			.OrderBy(keySelector: pair => side.OrderFrom(position: pair.Key));
+
+		int Index(Vector2I pos) => side.IndexFrom(position: pos);
 	}
 	private static string CalculateHints<TValue>(
 		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
@@ -81,8 +52,11 @@ public static class DisplayExtensions
 	{
 		StringBuilder builder = new();
 		int run = 0;
+		var line = tiles
+			.InLine(index: position.Index, indexer: pos => position.Side.IndexFrom(position: pos))
+			.OrderBy(keySelector: pair => position.Side.OrderFrom(position: pair.Key));
 
-		foreach ((Vector2I _, TValue? value) in tiles.OrderedLine(position))
+		foreach ((Vector2I _, TValue? value) in line)
 		{
 			if (selector(value) > 0)
 			{

@@ -2,30 +2,36 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-using static Display;
+using Mode = Display.TileMode;
 
 public static class TileModeExtensions
 {
-	public static bool IsCorrectMode(this TileMode current, TileMode expected) => expected switch
+	public static bool IsCorrect<TKey>(this IImmutableDictionary<TKey, Mode> tiles, TKey position, Mode current)
 	{
-		TileMode.Filled when current is TileMode.Filled => true,
-		TileMode.Clear when current is TileMode.Clear or TileMode.Blocked => true,
+		if (!tiles.TryGetValue(position, out Mode expected)) return false;
+		return current.IsCorrectMode(expected);
+	}
+
+	public static bool IsCorrectMode(this Mode current, Mode expected) => expected switch
+	{
+		Mode.Filled when current is Mode.Filled => true,
+		Mode.Clear when current is Mode.Clear or Mode.Blocked => true,
 		_ => false
 	};
-	public static bool IsValidInput(this TileMode current, ref TileMode input)
+	public static bool IsValidInput(this Mode current, ref Mode input)
 	{
-		if (input is TileMode.NULL) return false;
-		input = input == current ? TileMode.Clear : input;
-		return !TileMode.Clear.AllEqual(current, input);
+		if (input is Mode.NULL) return false;
+		input = input == current ? Mode.Clear : input;
+		return !Mode.Clear.AllEqual(current, input);
 	}
-	public static void PlayAudio(this TileMode mode)
+	public static void PlayAudio(this Mode mode)
 	{
 		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
 	}
-	public static AudioStream? AsAudioStream(this TileMode mode) => mode switch
+	public static AudioStream? AsAudioStream(this Mode mode) => mode switch
 	{
-		TileMode.Filled => Audio.NonogramSounds.FillTileClicked,
-		TileMode.Blocked => Audio.NonogramSounds.BlockTileClicked,
+		Mode.Filled => Audio.NonogramSounds.FillTileClicked,
+		Mode.Blocked => Audio.NonogramSounds.BlockTileClicked,
 		_ => null
 	};
 }
