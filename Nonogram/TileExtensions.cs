@@ -11,6 +11,9 @@ public static class TileExtensions
 		if (!tiles.TryGetValue(position, out TileMode expected)) return false;
 		return current.IsCorrectMode(expected);
 	}
+}
+public static class TileModeExtensions
+{
 	public static bool IsCorrectMode(this TileMode current, TileMode expected) => expected switch
 	{
 		TileMode.Filled when current is TileMode.Filled => true,
