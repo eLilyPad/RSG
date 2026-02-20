@@ -18,7 +18,7 @@ public sealed partial record SaveData : Display.Data
 	)
 	{
 		(Vector2I position, Settings settings, Type type, Mode mode) = input;
-		if (mode is Mode.NULL) return;
+
 		Assert(States.ContainsKey(position), $"No current tile in the data");
 
 		Tile tile = tiles.GetOrCreate(position);
@@ -26,8 +26,7 @@ public sealed partial record SaveData : Display.Data
 
 		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
 
-		mode = mode == current ? Mode.Clear : mode;
-		if (Mode.Clear.AllEqual(current, mode)) return;
+		if (current.IsValidInput(ref mode)) return;
 		if (tile.Locked) return;
 
 		mode.PlayAudio();
