@@ -55,6 +55,11 @@ public sealed partial class Core : Node
 			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
 			switch (current)
 			{
+				case { Type: Display.Type.Paint }:
+					current.Type = Display.Type.Game;
+					core.Container.Menu.Levels.Show();
+					core.Container.Menu.Show();
+					break;
 				case { PuzzleReady: true }:
 					core.Container.Menu.Hide();
 					current.UI.Show();
