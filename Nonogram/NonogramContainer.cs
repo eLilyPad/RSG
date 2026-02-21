@@ -54,11 +54,6 @@ public sealed partial class NonogramContainer : PanelContainer
 		Tiles = tiles;
 		Hints = hints;
 	}
-	//internal NonogramContainer(List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
-	//{
-	//	Hints = new(Provider: puzzle);
-	//	Tiles = new(Provider: puzzle) { LockRules = new() { Rules = rules } };
-	//}
 	public override void _Ready() => this.Add(Background, Container.Add(Display, Studio), CompletionScreen);
 
 }
