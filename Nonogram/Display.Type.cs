@@ -35,33 +35,7 @@ public static class DisplayTypeExtensions
 				break;
 		}
 	}
-
-	public static Type ChangeType(this PuzzleManager.CurrentPuzzle puzzle, ref Type field, Type value)
-	{
-		if (field == value) return field;
-
-		NonogramStudioBar studio = puzzle.UI.Studio;
-		var container = puzzle.UI.Container;
-		Default display = puzzle.UI.Display;
-		display.Name = value.AsName();
-
-		switch (value)
-		{
-			case Type.Game:
-				display.Timer.Show();
-				container.Remove(false, studio);
-				break;
-			case Type.Paint:
-				display.Timer.Hide();
-				container.Add(studio);
-				puzzle.Puzzle = new() { Expected = new() };
-				break;
-		}
-
-		return field = value;
-	}
-
-	public static Type ChangeType(this PuzzleManager.CurrentPuzzle puzzle, Type previous, Type current)
+	public static Type ChangeType(this CurrentPuzzle puzzle, Type previous, Type current)
 	{
 		if (previous == current) return previous;
 		NonogramStudioBar studio = puzzle.UI.Studio;

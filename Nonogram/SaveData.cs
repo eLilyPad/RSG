@@ -16,7 +16,8 @@ public sealed partial record SaveData : Display.Data
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
-	public bool IsComplete => CheckComplete();
+	public bool IsComplete => Tiles
+		.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
 
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
@@ -80,22 +81,10 @@ public sealed partial record SaveData : Display.Data
 			{
 				Tile tile = tiles.GetOrCreate(linePosition);
 				if (tile.Mode is Mode.Blocked) continue;
-				ChangeMode(position: linePosition, mode: Mode.Blocked, tiles: tiles);
+				tiles.GetOrCreate(linePosition).Mode = Mode.Blocked;
+				ChangeState(position: linePosition, mode: Mode.Blocked);
+				_ = tiles.TryLock(linePosition);
 			}
 		}
-	}
-	private void ChangeMode(Vector2I position, Mode mode, Tile.Pool tiles)
-	{
-		tiles.GetOrCreate(position).Mode = mode;
-		ChangeState(position, mode);
-		_ = tiles.TryLock(position);
-	}
-	private bool CheckComplete()
-	{
-		foreach ((Vector2I position, Mode state) in Tiles)
-		{
-			if (!Expected.States.IsCorrect(position, state)) return false;
-		}
-		return true;
 	}
 }

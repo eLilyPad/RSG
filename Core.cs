@@ -52,7 +52,7 @@ public sealed partial class Core : Node
 		}
 		public void PlayPressed()
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			switch (current)
 			{
 				case { Type: Display.Type.Paint }:
@@ -75,7 +75,7 @@ public sealed partial class Core : Node
 		}
 		public void OpenStudioPressed()
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			core.Container.Menu.Hide();
 			current.Type = Display.Type.Paint;
 			current.UI.Show();
@@ -86,17 +86,17 @@ public sealed partial class Core : Node
 		public void QuitPressed() => core.GetTree().Quit();
 		public void ToggledLockFilledTiles(bool toggled)
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
 		}
 		public void ToggledLockBlockedTiles(bool toggled)
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
 		}
 		public void ToggledBlockCompleteLines(bool toggled)
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
 		}
 

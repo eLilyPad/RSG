@@ -38,9 +38,7 @@ public sealed partial class PuzzleManager
 	}
 
 	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];
-	public Dictionary<string, bool> PuzzlesCompleted { private get; init; } = [];
-	public Dictionary<string, string> CompletionDialogues { private get; init; } = [];
-	public Dictionary<string, Data> Puzzles { private get; init; } = new() { [Data.DefaultName] = new PuzzleData() };
+	public Dictionary<string, Data> Puzzles { internal get; init; } = new() { [Data.DefaultName] = new PuzzleData() };
 
 	private PuzzleManager() { }
 }

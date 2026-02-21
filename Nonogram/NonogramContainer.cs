@@ -46,14 +46,19 @@ public sealed partial class NonogramContainer : PanelContainer
 		}
 	}
 
-	internal Tile.Pool Tiles { get; init; }
-	internal Hints Hints { get; init; }
+	internal Tile.Pool Tiles { get; }
+	internal Hints Hints { get; }
 
-	internal NonogramContainer(List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
+	internal NonogramContainer(Tile.Pool tiles, Hints hints)
 	{
-		Hints = new(Provider: puzzle);
-		Tiles = new(Provider: puzzle) { LockRules = new() { Rules = rules } };
+		Tiles = tiles;
+		Hints = hints;
 	}
+	//internal NonogramContainer(List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
+	//{
+	//	Hints = new(Provider: puzzle);
+	//	Tiles = new(Provider: puzzle) { LockRules = new() { Rules = rules } };
+	//}
 	public override void _Ready() => this.Add(Background, Container.Add(Display, Studio), CompletionScreen);
 
 }

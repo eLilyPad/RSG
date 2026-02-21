@@ -24,7 +24,7 @@ public sealed partial class CoreUI : Control
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			Dialogues.Start(name: current.CompletionDialogueName);
 			UI.Menu.Show();
 			UI.Menu.Buttons.Hide();
@@ -32,7 +32,7 @@ public sealed partial class CoreUI : Control
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
 		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
+			CurrentPuzzle current = PuzzleManager.Current;
 			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
 			string name = current.CompletionDialogueName;
 			bool hasDialogue = Dialogues.Contains(name);
