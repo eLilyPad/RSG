@@ -54,6 +54,6 @@ public sealed partial class NonogramContainer : PanelContainer
 		Hints = new(Provider: puzzle);
 		Tiles = new(Provider: puzzle) { LockRules = new() { Rules = rules } };
 	}
-	public override void _Ready() => this.Add(Background, Container.Add(Display), CompletionScreen);
+	public override void _Ready() => this.Add(Background, Container.Add(Display, Studio), CompletionScreen);
 
 }
