@@ -24,9 +24,10 @@ public static class TileModeExtensions
 		input = input == current ? Mode.Clear : input;
 		return !Mode.Clear.AllEqual(current, input);
 	}
-	public static void PlayAudio(this Mode mode)
+	public static Mode PlayAudio(this Mode mode)
 	{
 		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
+		return mode;
 	}
 	public static AudioStream? AsAudioStream(this Mode mode) => mode switch
 	{
