@@ -22,6 +22,25 @@ public sealed partial record SaveData : Display.Data
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
+	public ImageTexture AsIcon(int pixelSize = 16)
+	{
+		int size = Size * pixelSize;
+		Image image = Image
+			.CreateEmpty(size, size, false, Image.Format.Rgba8);
+		foreach ((Vector2I position, Mode mode) in Tiles)
+		{
+			Color color = mode switch
+			{
+				Mode.Clear => Colors.White,
+				Mode.Filled => Colors.Black,
+				Mode.Blocked => Colors.Red,
+				_ => throw new InvalidOperationException($"Invalid tile mode {mode}")
+			};
+			image.SetPixel(position.X * pixelSize, position.Y * pixelSize, color, pixelSize);
+		}
+		return ImageTexture.CreateFromImage(image);
+	}
+
 	public SaveData CloneCurrentToExpected() => this with
 	{
 		Expected = Expected with { Tiles = Tiles }

@@ -27,7 +27,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 		{
 			return Create(config.name, root, config.data);
 		}
-		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
+		private static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
 			PackDisplay display = new PackDisplay { Name = name }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
@@ -36,6 +36,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 			{
 				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
 				puzzleDisplay.Button.Pressed += pressed;
+				puzzleDisplay.Button.Icon = puzzle.AsIcon();
 				display.Puzzles.Value.Add(puzzleDisplay);
 
 				void pressed()
@@ -65,17 +66,21 @@ public sealed partial class PuzzleSelector : PanelContainer
 	}
 	public sealed partial class PuzzleDisplay : PanelContainer
 	{
-		public static PuzzleDisplay Create(Display.Data puzzle)
+		public static PuzzleDisplay Create(SaveData puzzle)
 		{
 			Color statusColor = puzzle switch
 			{
-				SaveData { IsComplete: true } => Colors.Green,
+				{ IsComplete: true } => Colors.Green,
 				_ => Colors.Black
 			};
 			PuzzleDisplay display = new PuzzleDisplay
 			{
 				Name = puzzle.Name + " Display",
-				Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
+				Button = new()
+				{
+					Name = puzzle.Name + " Button",
+					Icon = puzzle.AsIcon(),
+				},
 				Background = new ColorRect { Name = "Background", Color = statusColor }
 					.Preset(LayoutPreset.LeftWide)
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
