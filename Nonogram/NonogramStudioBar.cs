@@ -24,11 +24,11 @@ public sealed partial class NonogramStudioBar : Container
 			{
 				if (field is not null)
 				{
-					EditableName.TextChanged -= field.ModifyName;
+					EditableName.TextSubmitted -= field.ModifyName;
 					PuzzleSize.ValueChanged -= field.ModifySize;
 				}
 				field = value;
-				EditableName.TextChanged += field.ModifyName;
+				EditableName.TextSubmitted += field.ModifyName;
 				PuzzleSize.ValueChanged += field.ModifySize;
 			}
 		}
