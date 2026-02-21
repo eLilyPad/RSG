@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Godot;
 
 namespace RSG.Nonogram;
@@ -11,7 +12,6 @@ public static class TileModeExtensions
 		if (!tiles.TryGetValue(position, out Mode expected)) return false;
 		return current.IsCorrectMode(expected);
 	}
-
 	public static bool IsCorrectMode(this Mode current, Mode expected) => expected switch
 	{
 		Mode.Filled when current is Mode.Filled => true,
@@ -34,4 +34,17 @@ public static class TileModeExtensions
 		Mode.Blocked => Audio.NonogramSounds.BlockTileClicked,
 		_ => null
 	};
+}
+
+public abstract partial class Display
+{
+	[JsonConverter(typeof(JsonStringEnumConverter<Mode>))]
+	public enum TileMode
+	{
+		NULL = -1,
+		Clear = 0,
+		Filled = 1,
+		Blocked = 2
+	}
+
 }

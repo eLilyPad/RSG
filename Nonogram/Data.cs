@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Godot;
 
 namespace RSG.Nonogram;
@@ -64,15 +63,11 @@ public abstract partial class Display
 				elementSelector: position => selector(position) ? TileMode.Filled : TileMode.Clear
 			);
 		}
-	}
-
-	[JsonConverter(typeof(JsonStringEnumConverter<TileMode>))]
-	public enum TileMode
-	{
-		NULL = 0,
-		Clear = 1,
-		Filled = 2,
-		Blocked = 3
+		internal void ChangeState(Vector2I position, TileMode mode)
+		{
+			Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
+			Tiles[position] = mode;
+		}
 	}
 	public enum Side { Row, Column }
 }
