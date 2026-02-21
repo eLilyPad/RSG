@@ -16,8 +16,8 @@ public sealed partial class PuzzleManager
 	{
 		public PuzzleTimer Timer { get; }
 		public IHaveEvents? EventHandler { get; set; }
-		public bool PuzzleReady { get; private set; } = false;
-		public Type Type { get; set => this.ChangeType(ref field, value); } = Type.Game;
+		public bool PuzzleReady => Puzzle.Expected.States.Any(p => p.Value != TileMode.Clear);
+		public Type Type { get; set => this.ChangeType(previous: field, current: field = value); } = Type.Game;
 		public Settings Settings
 		{
 			get; set
@@ -35,7 +35,6 @@ public sealed partial class PuzzleManager
 
 				Instance.Puzzles[field.Name] = field;
 				Timer.Elapsed = field.TimeTaken;
-				PuzzleReady = true;
 				UI.Studio.PuzzleTab.EditableName.Text = field.Name;
 				UI.Studio.PuzzleTab.PuzzleSize.Value = field.Size;
 				UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
@@ -44,6 +43,8 @@ public sealed partial class PuzzleManager
 		public string CompletionDialogueName => Puzzle.Expected.DialogueName;
 
 		public NonogramContainer UI;
+
+		private IImmutableDictionary<Vector2I, TileMode> CurrentStates => Type.InputData(Puzzle).States;
 
 		internal CurrentPuzzle()
 		{
@@ -60,39 +61,58 @@ public sealed partial class PuzzleManager
 				.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 			Timer = new() { Provider = this };
 			Puzzle = new() { };
-			PuzzleReady = false;
 			UI.Studio.PuzzleTab.Signals = this;
 		}
-		void PuzzleTimer.IProvider.TimeChanged(string value)
+		public void ClearPuzzle()
+		{
+			Puzzle.Clear();
+			UI.PuzzleSize = Puzzle.Size;
+		}
+
+		public void TimeChanged(string value)
 		{
 			Puzzle.TimeTaken = Timer?.Elapsed ?? TimeSpan.Zero;
 			UI.Display.Timer.Time.Text = "[font_size=30]" + value;
 		}
-		Node Hints.IProvider.Parent(HintPosition position) => UI.Display.HintsParent(side: position.Side);
-		string Hints.IProvider.Text(HintPosition position)
-		{
-			Data data = Type switch
-			{
-				Type.Game => Puzzle.Expected,
-				_ => Puzzle
-			};
-			return data.States.CalculateHints(position);
-		}
+		public Node Parent(HintPosition position) => UI.Display.HintsParent(side: position.Side);
+		public string Text(HintPosition position) => Puzzle.Expected.States.CalculateHints(position);
 
-		Node Tile.IProvider.Parent() => UI.Display.TilesGrid;
-		TileMode Tile.IProvider.State(Vector2I position)
+		private const TileMode defaultValue = TileMode.Clear;
+		public Node Parent() => UI.Display.TilesGrid;
+		public TileMode State(Vector2I position)
 		{
-			return Puzzle.States.GetValueOrDefault(position, TileMode.Clear);
+			return CurrentStates.GetValueOrDefault(position, defaultValue);
 		}
-		void Tile.IProvider.OnActivate(Vector2I position, Tile tile)
+		public void OnActivate(Vector2I position, Tile tile)
 		{
-			SaveData.InputEvent input = new(position, Settings, Type, PressedMode);
-			Puzzle.HandleUserInput(input, UI.Tiles, UI.Hints, Timer, EventHandler);
+			Assert(CurrentStates.ContainsKey(position), $"No current tile in the data");
+
+			TileMode mode = PressedMode;
+			Tile.Pool tiles = UI.Tiles;
+			TileMode current = CurrentStates[position];
+
+			if (!current.IsValidInput(ref mode) || tile.Locked) return;
+
+			Type.InputData(Puzzle).ChangeState(position, mode);
+			tile.Mode = mode;
+			mode.PlayAudio();
+
+			Type.HandleInput(UI, position);
+
+			switch (Type)
+			{
+				case Type.Game:
+					if (Settings.LineCompleteBlockRest) Puzzle.BlockCompletedLines(tiles, position);
+					if (Puzzle.IsComplete) EventHandler?.Completed(Puzzle);
+					Timer.TryStart(tile: mode);
+					break;
+			}
+
 			Save(Puzzle);
 		}
 
-		void IChangePuzzle.ModifyName(string value) => Puzzle = Puzzle with { Name = value };
-		void IChangePuzzle.ModifySize(double value)
+		public void ModifyName(string value) => Puzzle = Puzzle with { Name = value };
+		public void ModifySize(double value)
 		{
 			int size = double.ConvertToInteger<int>(value);
 

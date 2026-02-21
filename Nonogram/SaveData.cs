@@ -4,66 +4,10 @@ using Godot;
 namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
-using Type = Display.Type;
 
 public sealed partial record SaveData : Display.Data
 {
-	internal readonly record struct InputEvent(Vector2I Position, Settings Settings, Type Type, Mode Mode);
-	internal void HandleUserInput(
-		InputEvent input,
-		Tile.Pool tiles,
-		Hints hints,
-		PuzzleTimer timer,
-		PuzzleManager.IHaveEvents? eventHandler
-	)
-	{
-		(Vector2I position, Settings settings, Type type, Mode mode) = input;
 
-		Assert(States.ContainsKey(position), $"No current tile in the data");
-
-		Tile tile = tiles.GetOrCreate(position);
-		Mode current = States[position];
-
-		Assert(tile.Mode == current, "tiles displayed mode is unsynchronized from data");
-
-		if (current.IsValidInput(ref mode)) return;
-		if (tile.Locked) return;
-
-		mode.PlayAudio();
-		ChangeMode(position, tile, mode);
-
-		switch (type)
-		{
-			case Type.Paint:
-				hints.Refresh();
-				break;
-			case Type.Game:
-				if (settings.LineCompleteBlockRest)
-				{
-					BlockCompletedLine(side: Display.Side.Row);
-					BlockCompletedLine(side: Display.Side.Column);
-				}
-				timer.TryStart(tile: mode);
-				if (IsComplete) eventHandler?.Completed(this);
-				break;
-		}
-
-		void BlockCompletedLine(Display.Side side)
-		{
-			foreach (var linePosition in InLine(position, side))
-			{
-				Tile tile = tiles.GetOrCreate(linePosition);
-				if (tile.Mode is Mode.Blocked) continue;
-				ChangeMode(position: linePosition, tile, mode: Mode.Blocked);
-			}
-		}
-		void ChangeMode(Vector2I position, Tile tile, Mode mode)
-		{
-			tile.Mode = mode;
-			ChangeState(position, mode);
-			_ = tiles.TryLock(position);
-		}
-	}
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
@@ -77,6 +21,18 @@ public sealed partial record SaveData : Display.Data
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
+	public SaveData CloneCurrentToExpected() => this with
+	{
+		Expected = Expected with { Tiles = Tiles }
+	};
+	public SaveData Clear()
+	{
+		foreach (Vector2I key in Tiles.Keys)
+		{
+			Tiles[key] = Mode.Clear;
+		}
+		return this;
+	}
 	public IEnumerable<Vector2I> InLine(Vector2I position, Display.Side side, Mode without = Mode.Filled)
 	{
 		if (!IsLineComplete(position, side)) { yield break; }
@@ -113,10 +69,26 @@ public sealed partial record SaveData : Display.Data
 		);
 	}
 
-	private void ChangeState(Vector2I position, Mode mode)
+	internal void BlockCompletedLines(Tile.Pool tiles, Vector2I position)
 	{
-		Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
-		Tiles[position] = mode;
+		BlockCompletedLine(Display.Side.Row);
+		BlockCompletedLine(Display.Side.Column);
+
+		void BlockCompletedLine(Display.Side side)
+		{
+			foreach (var linePosition in InLine(position, side))
+			{
+				Tile tile = tiles.GetOrCreate(linePosition);
+				if (tile.Mode is Mode.Blocked) continue;
+				ChangeMode(position: linePosition, mode: Mode.Blocked, tiles: tiles);
+			}
+		}
+	}
+	private void ChangeMode(Vector2I position, Mode mode, Tile.Pool tiles)
+	{
+		tiles.GetOrCreate(position).Mode = mode;
+		ChangeState(position, mode);
+		_ = tiles.TryLock(position);
 	}
 	private bool CheckComplete()
 	{
