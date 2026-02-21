@@ -1,6 +1,6 @@
 namespace RSG.Nonogram;
 
-using Godot;
+using System.Numerics;
 using static Display;
 
 public static class DisplayTypeExtensions
@@ -11,12 +11,37 @@ public static class DisplayTypeExtensions
 		Type.Paint => "Paint",
 		_ => "Puzzle Display"
 	};
+	public static Data HintsData(this Type type, SaveData save) => type switch
+	{
+		Type.Game => save.Expected,
+		_ => save
+	};
+	public static Data InputData(this Type type, SaveData save) => type switch
+	{
+		Type.Paint => save.Expected,
+		_ => save
+	};
+	public static void HandleInput(this Type type, NonogramContainer ui, Godot.Vector2I position)
+	{
+		Tile.Pool tiles = ui.Tiles;
+		Hints hints = ui.Hints;
+		switch (type)
+		{
+			case Type.Game:
+				_ = tiles.TryLock(position);
+				break;
+			case Type.Paint:
+				hints.Refresh();
+				break;
+		}
+	}
+
 	public static Type ChangeType(this PuzzleManager.CurrentPuzzle puzzle, ref Type field, Type value)
 	{
 		if (field == value) return field;
 
 		NonogramStudioBar studio = puzzle.UI.Studio;
-		HBoxContainer container = puzzle.UI.Container;
+		var container = puzzle.UI.Container;
 		Default display = puzzle.UI.Display;
 		display.Name = value.AsName();
 
@@ -34,6 +59,28 @@ public static class DisplayTypeExtensions
 		}
 
 		return field = value;
+	}
+
+	public static Type ChangeType(this PuzzleManager.CurrentPuzzle puzzle, Type previous, Type current)
+	{
+		if (previous == current) return previous;
+		NonogramStudioBar studio = puzzle.UI.Studio;
+		Default display = puzzle.UI.Display;
+		display.Name = current.AsName();
+		switch (current)
+		{
+			case Type.Game:
+				display.Timer.Show();
+				studio.Hide();
+				if (previous is Type.Paint) puzzle.ClearPuzzle();
+				break;
+			case Type.Paint:
+				display.Timer.Hide();
+				studio.Show();
+				puzzle.Puzzle = new() { Expected = new() };
+				break;
+		}
+		return current;
 	}
 	public static Type LogChange(this Type type)
 	{
