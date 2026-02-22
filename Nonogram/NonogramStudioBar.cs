@@ -11,11 +11,15 @@ public sealed partial class NonogramStudioBar : Container
 {
 	public sealed partial class PuzzleTabContainer : VBoxContainer
 	{
-		public LineEdit EditableName { get; } = new LineEdit { Text = "Name" };
+		public LineEdit EditableName { get; } = new LineEdit { Name = "Name" };
+		public RichTextLabel Message { get; } = new RichTextLabel { Name = "Message Label", Text = "Message" }
+			.Preset(LayoutPreset.HcenterWide);
 		public SpinBox PuzzleSize { get; } = new SpinBox
 		{
 			Name = "Puzzle Size",
 			MinValue = 10,
+			MaxValue = 20,
+			Step = Tile.Pool.ChunkSize,
 			AllowLesser = false
 		};
 		public IChangePuzzle Signals
@@ -32,7 +36,7 @@ public sealed partial class NonogramStudioBar : Container
 				PuzzleSize.ValueChanged += field.ModifySize;
 			}
 		}
-		public override void _Ready() => this.Add(EditableName, PuzzleSize);
+		public override void _Ready() => this.Add(EditableName, PuzzleSize, Message);
 	}
 	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.AliceBlue }
 		.Preset(LayoutPreset.FullRect);
