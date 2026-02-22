@@ -19,6 +19,7 @@ public sealed partial class Tile : PanelContainer
 	}
 	internal sealed class Pool(IProvider Provider) : NodePool<Vector2I, Tile>
 	{
+		public const int ChunkSize = 5;
 		public required Locker LockRules { get; init; }
 		public Vector2 TileSize { get; private set; } = Vector2.One;
 		public IColours Colours { private get; set; } = Core.Colours;
@@ -52,11 +53,10 @@ public sealed partial class Tile : PanelContainer
 		protected override Node Parent(Vector2I position) => Provider.Parent();
 		protected override Tile Create(Vector2I position)
 		{
-			const int chunkSize = 5;
 			Tile tile = new Tile
 			{
 				Name = $"Tile (X: {position.X}, Y: {position.Y})",
-				IsAlternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0,
+				IsAlternative = (position.X / ChunkSize + position.Y / ChunkSize) % 2 == 0,
 				Colours = Colours,
 				Mode = TileMode.Clear,
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
