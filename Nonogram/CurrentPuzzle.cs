@@ -79,6 +79,7 @@ public sealed record class CurrentPuzzle
 					if (puzzle.IsComplete) Current.EventHandler?.Completed(puzzle);
 					Current.Timer.TryStart(tile: mode);
 					break;
+
 			}
 
 			Puzzles.Save(puzzle);

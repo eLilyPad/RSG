@@ -8,7 +8,7 @@ public static class DisplayTypeExtensions
 	public static string AsName(this Type type) => type switch
 	{
 		Type.Game => "Game",
-		Type.Paint => "Paint",
+		Type.Studio => "Paint",
 		_ => "Puzzle Display"
 	};
 	public static Data HintsData(this Type type, SaveData save) => type switch
@@ -18,7 +18,7 @@ public static class DisplayTypeExtensions
 	};
 	public static Data InputData(this Type type, SaveData save) => type switch
 	{
-		Type.Paint => save.Expected,
+		Type.Studio => save.Expected,
 		_ => save
 	};
 	public static void HandleInput(this Type type, NonogramContainer ui, Godot.Vector2I position)
@@ -30,7 +30,7 @@ public static class DisplayTypeExtensions
 			case Type.Game:
 				_ = tiles.TryLock(position);
 				break;
-			case Type.Paint:
+			case Type.Studio:
 				hints.Refresh();
 				break;
 		}
@@ -46,9 +46,9 @@ public static class DisplayTypeExtensions
 			case Type.Game:
 				display.Timer.Show();
 				studio.Hide();
-				if (previous is Type.Paint) puzzle.ClearPuzzle();
+				if (previous is Type.Studio) puzzle.ClearPuzzle();
 				break;
-			case Type.Paint:
+			case Type.Studio:
 				display.Timer.Hide();
 				studio.Show();
 				puzzle.Puzzle = new() { Expected = new() };
@@ -70,5 +70,5 @@ public static class DisplayTypeExtensions
 
 public abstract partial class Display
 {
-	public enum Type { Game, Paint }
+	public enum Type { Game, Studio }
 }

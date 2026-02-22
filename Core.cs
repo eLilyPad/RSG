@@ -55,7 +55,7 @@ public sealed partial class Core : Node
 			CurrentPuzzle current = PuzzleManager.Current;
 			switch (current)
 			{
-				case { Type: Display.Type.Paint }:
+				case { Type: Display.Type.Studio }:
 					current.Type = Display.Type.Game;
 					core.Container.Menu.Levels.Show();
 					core.Container.Menu.Show();
@@ -77,7 +77,7 @@ public sealed partial class Core : Node
 		{
 			CurrentPuzzle current = PuzzleManager.Current;
 			core.Container.Menu.Hide();
-			current.Type = Display.Type.Paint;
+			current.Type = Display.Type.Studio;
 			current.UI.Show();
 		}
 		public void LevelsPressed() => core.Container.Menu.Levels.Show();
@@ -201,7 +201,7 @@ public sealed partial class Core : Node
 			Flags = new()
 			{
 				["game"] = () => (PuzzleManager.Current.Type = Display.Type.Game).LogChange(),
-				["paint"] = () => (PuzzleManager.Current.Type = Display.Type.Paint).LogChange(),
+				["paint"] = () => (PuzzleManager.Current.Type = Display.Type.Studio).LogChange(),
 			}
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
