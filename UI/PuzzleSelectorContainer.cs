@@ -36,7 +36,6 @@ public sealed partial class PuzzleSelector : PanelContainer
 			{
 				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
 				puzzleDisplay.Button.Pressed += pressed;
-				puzzleDisplay.Button.Icon = puzzle.AsIcon();
 				display.Puzzles.Value.Add(puzzleDisplay);
 
 				void pressed()
@@ -51,12 +50,12 @@ public sealed partial class PuzzleSelector : PanelContainer
 			return display;
 		}
 
-		public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
+		public Labelled<GridContainer> Puzzles { get; } = new Labelled<GridContainer>()
 		{
 			Name = "Puzzles Display",
 			Label = new RichTextLabel { Name = "Label", FitContent = true }
 				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
-			Value = new VBoxContainer { Name = "Puzzles Container" }
+			Value = new GridContainer { Name = "Puzzles Container", Columns = 5 }
 				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
 			Vertical = true
 		}
@@ -79,26 +78,32 @@ public sealed partial class PuzzleSelector : PanelContainer
 				Button = new()
 				{
 					Name = puzzle.Name + " Button",
-					Icon = puzzle.AsIcon(),
+					Text = puzzle.Name,
+					VerticalIconAlignment = VerticalAlignment.Top,
+					IconAlignment = HorizontalAlignment.Center,
+					Icon = puzzle.AsIcon(colours: Core.Colours, pixelSize: 16),
 				},
 				Background = new ColorRect { Name = "Background", Color = statusColor }
 					.Preset(LayoutPreset.LeftWide)
 					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
 			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 
-			display.Button.OverrideStyle((StyleBoxFlat style) =>
-			{
-				style.SetCornerRadiusAll(0);
-				return style;
-			});
+			display.Button.OverrideStyle<StyleBoxFlat, Button>(modify);
+			display.Button.OverrideStyle<StyleBoxFlat, Button>(modify, "hover");
 			display.Background.OverrideStyle((StyleBoxFlat style) =>
 			{
-				style.ContentMarginBottom = 50;
 				style.SetCornerRadiusAll(0);
 				return style;
 			});
 
 			return display;
+
+			static StyleBoxFlat modify(StyleBoxFlat style)
+			{
+				style.SetCornerRadiusAll(0);
+				style.SetContentMarginAll(40);
+				return style;
+			}
 		}
 		public required ColorRect Background { get; init; }
 		public required Button Button { get; init; }

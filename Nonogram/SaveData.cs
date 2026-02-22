@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Godot;
+using RSG.UI;
 
 namespace RSG.Nonogram;
 
@@ -22,23 +23,18 @@ public sealed partial record SaveData : Display.Data
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
-	public ImageTexture AsIcon(int pixelSize = 16)
+	public ImageTexture AsIcon(IColours colours, int pixelSize = 16)
 	{
-		int size = Size * pixelSize;
-		Image image = Image
-			.CreateEmpty(size, size, false, Image.Format.Rgba8);
-		foreach ((Vector2I position, Mode mode) in Tiles)
+		Image image = Tiles.AsIcon(GetColor, Size, pixelSize);
+		image.Rotate90(ClockDirection.Clockwise);
+		return ImageTexture.CreateFromImage(image: image);
+
+		Color GetColor(Vector2I position, Mode mode)
 		{
-			Color color = mode switch
-			{
-				Mode.Clear => Colors.White,
-				Mode.Filled => Colors.Black,
-				Mode.Blocked => Colors.Red,
-				_ => throw new InvalidOperationException($"Invalid tile mode {mode}")
-			};
-			image.SetPixel(position.X * pixelSize, position.Y * pixelSize, color, pixelSize);
+			const int chunkSize = Tile.Pool.ChunkSize;
+			bool alternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0;
+			return colours.NonogramTileBackground(mode, alternative);
 		}
-		return ImageTexture.CreateFromImage(image);
 	}
 
 	public SaveData CloneCurrentToExpected() => this with

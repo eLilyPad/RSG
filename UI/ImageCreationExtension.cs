@@ -4,6 +4,50 @@ namespace RSG.UI;
 
 public static class ImageCreationExtension
 {
+	public static Image AsIcon<TValue>(
+		this IDictionary<Vector2I, TValue> state,
+		Func<Vector2I, TValue, Color> getColor,
+		int size,
+		int pixelSize = 16
+	)
+	{
+		int width = size * pixelSize, height = width;
+		Image image = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
+		byte[] data = image.GetData();
+
+		foreach ((Vector2I position, TValue mode) in state)
+		{
+			int tileX = position.X;
+			int tileY = position.Y;
+			Color color = getColor(position, mode);
+			int baseIndex = (tileY * pixelSize * width + tileX * pixelSize) * 4;
+			int stride = width * 4;
+
+			byte
+			r = (byte)(color.R * 255),
+			g = (byte)(color.G * 255),
+			b = (byte)(color.B * 255),
+			a = (byte)(color.A * 255);
+
+			for (int dy = 0; dy < pixelSize; dy++)
+			{
+				int rowStart = baseIndex + dy * stride;
+
+				for (int dx = 0; dx < pixelSize; dx++)
+				{
+					int i = rowStart + dx * 4;
+
+					data[i] = r;
+					data[i + 1] = g;
+					data[i + 2] = b;
+					data[i + 3] = a;
+				}
+			}
+		}
+
+		image.SetData(width, height, false, Image.Format.Rgba8, data);
+		return image;
+	}
 	public static void TextureLines(this TextureRect rect, Vector2I size, float space = 173f)
 	{
 		Image image = Image
