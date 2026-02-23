@@ -12,7 +12,7 @@ public sealed partial class NonogramStudioBar : Container
 	public sealed partial class PuzzleTabContainer : VBoxContainer
 	{
 		public LineEdit EditableName { get; } = new LineEdit { Name = "Name" };
-		public RichTextLabel Message { get; } = new RichTextLabel { Name = "Message Label", Text = "Message" }
+		public RichTextLabel Message { get; } = new RichTextLabel { Name = "Message Label", FitContent = true, Text = "Message" }
 			.Preset(LayoutPreset.HcenterWide);
 		public SpinBox PuzzleSize { get; } = new SpinBox
 		{
