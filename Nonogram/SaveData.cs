@@ -34,7 +34,7 @@ public sealed partial record SaveData : Display.Data, IPuzzleHints
 			List<int>[] hints = new List<int>[Size];
 			for (int i = 0; i < Size; i++)
 			{
-				hints[i] = Tiles.CalculateHints(new(Display.Side.Row, i));
+				hints[i] = Tiles.AsLineHints(new(Display.Side.Row, i));
 			}
 			return field = hints;
 		}
@@ -47,7 +47,7 @@ public sealed partial record SaveData : Display.Data, IPuzzleHints
 			List<int>[] hints = new List<int>[Size];
 			for (int i = 0; i < Size; i++)
 			{
-				hints[i] = Tiles.CalculateHints(new(Display.Side.Column, i));
+				hints[i] = Tiles.AsLineHints(new(Display.Side.Column, i));
 			}
 			return field = hints;
 		}
