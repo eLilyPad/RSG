@@ -1,6 +1,5 @@
 namespace RSG.Nonogram;
 
-using System.Numerics;
 using static Display;
 
 public static class DisplayTypeExtensions
@@ -21,20 +20,6 @@ public static class DisplayTypeExtensions
 		Type.Studio => save.Expected,
 		_ => save
 	};
-	public static void HandleInput(this Type type, NonogramContainer ui, Godot.Vector2I position)
-	{
-		Tile.Pool tiles = ui.Tiles;
-		Hints hints = ui.Hints;
-		switch (type)
-		{
-			case Type.Game:
-				_ = tiles.TryLock(position);
-				break;
-			case Type.Studio:
-				hints.Refresh();
-				break;
-		}
-	}
 	public static Type ChangeType(this CurrentPuzzle puzzle, Type previous, Type current)
 	{
 		if (previous == current) return previous;
@@ -51,7 +36,7 @@ public static class DisplayTypeExtensions
 			case Type.Studio:
 				display.Timer.Hide();
 				studio.Show();
-				puzzle.Puzzle = new() { Expected = new() };
+				//puzzle.Puzzle = new() { Expected = new() };
 				break;
 		}
 		return current;
