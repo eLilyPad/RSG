@@ -13,6 +13,8 @@ public abstract partial class Display
 			new(Side.Column, value.Match(position => position.Y, index => index))
 		];
 
+		public HintPosition(Side side, Vector2I position) : this(side, side.IndexFrom(position)) { }
+
 		public readonly (HorizontalAlignment, VerticalAlignment) Alignment() => (
 			Side switch
 			{
