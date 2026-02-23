@@ -2,175 +2,166 @@ namespace RSG.Nonogram;
 
 public static class Solver
 {
-	private static void GenerateRowNonRecursive(List<ulong> results, IReadOnlyList<int> hints, int size)
-	{
-		if (hints.Count == 0)
-		{
-			results.Add(0UL);
-			return;
-		}
-
-		Stack<(int hintIndex, int position, ulong mask)> stack = new();
-		stack.Push((0, 0, 0UL));
-
-		while (stack.Count > 0)
-		{
-			var (hintIndex, position, mask) = stack.Pop();
-
-			if (hintIndex == hints.Count)
-			{
-				results.Add(mask);
-				continue;
-			}
-
-			int block = hints[hintIndex];
-			int remainingMin = 0;
-			for (int i = hintIndex + 1; i < hints.Count; i++) remainingMin += hints[i] + 1;
-
-			for (int start = size - block; start >= position; start--)
-			{
-				int nextPosition = start + block;
-				if (nextPosition + remainingMin > size) continue;
-				ulong newMask = mask;
-				for (int i = 0; i < block; i++) newMask |= 1UL << (start + i);
-				if (hintIndex + 1 < hints.Count) nextPosition++;
-				stack.Push((hintIndex + 1, nextPosition, newMask));
-			}
-		}
-	}
-
-	public static int Solutions<T>(this T state, IPuzzleHints config)
+	public static bool IsSolvable<T>(this T state, IPuzzleHints config)
 	where T : IEnumerable<KeyValuePair<Godot.Vector2I, Display.TileMode>>
 	{
 		Assert(state.IsSquare<T, Display.TileMode>(), $"State must be square");
-		int solutionCount = 0;
 		int size = config.PuzzleSize;
+		IReadOnlyList<IReadOnlyList<int>> expectedColumnsHints = config.ColumnHints;
+		IReadOnlyList<IReadOnlyList<int>> expectedRowsHints = config.RowHints;
 		List<ulong>[] rowMasks = new List<ulong>[size];
 		ulong[] currentRows = new ulong[size];
 		int[] columnTotals = new int[size];
+		int[] maskIndex = new int[rowMasks.Length];
+		Stack<(int hintIndex, int position, ulong mask)> maskStack = new();
+		List<ulong> masks = [];
+		List<int> rowGroups = [];
+		int row = 0;
+		int columnTotal;
+		bool columnStillPossible;
+		bool matchExact;
+		int columnHintRun;
+		ulong rowMask;
+		int remainingRows = size - 1;
+		int remainingMin;
+		int hintCount;
+		int hintIndex;
+		int runLength;
+		int filledCount;
+		int remainingNeeded;
+		int rowHintBlock;
+		int nextPosition;
+		ulong newMask;
 
-		for (int c = 0; c < size; c++)
+		Array.Fill(maskIndex, -1);
+
+		for (int columnIndex = 0; columnIndex < size; columnIndex++)
 		{
-			int total = 0;
-			IReadOnlyList<int> hints = config.ColumnHints[c];
-			for (int i = 0; i < hints.Count; i++) total += hints[i];
-			columnTotals[c] = total;
+			columnTotal = 0;
+			IReadOnlyList<int> expectedHints = expectedColumnsHints[columnIndex];
+			for (int index = 0; index < expectedHints.Count; index++)
+			{
+				columnTotal += expectedHints[index];
+			}
+			columnTotals[columnIndex] = columnTotal;
 		}
-
-		foreach ((int i, IReadOnlyList<int> hints) in config.RowHints.Index())
+		foreach ((int i, IReadOnlyList<int> expectedRow) in expectedRowsHints.Index())
 		{
-			List<ulong> results = [];
-			GenerateRowNonRecursive(results, hints, size);
-			rowMasks[i] = results;
+			if (expectedRow.Count == 0)
+			{
+				masks.Add(0UL);
+				rowMasks[i] = masks;
+				continue;
+			}
+			maskStack.Clear();
+			maskStack.Push((0, 0, 0UL));
+
+			while (maskStack.Count > 0)
+			{
+				(hintIndex, int position, ulong mask) = maskStack.Pop();
+				if (hintIndex == expectedRow.Count)
+				{
+					masks.Add(mask);
+					continue;
+				}
+				rowHintBlock = expectedRow[hintIndex];
+				remainingMin = 0;
+				for (int nextIndex = hintIndex + 1; nextIndex < expectedRow.Count; nextIndex++)
+				{
+					remainingMin += expectedRow[nextIndex] + 1;
+				}
+				for (int start = size - rowHintBlock; start >= position; start--)
+				{
+					nextPosition = start + rowHintBlock;
+					if (nextPosition + remainingMin > size)
+					{
+						continue;
+					}
+					newMask = mask;
+					for (int nextIndex = 0; nextIndex < rowHintBlock; nextIndex++)
+					{
+						newMask |= 1UL << (start + nextIndex);
+					}
+					if (hintIndex + 1 < expectedRow.Count)
+					{
+						nextPosition++;
+					}
+					maskStack.Push((hintIndex + 1, nextPosition, newMask));
+				}
+			}
+
+			rowMasks[i] = masks;
+			masks.Clear();
 		}
-
-		Solve(row: solutionCount);
-		return solutionCount;
-
-		bool Solve(int row)
+		while (row >= 0)
 		{
 			if (row == rowMasks.Length)
 			{
-				solutionCount++;
-				return ColumnsMatchExact() && solutionCount >= 2;
-			}
-			foreach (ulong mask in rowMasks[row])
-			{
-				currentRows[row] = mask;
-
-				if (ColumnsStillPossible(filledRows: row))
+				matchExact = true;
+				rowGroups.Clear();
+				foreach ((int index, IReadOnlyList<int> hints) in expectedColumnsHints.Index())
 				{
-					if (Solve(row: row + 1)) { return true; }
-				}
-			}
-			return false;
-		}
-		void GenerateRowNonRecursive(List<ulong> results, IReadOnlyList<int> hints, int size)
-		{
-			if (hints.Count == 0)
-			{
-				results.Add(0UL);
-				return;
-			}
-
-			Stack<(int hintIndex, int position, ulong mask)> stack = new();
-			stack.Push((0, 0, 0UL));
-
-			while (stack.Count > 0)
-			{
-				var (hintIndex, position, mask) = stack.Pop();
-
-				if (hintIndex == hints.Count)
-				{
-					results.Add(mask);
-					continue;
-				}
-
-				int block = hints[hintIndex];
-				int remainingMin = 0;
-				for (int i = hintIndex + 1; i < hints.Count; i++) remainingMin += hints[i] + 1;
-
-				for (int start = size - block; start >= position; start--)
-				{
-					int nextPosition = start + block;
-					if (nextPosition + remainingMin > size) continue;
-					ulong newMask = mask;
-					for (int i = 0; i < block; i++) newMask |= 1UL << (start + i);
-					if (hintIndex + 1 < hints.Count) nextPosition++;
-					stack.Push((hintIndex + 1, nextPosition, newMask));
-				}
-			}
-		}
-		bool ColumnsMatchExact()
-		{
-			List<int> groups = [];
-			foreach ((int i, IReadOnlyList<int> hints) in config.ColumnHints.Index())
-			{
-				int run = 0;
-				for (int row = 0; row < config.RowHints.Count; row++)
-				{
-					ulong rows = currentRows[row];
-					bool filled = ((rows >> i) & 1UL) != 0;
-					if (filled) run++;
-					else if (run > 0)
+					columnHintRun = 0;
+					for (int rowIndex = 0; rowIndex < expectedRowsHints.Count; rowIndex++)
 					{
-						groups.Add(run);
-						run = 0;
+						rowMask = currentRows[rowIndex];
+						if (((rowMask >> index) & 1UL) != 0)
+						{
+							columnHintRun++;
+						}
+						else if (columnHintRun > 0)
+						{
+							rowGroups.Add(columnHintRun);
+							columnHintRun = 0;
+						}
 					}
+					if (columnHintRun > 0)
+					{
+						rowGroups.Add(columnHintRun);
+					}
+					if (!rowGroups.SequenceEqual(hints))
+					{
+						matchExact = false;
+					}
+					rowGroups.Clear();
 				}
-				if (run > 0) groups.Add(run);
-				if (!groups.SequenceEqual(hints)) return false;
-				groups.Clear();
+				if (matchExact)
+				{
+					return true;
+				}
+				row--;
+				continue;
 			}
-			return true;
-		}
-		bool ColumnsStillPossible(int filledRows)
-		{
-			int size = config.PuzzleSize;
-			int remainingRows = size - filledRows - 1;
+			maskIndex[row]++;
+			if (maskIndex[row] >= rowMasks[row].Count)
+			{
+				maskIndex[row] = -1;
+				row--;
+				continue;
+			}
+			currentRows[row] = rowMasks[row][maskIndex[row]];
+
+			columnStillPossible = true;
+			remainingRows -= row;
 
 			for (int column = 0; column < size; column++)
 			{
-				var hints = config.ColumnHints[column];
-				int hintCount = hints.Count;
-
-				int hintIndex = 0;
-				int runLength = 0;
-				int filledCount = 0;
-
-				// Walk filled rows only
-				for (int row = 0; row <= filledRows; row++)
+				IReadOnlyList<int> hints = expectedColumnsHints[column];
+				hintCount = hints.Count;
+				hintIndex = 0;
+				runLength = 0;
+				filledCount = 0;
+				for (int r = 0; r <= row; r++)
 				{
-					bool filled = ((currentRows[row] >> column) & 1UL) != 0;
-
-					if (filled)
+					if (((currentRows[r] >> column) & 1UL) != 0)
 					{
 						filledCount++;
 						runLength++;
-
-						// Run too long?
 						if (hintIndex >= hintCount || runLength > hints[hintIndex])
-							return false;
+						{
+							columnStillPossible = false;
+							break;
+						}
 					}
 					else if (runLength > 0)
 					{
@@ -178,34 +169,39 @@ public static class Solver
 						runLength = 0;
 					}
 				}
-
-				// Too many filled cells overall?
 				if (filledCount > columnTotals[column])
-					return false;
-
-				// Remaining cells required to satisfy hints
-				int remainingNeeded = 0;
-
+				{
+					columnStillPossible = false;
+					break;
+				}
+				remainingNeeded = 0;
 				if (runLength > 0)
 				{
-					// Still inside a run
 					remainingNeeded += hints[hintIndex] - runLength;
-
 					for (int i = hintIndex + 1; i < hintCount; i++)
+					{
 						remainingNeeded += hints[i];
+					}
 				}
 				else
 				{
 					for (int i = hintIndex; i < hintCount; i++)
+					{
 						remainingNeeded += hints[i];
+					}
 				}
-
 				if (remainingNeeded > remainingRows)
-					return false;
+				{
+					columnStillPossible = false;
+					break;
+				}
 			}
-
-			return true;
+			if (columnStillPossible)
+			{
+				row++;
+			}
 		}
+		return false;
 	}
 }
 

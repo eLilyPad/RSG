@@ -85,7 +85,7 @@ public sealed record class CurrentPuzzle
 					break;
 				case Type.Studio:
 					hints.Refresh();
-					studio.PuzzleTab.Message.Text = $"Solutions: {Solver.Solutions(state, Current.Puzzle)}";
+					studio.PuzzleTab.Message.Text = $"Solvable: {Solver.IsSolvable(state, Current.Puzzle)}";
 					break;
 			}
 

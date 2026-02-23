@@ -76,9 +76,18 @@ public sealed partial class Core : Node
 		public void OpenStudioPressed()
 		{
 			CurrentPuzzle current = PuzzleManager.Current;
-			core.Container.Menu.Hide();
 			current.Type = Display.Type.Studio;
 			current.UI.Show();
+			switch (current)
+			{
+				case { PuzzleReady: false }:
+					core.Container.Menu.Levels.Show();
+					core.Container.Menu.Show();
+					break;
+				default:
+					core.Container.Menu.Hide();
+					break;
+			}
 		}
 		public void LevelsPressed() => core.Container.Menu.Levels.Show();
 		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
