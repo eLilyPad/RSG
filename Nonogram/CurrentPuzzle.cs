@@ -58,28 +58,35 @@ public sealed record class CurrentPuzzle
 		{
 			Assert(Current.CurrentStates.ContainsKey(position), $"No current tile in the data");
 
-			TileMode mode = PressedMode;
-			Tile.Pool tiles = Current.UI.Tiles;
 			TileMode current = Current.CurrentStates[position];
-			Type type = Current.Type;
+			NonogramContainer ui = Current.UI;
 			SaveData puzzle = Current.Puzzle;
+			Type type = Current.Type;
+			NonogramStudioBar studio = ui.Studio;
+			Tile.Pool tiles = ui.Tiles;
+			Hints hints = ui.Hints;
 			Data data = type.InputData(puzzle);
+			IImmutableDictionary<Vector2I, TileMode> state = puzzle.Expected.States;
+			TileMode mode = PressedMode;
 
 			if (!current.IsValidInput(ref mode) || tile.Locked) return;
 
 			data.ChangeState(position, mode);
 			tile.Mode = mode;
 			mode.PlayAudio();
-			type.HandleInput(Current.UI, position);
 
 			switch (type)
 			{
 				case Type.Game:
-					if (Current.Settings.LineCompleteBlockRest) puzzle.BlockCompletedLines(tiles, position);
+					_ = tiles.TryLock(position);
+					if (Settings.LineCompleteBlockRest) puzzle.BlockCompletedLines(tiles, position);
 					if (puzzle.IsComplete) Current.EventHandler?.Completed(puzzle);
 					Current.Timer.TryStart(tile: mode);
 					break;
-
+				case Type.Studio:
+					hints.Refresh();
+					studio.PuzzleTab.Message.Text = $"Solutions: {Solver.Solutions(state, Current.Puzzle)}";
+					break;
 			}
 
 			Puzzles.Save(puzzle);
