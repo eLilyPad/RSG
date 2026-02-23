@@ -2,6 +2,13 @@ namespace RSG.Extensions;
 
 public static class SystemExtensions
 {
+	public static bool IsSquare<T, TValue>(this T values)
+	where T : IEnumerable<KeyValuePair<Godot.Vector2I, TValue>>
+	{
+		int count = values.Count();
+		int size = (int)Math.Sqrt(count);
+		return size * size == count;
+	}
 	public static bool AllEqual<T>(this T expected, params ReadOnlySpan<T> values) where T : notnull
 	{
 		foreach (T value in values)
