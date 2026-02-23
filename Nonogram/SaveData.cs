@@ -6,9 +6,15 @@ namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
 
-public sealed partial record SaveData : Display.Data
+public interface IPuzzleHints
 {
+	public int PuzzleSize => RowHints.Count;
+	public IReadOnlyList<IReadOnlyList<int>> RowHints { get; }
+	public IReadOnlyList<IReadOnlyList<int>> ColumnHints { get; }
+}
 
+public sealed partial record SaveData : Display.Data, IPuzzleHints
+{
 	public PuzzleData Expected { get; init; } = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
@@ -20,6 +26,32 @@ public sealed partial record SaveData : Display.Data
 	public bool IsComplete => Tiles
 		.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
 
+	public IReadOnlyList<IReadOnlyList<int>> RowHints
+	{
+		get
+		{
+			if (field is not null) return field;
+			List<int>[] hints = new List<int>[Size];
+			for (int i = 0; i < Size; i++)
+			{
+				hints[i] = Tiles.CalculateHints(new(Display.Side.Row, i));
+			}
+			return field = hints;
+		}
+	}
+	public IReadOnlyList<IReadOnlyList<int>> ColumnHints
+	{
+		get
+		{
+			if (field is not null) return field;
+			List<int>[] hints = new List<int>[Size];
+			for (int i = 0; i < Size; i++)
+			{
+				hints[i] = Tiles.CalculateHints(new(Display.Side.Column, i));
+			}
+			return field = hints;
+		}
+	}
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
 
