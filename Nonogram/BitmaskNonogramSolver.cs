@@ -1,165 +1,62 @@
+using Godot;
+
 namespace RSG.Nonogram;
+
+using static Display;
+using TRun = (int Index, int HintIndex, int FilledCount, int RunLength, int HintCount);
+using HintLines = IImmutableList<IImmutableList<int>>;
+using Puzzle = IEnumerable<KeyValuePair<Vector2I, Display.TileMode>>;
+using PuzzleMasks = ReadOnlyCollection<ReadOnlyCollection<ulong>>;
 
 public static class Solver
 {
-	public static bool IsSolvable<T>(this T state, IPuzzleHints config)
-	where T : IEnumerable<KeyValuePair<Godot.Vector2I, Display.TileMode>>
+	private record Hints(HintLines Columns, HintLines Rows, PuzzleMasks Masks)
 	{
-		Assert(state.IsSquare<T, Display.TileMode>(), $"State must be square");
-		int size = config.PuzzleSize;
-		IReadOnlyList<IReadOnlyList<int>> expectedColumnsHints = config.ColumnHints;
-		IReadOnlyList<IReadOnlyList<int>> expectedRowsHints = config.RowHints;
-		List<ulong>[] rowMasks = new List<ulong>[size];
-		ulong[] currentRows = new ulong[size];
-		int[] columnTotals = new int[size];
-		int[] maskIndex = new int[rowMasks.Length];
-		Stack<(int hintIndex, int position, ulong mask)> maskStack = new();
-		List<ulong> masks = [];
-		List<int> rowGroups = [];
-		int row = 0;
-		int columnTotal;
-		bool columnStillPossible;
-		bool matchExact;
-		int columnHintRun;
-		ulong rowMask;
-		int remainingRows = size - 1;
-		int remainingMin;
-		int hintCount;
-		int hintIndex;
-		int runLength;
-		int filledCount;
-		int remainingNeeded;
-		int rowHintBlock;
-		int nextPosition;
-		ulong newMask;
+		public int ScanningRow { get; set; } = 0;
 
-		Array.Fill(maskIndex, -1);
+		public ImmutableList<int> Totals => field ??= [.. Columns.Select(hints => hints.Sum())];
+		public ulong[] ActiveScan => field ??= new ulong[Columns.Count];
+		public int[] MaskIndex => field ??= new int[Masks.Count].Fill(-1);
+		public bool ScannedRowComplete => MaskIndex[ScanningRow] >= Masks[ScanningRow].Count;
+		public bool RowToScan => ScanningRow >= 0;
 
-		for (int columnIndex = 0; columnIndex < size; columnIndex++)
+		public void ReplaceScan() => ActiveScan[ScanningRow] = Masks[ScanningRow][MaskIndex[ScanningRow]];
+		public bool Matches()
 		{
-			columnTotal = 0;
-			IReadOnlyList<int> expectedHints = expectedColumnsHints[columnIndex];
-			for (int index = 0; index < expectedHints.Count; index++)
+			List<int> rowGroups = [];
+			int hintRun = 0;
+			foreach ((int index, IReadOnlyList<int> hints) in Columns.Index())
 			{
-				columnTotal += expectedHints[index];
+				for (int rowIndex = 0; rowIndex < Rows.Count; rowIndex++)
+				{
+					if (ActiveScan[rowIndex].IsFilled(index)) hintRun++;
+					else if (hintRun > 0)
+					{
+						rowGroups.Add(hintRun);
+						hintRun = 0;
+					}
+				}
+				if (hintRun > 0) rowGroups.Add(hintRun);
+				if (!rowGroups.SequenceEqual(hints)) return false;
 			}
-			columnTotals[columnIndex] = columnTotal;
+			return true;
 		}
-		foreach ((int i, IReadOnlyList<int> expectedRow) in expectedRowsHints.Index())
+		public IEnumerable<(TRun value, IImmutableList<int> hints)> Get(Action<bool> columnPossible)
 		{
-			if (expectedRow.Count == 0)
+			ulong[] currentRows = ActiveScan;
+			foreach ((int index, IImmutableList<int> hints) in Columns.Index())
 			{
-				masks.Add(0UL);
-				rowMasks[i] = masks;
-				continue;
-			}
-			maskStack.Clear();
-			maskStack.Push((0, 0, 0UL));
-
-			while (maskStack.Count > 0)
-			{
-				(hintIndex, int position, ulong mask) = maskStack.Pop();
-				if (hintIndex == expectedRow.Count)
+				int count = hints.Count, hintIndex = 0, runLength = 0, filledCount = 0;
+				for (int rowIndex = 0; rowIndex <= ScanningRow; rowIndex++)
 				{
-					masks.Add(mask);
-					continue;
-				}
-				rowHintBlock = expectedRow[hintIndex];
-				remainingMin = 0;
-				for (int nextIndex = hintIndex + 1; nextIndex < expectedRow.Count; nextIndex++)
-				{
-					remainingMin += expectedRow[nextIndex] + 1;
-				}
-				for (int start = size - rowHintBlock; start >= position; start--)
-				{
-					nextPosition = start + rowHintBlock;
-					if (nextPosition + remainingMin > size)
-					{
-						continue;
-					}
-					newMask = mask;
-					for (int nextIndex = 0; nextIndex < rowHintBlock; nextIndex++)
-					{
-						newMask |= 1UL << (start + nextIndex);
-					}
-					if (hintIndex + 1 < expectedRow.Count)
-					{
-						nextPosition++;
-					}
-					maskStack.Push((hintIndex + 1, nextPosition, newMask));
-				}
-			}
-
-			rowMasks[i] = masks;
-			masks.Clear();
-		}
-		while (row >= 0)
-		{
-			if (row == rowMasks.Length)
-			{
-				matchExact = true;
-				rowGroups.Clear();
-				foreach ((int index, IReadOnlyList<int> hints) in expectedColumnsHints.Index())
-				{
-					columnHintRun = 0;
-					for (int rowIndex = 0; rowIndex < expectedRowsHints.Count; rowIndex++)
-					{
-						rowMask = currentRows[rowIndex];
-						if (((rowMask >> index) & 1UL) != 0)
-						{
-							columnHintRun++;
-						}
-						else if (columnHintRun > 0)
-						{
-							rowGroups.Add(columnHintRun);
-							columnHintRun = 0;
-						}
-					}
-					if (columnHintRun > 0)
-					{
-						rowGroups.Add(columnHintRun);
-					}
-					if (!rowGroups.SequenceEqual(hints))
-					{
-						matchExact = false;
-					}
-					rowGroups.Clear();
-				}
-				if (matchExact)
-				{
-					return true;
-				}
-				row--;
-				continue;
-			}
-			maskIndex[row]++;
-			if (maskIndex[row] >= rowMasks[row].Count)
-			{
-				maskIndex[row] = -1;
-				row--;
-				continue;
-			}
-			currentRows[row] = rowMasks[row][maskIndex[row]];
-
-			columnStillPossible = true;
-			remainingRows -= row;
-
-			for (int column = 0; column < size; column++)
-			{
-				IReadOnlyList<int> hints = expectedColumnsHints[column];
-				hintCount = hints.Count;
-				hintIndex = 0;
-				runLength = 0;
-				filledCount = 0;
-				for (int r = 0; r <= row; r++)
-				{
-					if (((currentRows[r] >> column) & 1UL) != 0)
+					ulong currentRowMask = currentRows[rowIndex];
+					if (currentRowMask.IsFilled(index))
 					{
 						filledCount++;
 						runLength++;
-						if (hintIndex >= hintCount || runLength > hints[hintIndex])
+						if (hintIndex >= count || runLength > hints[hintIndex])
 						{
-							columnStillPossible = false;
+							columnPossible(false);
 							break;
 						}
 					}
@@ -169,39 +66,130 @@ public static class Solver
 						runLength = 0;
 					}
 				}
-				if (filledCount > columnTotals[column])
+				if (filledCount > Totals[index])
 				{
-					columnStillPossible = false;
+					columnPossible(false);
 					break;
 				}
-				remainingNeeded = 0;
-				if (runLength > 0)
-				{
-					remainingNeeded += hints[hintIndex] - runLength;
-					for (int i = hintIndex + 1; i < hintCount; i++)
-					{
-						remainingNeeded += hints[i];
-					}
-				}
-				else
-				{
-					for (int i = hintIndex; i < hintCount; i++)
-					{
-						remainingNeeded += hints[i];
-					}
-				}
+				yield return ((index, hintIndex, filledCount, runLength, count), hints);
+			}
+		}
+	}
+
+	public static bool IsSolvable<TState>(this TState state, int size)
+	where TState : Puzzle
+	{
+		Assert(state.IsSquare<TState, TileMode>(), $"State must be square");
+		Hints hints = Create(state, size);
+		bool columnStillPossible, matchExact;
+		int remainingNeeded, remainingRows;
+		while (hints.RowToScan)
+		{
+			columnStillPossible = true;
+			if (hints.ScanningRow == hints.Masks.Count)
+			{
+				matchExact = true;
+				if (!hints.Matches()) matchExact = false;
+				if (matchExact) { return true; }
+				hints.ScanningRow--;
+				continue;
+			}
+			hints.MaskIndex[hints.ScanningRow]++;
+			if (hints.ScannedRowComplete)
+			{
+				hints.MaskIndex[hints.ScanningRow] = -1;
+				hints.ScanningRow--;
+				continue;
+			}
+			hints.ReplaceScan();
+			remainingRows = size - hints.ScanningRow - 1;
+
+			foreach ((TRun run, IImmutableList<int> line) in hints.Get(columnPossible))
+			{
+				(int index, int hintIndex, int filledCount, int runLength, int hintCount) = run;
+				bool runOver = runLength > 0;
+				remainingNeeded = runOver ? line[hintIndex] - runLength : 0;
+				int offset = runOver ? 1 : 0;
+				for (int i = hintIndex + offset; i < hintCount; i++) remainingNeeded += line[i];
+
 				if (remainingNeeded > remainingRows)
 				{
 					columnStillPossible = false;
 					break;
 				}
 			}
-			if (columnStillPossible)
-			{
-				row++;
-			}
+			if (columnStillPossible) hints.ScanningRow++;
 		}
 		return false;
+
+		void columnPossible(bool possible) => columnStillPossible = possible;
 	}
+	private static Hints Create(Puzzle state, int size)
+	{
+		HintLines columns = CalculateHint(Side.Column), rows = CalculateHint(Side.Row);
+		return new Hints(columns, rows, GetMasks());
+
+		HintLines CalculateHint(Side side)
+		{
+			IImmutableList<int>[] hints = new IImmutableList<int>[size];
+			for (int i = 0; i < size; i++)
+			{
+				hints[i] = [.. state.AsLineHints(new(side, i))];
+			}
+			return [.. hints];
+		}
+		PuzzleMasks GetMasks()
+		{
+			int size = rows.Count;
+			int nextPosition;
+			ReadOnlyCollection<ulong>[] rowMasks = new ReadOnlyCollection<ulong>[size];
+
+			foreach ((int index, IReadOnlyList<int> expectedRow) in rows.Index())
+			{
+				Stack<(int hintIndex, int position, ulong mask)> maskStack = new();
+				List<ulong> masks = [];
+				maskStack.Push((0, 0, 0UL));
+				if (expectedRow.Count == 0)
+				{
+					masks.Add(0UL);
+					rowMasks[index] = masks.AsReadOnly();
+					continue;
+				}
+				while (maskStack.Count > 0)
+				{
+					(int hintIndex, int position, ulong mask) = maskStack.Pop();
+					if (!expectedRow.TryGetValue(hintIndex, out int rowHintBlock))
+					{
+						if (!RowMaskMatchesPlayerState(mask, index)) continue;
+						masks.Add(mask);
+					}
+					int remainingMin = expectedRow.Remaining(hintIndex);
+					for (int start = size - rowHintBlock; start >= position; start--)
+					{
+						if ((nextPosition = start + rowHintBlock) + remainingMin > size) continue;
+						ulong newMask = mask;
+						for (int nextI = 0; nextI < rowHintBlock; nextI++) newMask |= 1UL << (start + nextI);
+						if (hintIndex + 1 < expectedRow.Count) nextPosition++;
+						maskStack.Push((hintIndex + 1, nextPosition, newMask));
+					}
+				}
+				rowMasks[index] = masks.AsReadOnly();
+			}
+			return rowMasks.AsReadOnly();
+		}
+		bool RowMaskMatchesPlayerState(ulong mask, int rowIndex)
+		{
+			foreach ((Vector2I pos, TileMode mode) in state) // store state in Hints
+			{
+				if (pos.Y != rowIndex) continue;
+				bool filled = ((mask >> pos.X) & 1UL) != 0;
+				if (mode == TileMode.Filled && !filled) return false;
+				if (mode == TileMode.Blocked && filled) return false;
+			}
+			return true;
+		}
+	}
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static bool IsFilled(this ulong mask, int index) => ((mask >> index) & 1UL) != 0;
 }
 
