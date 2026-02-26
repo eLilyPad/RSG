@@ -55,7 +55,7 @@ public static class DisplayExtensions
 	)
 	{
 		List<int> hints = [];
-		int run = 0;
+		int connected = 0;
 		var line = tiles
 			.InLine(index: position.Index, indexer: pos => position.Side.IndexFrom(position: pos))
 			.OrderBy(keySelector: pair => position.Side.OrderFrom(position: pair.Key));
@@ -64,16 +64,16 @@ public static class DisplayExtensions
 		{
 			if (selector(value) > 0)
 			{
-				run++;
+				connected++;
 				continue;
 			}
-			if (run <= 0) continue;
-			hints.Add(run);
-			run = 0;
+			if (connected <= 0) continue;
+			hints.Add(connected);
+			connected = 0;
 		}
-		if (run <= 0) return hints;
-		hints.Add(run);
-		run = 0;
+		if (connected <= 0) return hints;
+		hints.Add(connected);
+		connected = 0;
 		return hints;
 	}
 	private static string CalculateHints<TValue>(
