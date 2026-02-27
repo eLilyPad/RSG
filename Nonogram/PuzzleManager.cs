@@ -26,7 +26,6 @@ public sealed partial class PuzzleManager
 		puzzle.Switch(Puzzle, Savable);
 		static void Savable(SaveData save)
 		{
-			save = save with { Name = save.Name + " save" };
 			FileManager.Save(save);
 			Instance.Puzzles[save.Name] = save;
 		}
