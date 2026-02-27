@@ -7,7 +7,7 @@ using RSG.Dialogue;
 namespace RSG.Nonogram;
 
 using static PuzzleBuilder;
-public sealed record PuzzleData : Display.Data
+public sealed class PuzzleData : Display.Data
 {
 	public sealed class Converter : JsonConverter<PuzzleData>
 	{

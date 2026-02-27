@@ -7,7 +7,7 @@ namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
 
-public sealed partial record SaveData
+public sealed partial class SaveData
 {
 	public sealed class Converter : JsonConverter<SaveData>
 	{

@@ -13,35 +13,13 @@ public sealed record class CurrentPuzzle
 	{
 		public void ModifyName(string value)
 		{
-			Current.Puzzle = Current.Puzzle with
-			{
-				Expected = Current.Puzzle.Expected with { Name = value }
-			};
+			Current.Puzzle.ModifyName(value);
 			Puzzles.Save(Current.Puzzle);
 		}
 		public void ModifySize(double value)
 		{
 			int size = double.ConvertToInteger<int>(value);
-
-			Dictionary<Vector2I, TileMode> newCurrent = Data.CreateTiles(size);
-			Dictionary<Vector2I, TileMode> newExpected = Data.CreateTiles(size);
-
-			foreach (Vector2I key in newCurrent.Keys)
-			{
-				if (!Current.Puzzle.States.TryGetValue(key, out TileMode mode)) continue;
-				newCurrent[key] = mode;
-			}
-			foreach (Vector2I key in newExpected.Keys)
-			{
-				if (!Current.Puzzle.Expected.States.TryGetValue(key, out TileMode mode)) continue;
-				newExpected[key] = mode;
-			}
-
-			Current.Puzzle = Current.Puzzle with
-			{
-				Tiles = newCurrent,
-				Expected = Current.Puzzle.Expected with { Tiles = newExpected }
-			};
+			Current.Puzzle = Current.Puzzle.Clone(size);
 			Puzzles.Save(Current.Puzzle);
 		}
 	}
@@ -50,7 +28,7 @@ public sealed record class CurrentPuzzle
 		public Settings Settings => Current.Settings;
 		//Hints
 		public Node Parent(HintPosition position) => Current.UI.Display.HintsParent(side: position.Side);
-		public string Text(HintPosition position) => Current.Puzzle.Expected.States.CalculateHints(position);
+		public string Text(HintPosition position) => Current.Puzzle.Hints.TextLineAt(position);
 		//Tiles
 		public Node Parent() => Current.UI.Display.TilesGrid;
 		public TileMode State(Vector2I position) => Current.CurrentStates.GetValueOrDefault(position, defaultValue);
@@ -85,7 +63,8 @@ public sealed record class CurrentPuzzle
 					break;
 				case Type.Studio:
 					hints.Refresh();
-					studio.PuzzleTab.Message.Text = $"Solvable: {Solver.IsSolvable(state, Current.Puzzle)}";
+					//bool solvable = state.IsSolvable(puzzle.Size);
+					//studio.PuzzleTab.Message.Text = $"Solvable: {solvable}";
 					break;
 			}
 
