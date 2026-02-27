@@ -25,6 +25,12 @@ public static class HintExtensions
 		Side.Row => position.Y,
 		_ => throw new ArgumentOutOfRangeException(nameof(position))
 	};
+	public static void Shift(this Side side, ref Vector2I position, int amount)
+	{
+		int s = (int)side;
+		position.X += (s ^ 1) * amount;
+		position.Y += s * amount;
+	}
 }
 public static class DisplayExtensions
 {
