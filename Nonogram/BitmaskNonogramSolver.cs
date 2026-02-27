@@ -76,8 +76,8 @@ public static class Solver
 		}
 	}
 
-	public static bool IsSolvable<TState>(this TState state, int size)
-	where TState : Puzzle
+	public static bool IsSolvable(this SaveData save, int size) => save.States.IsSolvable<Puzzle>(size);
+	public static bool IsSolvable<TState>(this TState state, int size) where TState : Puzzle
 	{
 		Assert(state.IsSquare<TState, TileMode>(), $"State must be square");
 		Hints hints = Create(state, size);
@@ -86,7 +86,8 @@ public static class Solver
 		while (hints.RowToScan)
 		{
 			columnStillPossible = true;
-			if (hints.ScanningRow == hints.Masks.Count)
+			PuzzleMasks masks = hints.Masks;
+			if (hints.ScanningRow == masks.Count)
 			{
 				matchExact = true;
 				if (!hints.Matches()) matchExact = false;
@@ -162,13 +163,14 @@ public static class Solver
 					{
 						if (!RowMaskMatchesPlayerState(mask, index)) continue;
 						masks.Add(mask);
+						continue;
 					}
 					int remainingMin = expectedRow.Remaining(hintIndex);
 					for (int start = size - rowHintBlock; start >= position; start--)
 					{
 						if ((nextPosition = start + rowHintBlock) + remainingMin > size) continue;
-						ulong newMask = mask;
-						for (int nextI = 0; nextI < rowHintBlock; nextI++) newMask |= 1UL << (start + nextI);
+						ulong blockMask = ((1UL << rowHintBlock) - 1) << start;
+						ulong newMask = mask |= blockMask;
 						if (hintIndex + 1 < expectedRow.Count) nextPosition++;
 						maskStack.Push((hintIndex + 1, nextPosition, newMask));
 					}
