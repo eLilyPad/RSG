@@ -22,8 +22,10 @@ public static class SaveDataExtensions
 		Mode mode = state[position];
 		if (mode is not Mode.Filled) return false;
 
-		var a = state.InLine(position, side);
+		var a = state.InOrderedLine(position, Index, Order);
 
 		return false;
+		int Index(Vector2I pos) => side.IndexFrom(position: pos);
+		int Order(Vector2I pos) => side.OrderFrom(position: pos);
 	}
 }
