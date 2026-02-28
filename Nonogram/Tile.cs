@@ -105,7 +105,7 @@ public sealed partial class Tile : PanelContainer
 	public required IColours Colours { private get; set; }
 	[Export] public bool Locked { get; set => ChangeLocked(field = value); } = false;
 	[Export] public bool Hovering { get; set => ChangeHovering(field = value); } = false;
-	[Export] public TileMode Mode { get; set => ChangeMode(field = value); } = TileMode.NULL;
+	[Export] public TileMode Mode { get; set => ChangeMode(field = value); } = TileMode.Clear;
 
 	private Tile() { }
 	public override void _Ready() => this.Add(Button);
