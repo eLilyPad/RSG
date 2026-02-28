@@ -27,7 +27,7 @@ public sealed partial class SaveData : Data, IPuzzleState
 		get; init
 		{
 			field = value;
-			Expected.Modified += Hints.Recalculate;
+			Expected.Modified += PuzzleHints.Recalculate;
 		}
 	} = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
@@ -40,16 +40,14 @@ public sealed partial class SaveData : Data, IPuzzleState
 	public bool IsComplete => Tiles
 		.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
 
-	public IPuzzleHints Hints => _hints;
+	public IPuzzleHints PuzzleHints => Hints;
 
-	private readonly ExpectedHints _hints;
-	public SaveData() => _hints = new(this);
-	public SaveData(PuzzleData expected) => (_hints, Expected) = (new(this), expected);
+	public SaveData() { }
+	public SaveData(PuzzleData expected) => Expected = expected;
 	public SaveData Clone(int size)
 	{
 		Dictionary<Vector2I, Mode> newCurrent = CreateTiles(size);
 		Dictionary<Vector2I, Mode> newExpected = CreateTiles(size);
-
 		foreach (Vector2I key in newCurrent.Keys)
 		{
 			if (!Tiles.TryGetValue(key, out Mode mode)) continue;
@@ -95,13 +93,6 @@ public sealed partial class SaveData : Data, IPuzzleState
 		foreach (Vector2I key in Tiles.Keys) Tiles[key] = Mode.Clear;
 		return this;
 	}
-	//public IEnumerable<(Vector2I pos, Mode current)> CorrectInLine(Vector2I position)
-	//{
-	//	foreach ((Vector2I pos, Mode current) in InLine(position))
-	//	{
-	//		if (!Expected.States.IsCorrect(position: pos, current: current)) return false;
-	//	}
-	//}
 	public bool IsLineComplete(Vector2I position, Side side)
 	{
 		foreach ((Vector2I pos, Mode current) in InLine(position, side))
@@ -112,15 +103,13 @@ public sealed partial class SaveData : Data, IPuzzleState
 	}
 	public bool IsCorrectlyBlocked(Vector2I position)
 	{
-		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
-		Assert(States.ContainsKey(position), $"No current tile in the data");
+		AssertHasPosition(position);
 		return States[position] is Mode.Blocked
 			&& Expected.States[position] is Mode.Clear;
 	}
 	public bool IsCorrectlyFilled(Vector2I position)
 	{
-		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
-		Assert(States.ContainsKey(position), $"No current tile in the data");
+		AssertHasPosition(position);
 		return Mode.Filled.AllEqual(Expected.States[position], States[position]);
 	}
 	internal void BlockCompletedLines(Tile.Pool tiles, Vector2I position)
@@ -134,6 +123,10 @@ public sealed partial class SaveData : Data, IPuzzleState
 			ChangeState(pos, mode: Mode.Blocked);
 			_ = tiles.TryLock(pos);
 		}
-
+	}
+	private void AssertHasPosition(Vector2I position)
+	{
+		Assert(Expected.States.ContainsKey(position), $"No expected tile in the data");
+		Assert(States.ContainsKey(position), $"No current tile in the data");
 	}
 }

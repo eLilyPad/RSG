@@ -44,24 +44,24 @@ public static class SystemExtensions
 		}
 		return true;
 	}
-	public static int[] Condense<T>(this T values) where T : IEnumerable<int>
+	public static T Condense<T>(this T values, out int[] result) where T : IEnumerable<int>
 	{
 		int size = values.Count(), connected = 0, actualSize = 0;
-		int[] n = new int[size];
+		result = new int[size];
 
 		foreach ((int i, int value) in values.Index())
 		{
 			if (value > 0) connected++;
 			else
 			{
-				n[i] = connected;
+				result[i] = connected;
 				connected = 0;
 				actualSize++;
 			}
 		}
-		Array.Resize(ref n, actualSize);
-		if (connected > 0) n[^1] = connected;
-		return n;
+		Array.Resize(ref result, actualSize);
+		if (connected > 0) result[^1] = connected;
+		return values;
 	}
 	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> create)
 	where TKey : notnull
