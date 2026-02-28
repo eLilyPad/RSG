@@ -20,10 +20,14 @@ public static class TileModeExtensions
 	};
 	public static bool IsValidInput(this Mode current, ref Mode input)
 	{
-		if (input is Mode.NULL) return false;
+		if (input is Mode.Clear) return false;
 		input = input == current ? Mode.Clear : input;
 		return !Mode.Clear.AllEqual(current, input);
 	}
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int AsBinaryMode(this Mode mode) => mode is Mode.Filled ? 1 : 0;
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsFilled(this Mode mode) => mode is Mode.Filled;
 	public static Mode PlayAudio(this Mode mode)
 	{
 		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
@@ -40,10 +44,9 @@ public static class TileModeExtensions
 public abstract partial class Display
 {
 	[JsonConverter(typeof(JsonStringEnumConverter<Mode>))]
-	public enum TileMode
+	public enum TileMode : ulong
 	{
-		NULL = -1,
-		Clear = 0,
+		Clear = 0UL,
 		Filled = 1,
 		Blocked = 2
 	}
