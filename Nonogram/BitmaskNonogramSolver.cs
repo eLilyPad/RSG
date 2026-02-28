@@ -6,7 +6,7 @@ using static Display;
 using TRun = (int Index, int HintIndex, int FilledCount, int RunLength, int HintCount);
 using HintLines = IImmutableList<IImmutableList<int>>;
 using Puzzle = IEnumerable<KeyValuePair<Vector2I, Display.TileMode>>;
-using PuzzleMasks = ReadOnlyCollection<ReadOnlyCollection<ulong>>;
+using PuzzleMasks = ulong[][];
 
 public static class Solver
 {
@@ -16,8 +16,8 @@ public static class Solver
 
 		public ImmutableList<int> Totals => field ??= [.. Columns.Select(hints => hints.Sum())];
 		public ulong[] ActiveScan => field ??= new ulong[Columns.Count];
-		public int[] MaskIndex => field ??= new int[Masks.Count].Fill(-1);
-		public bool ScannedRowComplete => MaskIndex[ScanningRow] >= Masks[ScanningRow].Count;
+		public int[] MaskIndex => field ??= new int[Masks.Length].Fill(-1);
+		public bool ScannedRowComplete => MaskIndex[ScanningRow] >= Masks[ScanningRow].Length;
 		public bool RowToScan => ScanningRow >= 0;
 
 		public void ReplaceScan() => ActiveScan[ScanningRow] = Masks[ScanningRow][MaskIndex[ScanningRow]];
@@ -75,19 +75,18 @@ public static class Solver
 			}
 		}
 	}
-
-	public static bool IsSolvable(this SaveData save, int size) => save.States.IsSolvable<Puzzle>(size);
-	public static bool IsSolvable<TState>(this TState state, int size) where TState : Puzzle
+	public static bool IsSolvable(this SaveData save, int size)
 	{
-		Assert(state.IsSquare<TState, TileMode>(), $"State must be square");
-		Hints hints = Create(state, size);
+		Puzzle state = save.Expected.States;
+		Assert(state.IsSquare<Puzzle, TileMode>(), $"State must be square");
+		Hints hints = Create(save);
 		bool columnStillPossible, matchExact;
 		int remainingNeeded, remainingRows;
 		while (hints.RowToScan)
 		{
 			columnStillPossible = true;
 			PuzzleMasks masks = hints.Masks;
-			if (hints.ScanningRow == masks.Count)
+			if (hints.ScanningRow == masks.Length)
 			{
 				matchExact = true;
 				if (!hints.Matches()) matchExact = false;
@@ -125,71 +124,14 @@ public static class Solver
 
 		void columnPossible(bool possible) => columnStillPossible = possible;
 	}
-	private static Hints Create(Puzzle state, int size)
+	private static Hints Create(Data data)
 	{
 		HintLines columns = CalculateHint(Side.Column), rows = CalculateHint(Side.Row);
-		return new Hints(columns, rows, GetMasks());
-
-		HintLines CalculateHint(Side side)
-		{
-			IImmutableList<int>[] hints = new IImmutableList<int>[size];
-			for (int i = 0; i < size; i++)
-			{
-				hints[i] = [.. state.AsLineHints(new(side, i))];
-			}
-			return [.. hints];
-		}
-		PuzzleMasks GetMasks()
-		{
-			int size = rows.Count;
-			int nextPosition;
-			ReadOnlyCollection<ulong>[] rowMasks = new ReadOnlyCollection<ulong>[size];
-
-			foreach ((int index, IReadOnlyList<int> expectedRow) in rows.Index())
-			{
-				Stack<(int hintIndex, int position, ulong mask)> maskStack = new();
-				List<ulong> masks = [];
-				maskStack.Push((0, 0, 0UL));
-				if (expectedRow.Count == 0)
-				{
-					masks.Add(0UL);
-					rowMasks[index] = masks.AsReadOnly();
-					continue;
-				}
-				while (maskStack.Count > 0)
-				{
-					(int hintIndex, int position, ulong mask) = maskStack.Pop();
-					if (!expectedRow.TryGetValue(hintIndex, out int rowHintBlock))
-					{
-						if (!RowMaskMatchesPlayerState(mask, index)) continue;
-						masks.Add(mask);
-						continue;
-					}
-					int remainingMin = expectedRow.Remaining(hintIndex);
-					for (int start = size - rowHintBlock; start >= position; start--)
-					{
-						if ((nextPosition = start + rowHintBlock) + remainingMin > size) continue;
-						ulong blockMask = ((1UL << rowHintBlock) - 1) << start;
-						ulong newMask = mask |= blockMask;
-						if (hintIndex + 1 < expectedRow.Count) nextPosition++;
-						maskStack.Push((hintIndex + 1, nextPosition, newMask));
-					}
-				}
-				rowMasks[index] = masks.AsReadOnly();
-			}
-			return rowMasks.AsReadOnly();
-		}
-		bool RowMaskMatchesPlayerState(ulong mask, int rowIndex)
-		{
-			foreach ((Vector2I pos, TileMode mode) in state) // store state in Hints
-			{
-				if (pos.Y != rowIndex) continue;
-				bool filled = ((mask >> pos.X) & 1UL) != 0;
-				if (mode == TileMode.Filled && !filled) return false;
-				if (mode == TileMode.Blocked && filled) return false;
-			}
-			return true;
-		}
+		ulong[][] masks = Data.DataMask(Side.Row, data);
+		return new Hints(columns, rows, masks);
+		HintLines CalculateHint(Side side) => [.. Data.FilledLines(side, data)
+			.Select<int[], IImmutableList<int>>(selector: a => [.. a])
+		];
 	}
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static bool IsFilled(this ulong mask, int index) => ((mask >> index) & 1UL) != 0;
