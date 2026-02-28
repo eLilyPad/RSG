@@ -24,9 +24,7 @@ public static class TileModeExtensions
 		input = input == current ? Mode.Clear : input;
 		return !Mode.Clear.AllEqual(current, input);
 	}
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int AsBinaryMode(this Mode mode) => mode is Mode.Filled ? 1 : 0;
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsFilled(this Mode mode) => mode is Mode.Filled;
 	public static Mode PlayAudio(this Mode mode)
 	{
