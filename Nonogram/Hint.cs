@@ -9,8 +9,8 @@ sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 	internal interface IProvider
 	{
 		Node Parent(HintPosition position);
-		string Text(HintPosition position);
 	}
+	public IStringifyHints? HintTranslator { get; set; }
 	public Vector2 TileSize { get; set; } = Vector2.Zero;
 	public IColours Colours { private get; set; } = Core.Colours;
 
@@ -31,7 +31,8 @@ sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 			ApplyText(position, hint);
 		}
 	}
-	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
+	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = HintTranslator?.TextLineAt(position)
+		?? EmptyHint;
 	protected override Node Parent(HintPosition position) => Provider.Parent(position);
 	protected override Hint Create(HintPosition position)
 	{

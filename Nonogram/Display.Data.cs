@@ -176,23 +176,6 @@ public abstract partial class Display
 			Hints.Recalculate(position);
 			Modified?.Invoke(position);
 		}
-
-		protected sealed class GridTiles : IReadOnlyDictionary<Vector2I, Mode>
-		{
-			public Action<Vector2I>? Modified { get; set; }
-			public Mode this[Vector2I key] => _tiles[key];
-			public IEnumerable<Vector2I> Keys => _tiles.Keys;
-			public IEnumerable<Mode> Values => _tiles.Values;
-			public int Count => _tiles.Count;
-
-			private readonly Dictionary<Vector2I, Mode> _tiles = [];
-
-			public bool ContainsKey(Vector2I key) => _tiles.ContainsKey(key);
-			public IEnumerator<KeyValuePair<Vector2I, Mode>> GetEnumerator() => _tiles.GetEnumerator();
-			public bool TryGetValue(Vector2I key, [MaybeNullWhen(false)] out Mode value) => _tiles.TryGetValue(key, out value);
-
-			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-		}
 	}
 	public sealed record ExpectedHints(Data Save) : IPuzzleHints
 	{
@@ -221,17 +204,23 @@ public abstract partial class Display
 		public string TextLineAt(HintPosition position)
 		{
 			builder.Clear();
-			int[] line = GetLine(position);
-			for (int id = 0; id < line.Length; id++)
+			int connected = 0;
+			foreach ((Vector2I _, Mode mode) in Save.InLine(position))
 			{
-				AppendHint(position, hint: line[id]);
+				if (mode is Mode.Filled)
+				{
+					connected++;
+					continue;
+				}
+				AppendHint();
+				connected = 0;
 			}
+			if (connected > 0) AppendHint();
 			return builder.ToString();
-		}
-		public string TextLineAt(HintPosition position, int index)
-		{
-			builder.Clear();
-			return AppendHint(position, hint: GetHint(position, index)).ToString();
+
+			void AppendHint() => builder
+				.Append(connected)
+				.Append(position.Format);
 		}
 		public void TotalHints(HintPosition position, out int value) => value = GetLine(position).Length;
 		private int GetHint(HintPosition position, int index)
@@ -246,12 +235,7 @@ public abstract partial class Display
 			AssertIndex(hints, position);
 			return hints[position.Index];
 		}
-		private StringBuilder AppendHint(HintPosition position, int hint) => builder
-			.Append(hint)
-			.Append(position.Format);
-
 		private int[][] Get(Side side) => side switch { Side.Row => Rows, _ => Columns };
-
 	}
 
 	private readonly record struct MaskGen(int Index, int Position, ulong Mask)

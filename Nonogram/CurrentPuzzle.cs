@@ -88,6 +88,7 @@ public sealed record class CurrentPuzzle
 			field = value;
 			Puzzles.Instance.Puzzles[field.Name] = field;
 			Timer.Elapsed = field.TimeTaken;
+			hints.HintTranslator = field.Hints;
 			puzzleTab.EditableName.Text = field.Name;
 			puzzleTab.PuzzleSize.Value = field.Size;
 			UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
@@ -117,17 +118,19 @@ public sealed record class CurrentPuzzle
 
 	private IImmutableDictionary<Vector2I, TileMode> CurrentStates => Type.InputData(Puzzle).States;
 
+	private readonly UIProviders _provider;
 	internal CurrentPuzzle()
 	{
-		UIProviders Provider = new(Current: this);
+		_provider = new(Current: this);
 		Tile.Locker locker = new() { Rules = [ShouldLockFilledTiles, ShouldLockBlockedTiles] };
-		Tile.Pool tiles = new(Provider) { LockRules = locker };
-		Hints hints = new(Provider);
+		Tile.Pool tiles = new(_provider) { LockRules = locker };
+		Hints hints = new(_provider) { HintTranslator = Puzzle.Hints };
 		UI = new NonogramContainer(tiles, hints) { Name = "Nonogram", Visible = false }
 			.Preset(Control.LayoutPreset.FullRect)
 			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
-		Timer = new() { Provider = Provider };
+		Timer = new() { Provider = _provider };
 		UI.Studio.PuzzleTab.Signals = new PuzzleModifier(this);
+
 
 		bool ShouldLockFilledTiles(Vector2I position) => Type is Type.Game
 			&& Settings.LockCompletedFilledTiles
