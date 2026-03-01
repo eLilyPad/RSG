@@ -12,16 +12,9 @@ public interface IPuzzleState
 	bool IsCorrectlyBlocked(Vector2I position);
 	bool IsCorrectlyFilled(Vector2I position);
 }
-public interface IPuzzleHints
-{
-	string TextLineAt(HintPosition position);
-	void Recalculate(HintPosition position);
-	void Recalculate(Vector2I position);
-}
 
 public sealed partial class SaveData : Data, IPuzzleState
 {
-
 	public PuzzleData Expected
 	{
 		get; init
