@@ -127,9 +127,9 @@ public static class Solver
 	private static Hints Create(Data data)
 	{
 		HintLines columns = CalculateHint(Side.Column), rows = CalculateHint(Side.Row);
-		ulong[][] masks = Data.DataMask(Side.Row, data);
+		ulong[][] masks = DataMask(Side.Row, data);
 		return new Hints(columns, rows, masks);
-		HintLines CalculateHint(Side side) => [.. Data.FilledLines(side, data)
+		HintLines CalculateHint(Side side) => [.. FilledLines(side, data)
 			.Select<int[], IImmutableList<int>>(selector: a => [.. a])
 		];
 	}

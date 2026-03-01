@@ -20,7 +20,6 @@ public sealed partial class SaveData : Data, IPuzzleState
 		get; init
 		{
 			field = value;
-			Expected.Modified += PuzzleHints.Recalculate;
 		}
 	} = new();
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
@@ -32,8 +31,6 @@ public sealed partial class SaveData : Data, IPuzzleState
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
 	public bool IsComplete => Tiles
 		.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
-
-	public IPuzzleHints PuzzleHints => Hints;
 
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
@@ -67,19 +64,6 @@ public sealed partial class SaveData : Data, IPuzzleState
 	{
 		Expected.Name = value;
 		return this;
-	}
-	public ImageTexture AsIcon(IColours colours, int pixelSize = 16)
-	{
-		Image image = Tiles.AsIcon(GetColor, Size, pixelSize);
-		image.Rotate90(ClockDirection.Clockwise);
-		return ImageTexture.CreateFromImage(image: image);
-
-		Color GetColor(Vector2I position, Mode mode)
-		{
-			const int chunkSize = Tile.Pool.ChunkSize;
-			bool alternative = (position.X / chunkSize + position.Y / chunkSize) % 2 == 0;
-			return colours.NonogramTileBackground(mode, alternative);
-		}
 	}
 	public SaveData Clear()
 	{

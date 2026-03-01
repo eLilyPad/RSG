@@ -17,10 +17,9 @@ public static class ImageCreationExtension
 
 		foreach ((Vector2I position, TValue mode) in state)
 		{
-			int tileX = position.X;
-			int tileY = position.Y;
 			Color color = getColor(position, mode);
-			int baseIndex = (tileY * pixelSize * width + tileX * pixelSize) * 4;
+			int baseSize = pixelSize * width;
+			int baseIndex = (position.Y * baseSize + position.X * pixelSize) * 4;
 			int stride = width * 4;
 
 			byte

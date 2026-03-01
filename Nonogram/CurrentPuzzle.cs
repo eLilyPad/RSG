@@ -28,7 +28,7 @@ public sealed record class CurrentPuzzle
 		public Settings Settings => Current.Settings;
 		//Hints
 		public Node Parent(HintPosition position) => Current.UI.Display.HintsParent(side: position.Side);
-		public string Text(HintPosition position) => Current.Puzzle.PuzzleHints.TextLineAt(position);
+		public string Text(HintPosition position) => Current.Puzzle.Expected.Hints.TextLineAt(position);
 		//Tiles
 		public Node Parent() => Current.UI.Display.TilesGrid;
 		public TileMode State(Vector2I position) => Current.CurrentStates.GetValueOrDefault(position, defaultValue);

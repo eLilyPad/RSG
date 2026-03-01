@@ -4,6 +4,10 @@ namespace RSG;
 
 public static class Vector2IExtensions
 {
+	public static bool IsOnChequered(this Vector2I position, in int size)
+	{
+		return (position.X / size + position.Y / size) % 2 == 0;
+	}
 	public static IEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
 		this IEnumerable<KeyValuePair<Vector2I, T>> value,
 		int index,

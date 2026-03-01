@@ -59,8 +59,8 @@ public static class SystemExtensions
 				actualSize++;
 			}
 		}
-		Array.Resize(ref result, actualSize);
 		if (connected > 0) result[^1] = connected;
+		Array.Resize(ref result, actualSize);
 		return values;
 	}
 	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> create)
