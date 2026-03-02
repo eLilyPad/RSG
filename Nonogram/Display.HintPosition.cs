@@ -11,7 +11,7 @@ public static class HintExtensions
 	{
 		Side.Column => "\n",
 		Side.Row => " ",
-		_ => ""
+		_ => throw new ArgumentOutOfRangeException(nameof(side))
 	};
 	public static int IndexFrom(this Side side, Vector2I position) => side switch
 	{
@@ -25,18 +25,15 @@ public static class HintExtensions
 		Side.Row => position.Y,
 		_ => throw new ArgumentOutOfRangeException(nameof(position))
 	};
-	public static Vector2I Origin(this Side side)
+	public static Vector2I Direction(this Side side) => side switch
 	{
-		int s = (int)side;
-		Assert(s is 0 or 1);
-		return new(s, s ^ 1);
-	}
+		Side.Column => Vector2I.Down,
+		Side.Row => Vector2I.Right,
+		_ => throw new ArgumentOutOfRangeException(nameof(side))
+	};
 	public static void Shift(this Side side, ref Vector2I position, int amount)
 	{
-		int s = (int)side;
-		Assert(s is 0 or 1);
-		position.X += (s ^ 1) * amount;
-		position.Y += s * amount;
+		position += side.Direction() * amount;
 	}
 	public static HorizontalAlignment AsHAlignment(this Side side) => side switch
 	{
@@ -68,7 +65,7 @@ public abstract partial class Display
 			return (new(Side.Row, value.X), new(Side.Column, value.Y));
 		}
 
-		public readonly Vector2I Origin = Side.Origin() * Index;
+		public readonly Vector2I Origin = Side.Direction() * Index;
 		public readonly string Format = Side.AsFormat();
 
 		public HintPosition(Side side, Vector2I position) : this(side, side.IndexFrom(position)) { }
