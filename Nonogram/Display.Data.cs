@@ -139,14 +139,9 @@ public abstract partial class Display
 			Tiles = values;
 			_hints = new(this);
 		}
-		public ImageTexture AsIcon(IColours colours, int pixelSize = 16)
-		{
-			Image image = Tiles.AsIcon(GetColor, Size, pixelSize);
-			return ImageTexture.CreateFromImage(image);
-
-			Color GetColor(Vector2I position, Mode mode) => colours
-				.NonogramTileBackground(mode, alternative: position.IsOnChequered(Tile.Pool.ChunkSize));
-		}
+		public ImageTexture AsIcon(IColours colours, int pixelSize = 16) => Tiles
+			.AsIcon(getColor: colours.ChequeredNonogramTile, size: Size, pixelSize)
+			.ToImage();
 
 		public IEnumerable<(Vector2I Position, Mode Mode)> InLine(HintPosition position)
 			=> InLine(position: position.Origin, side: position);
