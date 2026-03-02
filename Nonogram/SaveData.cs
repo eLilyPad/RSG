@@ -99,7 +99,6 @@ public sealed partial class SaveData : Data, IPuzzleState
 			if (tile.Mode is Mode.Blocked) continue;
 			tile.Mode = Mode.Blocked;
 			ChangeState(pos, mode: Mode.Blocked);
-			_ = tiles.TryLock(pos);
 		}
 	}
 	private void AssertHasPosition(Vector2I position)
