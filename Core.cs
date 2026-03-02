@@ -300,8 +300,6 @@ public sealed partial class Core : Node
 			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
 		InitConsole(this);
-
-		PuzzleManager.Current.Type = Display.Type.Game;
 		PuzzleManager.Current.EventHandler = Handler;
 
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
