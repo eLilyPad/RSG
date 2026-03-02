@@ -28,7 +28,24 @@ public sealed record class CurrentPuzzle
 		public Settings Settings => Current.Settings;
 		//Hints
 		public Node Parent(HintPosition position) => Current.UI.Display.HintsParent(side: position.Side);
-		public string Text(HintPosition position) => Current.Puzzle.Expected.Hints.TextLineAt(position);
+		public string TextLineAt(HintPosition position)
+		{
+			StringBuilder builder = new(Current.Puzzle.Size);
+			int connected = 0;
+			foreach ((Vector2I _, TileMode Mode) in Current.Puzzle.Expected.InLine(position))
+			{
+				int filled = Mode is TileMode.Filled ? 1 : 0;
+				int prev = connected;
+				connected = (connected + filled) * filled;
+				if (prev > 0 && filled == 0) AppendHint(prev);
+			}
+			if (connected > 0) AppendHint(connected);
+			return builder.Length > 0 ? builder.ToString() : EmptyHint;
+
+			void AppendHint(int value) => builder
+				.Append(value)
+				.Append(position.Format);
+		}
 		//Tiles
 		public Node Parent() => Current.UI.Display.TilesGrid;
 		public TileMode State(Vector2I position) => Current.CurrentStates.GetValueOrDefault(position, defaultValue);
@@ -60,13 +77,14 @@ public sealed record class CurrentPuzzle
 			Current.Puzzle.TimeTaken = Current.Timer?.Elapsed ?? TimeSpan.Zero;
 			Current.UI.Display.Timer.Time.Text = "[font_size=30]" + value;
 		}
+
 	}
 
 	private const TileMode defaultValue = TileMode.Clear;
 
 	public PuzzleTimer Timer { get; }
 	public Puzzles.IHaveEvents? EventHandler { get; set; }
-	public Type Type { get; set => this.ChangeType(previous: field, current: field = value); } = Type.Game;
+	public Type Type { get; set => this.ChangeType(previous: field, current: field = value); } = Type.Studio;
 	public Settings Settings
 	{
 		get; set
@@ -88,7 +106,6 @@ public sealed record class CurrentPuzzle
 			field = value;
 			Puzzles.Instance.Puzzles[field.Name] = field;
 			Timer.Elapsed = field.TimeTaken;
-			hints.HintTranslator = field.Hints;
 			puzzleTab.EditableName.Text = field.Name;
 			puzzleTab.PuzzleSize.Value = field.Size;
 			UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
@@ -124,7 +141,7 @@ public sealed record class CurrentPuzzle
 		_provider = new(Current: this);
 		Tile.Locker locker = new() { Rules = [ShouldLockFilledTiles, ShouldLockBlockedTiles] };
 		Tile.Pool tiles = new(_provider) { LockRules = locker };
-		Hints hints = new(_provider) { HintTranslator = Puzzle.Hints };
+		Hints hints = new(_provider);
 		UI = new NonogramContainer(tiles, hints) { Name = "Nonogram", Visible = false }
 			.Preset(Control.LayoutPreset.FullRect)
 			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
