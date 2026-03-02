@@ -153,8 +153,8 @@ public sealed record class CurrentPuzzle
 			&& Settings.LockCompletedFilledTiles
 			&& Puzzle.IsCorrectlyFilled(position);
 		bool ShouldLockBlockedTiles(Vector2I position) => Type is Type.Game
-			&& Settings.LockCompletedFilledTiles
-			&& Puzzle.IsCorrectlyFilled(position);
+			&& Settings.LockCompletedBlockedTiles
+			&& Puzzle.IsCorrectlyBlocked(position);
 	}
 	public void ClearPuzzle()
 	{
