@@ -93,6 +93,7 @@ public sealed partial class SaveData : Data, IPuzzleState
 	{
 		foreach ((Vector2I pos, Mode current) in InLines(position))
 		{
+			if (!IsLineComplete(pos, Side.Row) && !IsLineComplete(pos, Side.Column)) continue;
 			if (current is not Mode.Clear) continue;
 			Tile tile = tiles.GetOrCreate(pos);
 			if (tile.Mode is Mode.Blocked) continue;
