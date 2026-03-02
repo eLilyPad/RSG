@@ -16,6 +16,11 @@ public interface IColours
 	Color NonogramTileBackground1 { get; }
 	Color NonogramTileBackgroundFilled { get; }
 
+	Color ChequeredNonogramTile(Vector2I position, Mode mode)
+	{
+		bool alternative = position.IsOnChequered(Tile.Pool.ChunkSize);
+		return NonogramTileBackground(mode, alternative);
+	}
 	Color NonogramTileBackground(Mode mode, bool alternative)
 	{
 		Color
