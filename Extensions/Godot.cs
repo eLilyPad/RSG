@@ -93,6 +93,7 @@ public static class VectorExtensions
 }
 public static class ImageExtensions
 {
+	public static ImageTexture ToImage(this Image image) => ImageTexture.CreateFromImage(image);
 	public static void SetPixel(this Image image, int x, int y, Color color, int size)
 	{
 		int half = size / 2;
