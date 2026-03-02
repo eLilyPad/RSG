@@ -139,7 +139,6 @@ public abstract partial class Display
 			Tiles = values;
 			_hints = new(this);
 		}
-		public IEnumerable<int> Line() { for (int i = 0; i < Size; i++) yield return i; }
 		public ImageTexture AsIcon(IColours colours, int pixelSize = 16)
 		{
 			Image image = Tiles.AsIcon(GetColor, Size, pixelSize);
@@ -152,16 +151,15 @@ public abstract partial class Display
 		public IEnumerable<(Vector2I Position, Mode Mode)> InLine(HintPosition position)
 			=> InLine(position: position.Origin, side: position);
 		public IEnumerable<(Vector2I Position, Mode Mode)> InLine(int index, Side side)
-			=> InLine(position: side.Origin() * index, side);
+			=> InLine(position: side.Direction() * index, side);
 		public IEnumerable<(Vector2I Position, Mode Mode)> InLine(Vector2I position, Side side)
 		{
-			const int step = 1;
-			side.Shift(ref position, amount: -side.OrderFrom(position));
-			for (int i = 0; i < Size; i += step)
+			int id = side.IndexFrom(position);
+			foreach ((Vector2I key, Mode mode) in Tiles)
 			{
-				side.Shift(ref position, step);
-				if (!Tiles.TryGetValue(position, out Mode mode)) continue;
-				yield return (position, mode);
+				int otherID = side.IndexFrom(key);
+				if (id != otherID) continue;
+				yield return (key, mode);
 			}
 		}
 		public IEnumerable<(Vector2I Position, Mode Mode)> InLines(Vector2I position)
