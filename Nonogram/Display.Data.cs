@@ -198,21 +198,18 @@ public abstract partial class Display
 		{
 			builder.Clear();
 			int connected = 0;
-			foreach ((Vector2I _, Mode mode) in Save.InLine(position))
+			foreach ((Vector2I _, Mode Mode) in Save.InLine(position))
 			{
-				if (mode is Mode.Filled)
-				{
-					connected++;
-					continue;
-				}
-				AppendHint();
-				connected = 0;
+				int filled = Mode is Mode.Filled ? 1 : 0;
+				int prev = connected;
+				connected = (connected + filled) * filled;
+				if (prev > 0 && filled == 0) AppendHint(prev);
 			}
-			if (connected > 0) AppendHint();
-			return builder.ToString();
+			if (connected > 0) AppendHint(connected);
+			return builder.Length > 0 ? builder.ToString() : EmptyHint;
 
-			void AppendHint() => builder
-				.Append(connected)
+			void AppendHint(int value) => builder
+				.Append(value)
 				.Append(position.Format);
 		}
 		public void TotalHints(HintPosition position, out int value) => value = GetLine(position).Length;

@@ -23,30 +23,19 @@ public sealed record class CurrentPuzzle
 			Puzzles.Save(Current.Puzzle);
 		}
 	}
-	private sealed class UIProviders(CurrentPuzzle Current) : Hints.IProvider, Tile.IProvider, PuzzleTimer.IProvider
-	{
-		public Settings Settings => Current.Settings;
-		//Hints
-		public Node Parent(HintPosition position) => Current.UI.Display.HintsParent(side: position.Side);
-		public string TextLineAt(HintPosition position)
-		{
-			StringBuilder builder = new(Current.Puzzle.Size);
-			int connected = 0;
-			foreach ((Vector2I _, TileMode Mode) in Current.Puzzle.Expected.InLine(position))
-			{
-				int filled = Mode is TileMode.Filled ? 1 : 0;
-				int prev = connected;
-				connected = (connected + filled) * filled;
-				if (prev > 0 && filled == 0) AppendHint(prev);
-			}
-			if (connected > 0) AppendHint(connected);
-			return builder.Length > 0 ? builder.ToString() : EmptyHint;
 
-			void AppendHint(int value) => builder
-				.Append(value)
-				.Append(position.Format);
-		}
-		//Tiles
+	private sealed class PuzzleHints(CurrentPuzzle Current) : Hints.IProvider
+	{
+		public Hints Hints => field ??= new(this);
+		public Node Parent(HintPosition position) => Current.UI.Display.HintsParent(side: position.Side);
+		public string TextLineAt(HintPosition position) => Current.Puzzle.Expected.Hints.TextLineAt(position);
+	}
+	private sealed class PuzzleTiles(CurrentPuzzle Current) : Tile.IProvider
+	{
+		public Tile.Pool Tiles => field ??= new(this)
+		{
+			LockRules = new() { Rules = [ShouldLockFilledTiles, ShouldLockBlockedTiles] }
+		};
 		public Node Parent() => Current.UI.Display.TilesGrid;
 		public TileMode State(Vector2I position) => Current.CurrentStates.GetValueOrDefault(position, defaultValue);
 		public void OnActivate(Vector2I position, Tile tile)
@@ -69,15 +58,24 @@ public sealed record class CurrentPuzzle
 			Puzzles.Save(puzzle);
 
 			if (type is Type.Game) Current.Timer.TryStart(tile: mode);
-			if (type is Type.Game && Settings.LineCompleteBlockRest) puzzle.BlockCompletedLines(tiles, position);
+			if (type is Type.Game && Current.Settings.LineCompleteBlockRest) puzzle.BlockCompletedLines(tiles, position);
 		}
-		//Timer
+
+		private bool ShouldLockFilledTiles(Vector2I position) => Current.Type is Type.Game
+			&& Current.Settings.LockCompletedFilledTiles
+			&& Current.Puzzle.IsCorrectlyFilled(position);
+		private bool ShouldLockBlockedTiles(Vector2I position) => Current.Type is Type.Game
+			&& Current.Settings.LockCompletedBlockedTiles
+			&& Current.Puzzle.IsCorrectlyBlocked(position);
+	}
+	private sealed class GameTimer(CurrentPuzzle Current) : PuzzleTimer.IProvider
+	{
+		public Settings Settings => Current.Settings;
 		public void TimeChanged(string value)
 		{
 			Current.Puzzle.TimeTaken = Current.Timer?.Elapsed ?? TimeSpan.Zero;
 			Current.UI.Display.Timer.Time.Text = "[font_size=30]" + value;
 		}
-
 	}
 
 	private const TileMode defaultValue = TileMode.Clear;
@@ -99,8 +97,8 @@ public sealed record class CurrentPuzzle
 		{
 			if (value is null) return;
 
-			Hints hints = UI.Hints;
-			Tile.Pool tiles = UI.Tiles;
+			Hints hints = _hints.Hints;
+			Tile.Pool tiles = _tiles.Tiles;
 			NonogramStudioBar.PuzzleTabContainer puzzleTab = UI.Studio.PuzzleTab;
 
 			field = value;
@@ -110,21 +108,14 @@ public sealed record class CurrentPuzzle
 			puzzleTab.PuzzleSize.Value = field.Size;
 			UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
 			field.Modified += TilesChanged;
+			field.Expected.Modified += _ => hints.Refresh();
 
 			void TilesChanged(Vector2I position)
 			{
-				switch (Type)
-				{
-					case Type.Game:
-						tiles.TryLock(position);
-						if (field.IsComplete) EventHandler?.Completed(field);
-						break;
-					case Type.Studio:
-						hints.Refresh();
-						//bool solvable = state.IsSolvable(puzzle.Size);
-						//studio.PuzzleTab.Message.Text = $"Solvable: {solvable}";
-						break;
-				}
+				if (Type is not Type.Game) return;
+				tiles.TryLock(position);
+				if (!field.IsComplete || EventHandler is null) return;
+				EventHandler.Completed(field);
 			}
 		}
 	} = new();
@@ -135,26 +126,19 @@ public sealed record class CurrentPuzzle
 
 	private IImmutableDictionary<Vector2I, TileMode> CurrentStates => Type.InputData(Puzzle).States;
 
-	private readonly UIProviders _provider;
+	private readonly GameTimer _provider;
+	private readonly PuzzleHints _hints;
+	private readonly PuzzleTiles _tiles;
 	internal CurrentPuzzle()
 	{
 		_provider = new(Current: this);
-		Tile.Locker locker = new() { Rules = [ShouldLockFilledTiles, ShouldLockBlockedTiles] };
-		Tile.Pool tiles = new(_provider) { LockRules = locker };
-		Hints hints = new(_provider);
-		UI = new NonogramContainer(tiles, hints) { Name = "Nonogram", Visible = false }
+		_tiles = new(Current: this);
+		_hints = new(Current: this);
+		UI = new NonogramContainer(_tiles.Tiles, _hints.Hints) { Name = "Nonogram", Visible = false }
 			.Preset(Control.LayoutPreset.FullRect)
 			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
 		Timer = new() { Provider = _provider };
 		UI.Studio.PuzzleTab.Signals = new PuzzleModifier(this);
-
-
-		bool ShouldLockFilledTiles(Vector2I position) => Type is Type.Game
-			&& Settings.LockCompletedFilledTiles
-			&& Puzzle.IsCorrectlyFilled(position);
-		bool ShouldLockBlockedTiles(Vector2I position) => Type is Type.Game
-			&& Settings.LockCompletedBlockedTiles
-			&& Puzzle.IsCorrectlyBlocked(position);
 	}
 	public void ClearPuzzle()
 	{
