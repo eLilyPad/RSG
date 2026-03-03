@@ -38,19 +38,16 @@ public sealed class PuzzleTimer
 		}
 	} = false;
 
-	private readonly System.Text.StringBuilder _stringBuilder = new();
+	private readonly StringBuilder _stringBuilder = new();
 
 	public void Tick(double delta)
 	{
 		if (!Running) return;
 		Elapsed += TimeSpan.FromSeconds(delta);
 	}
-	public void TryStart(Display.TileMode tile)
+	public void TryStart()
 	{
-		if (Running || tile is not Display.TileMode.Filled)
-		{
-			return;
-		}
+		if (Running) return;
 		Running = true;
 	}
 }
