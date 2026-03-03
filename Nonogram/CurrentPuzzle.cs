@@ -40,25 +40,18 @@ public sealed record class CurrentPuzzle
 		public TileMode State(Vector2I position) => Current.CurrentStates.GetValueOrDefault(position, defaultValue);
 		public void OnActivate(Vector2I position, Tile tile)
 		{
-			Assert(Current.CurrentStates.ContainsKey(position), $"No current tile in the data");
-
-			TileMode current = Current.CurrentStates[position];
 			SaveData puzzle = Current.Puzzle;
 			Type type = Current.Type;
-			Tile.Pool tiles = Current.UI.Tiles;
-			Data data = type.InputData(puzzle);
-			TileMode mode = PressedMode;
-
-			if (!current.IsValidInput(ref mode) || tile.Locked) return;
-
-			data.ChangeState(position, mode);
+			if (!Current.TryGetValidInput(position, out TileMode mode) || tile.Locked) return;
+			type.InputData(puzzle).ChangeState(position, mode);
 			tile.Mode = mode;
 			mode.PlayAudio();
-
-			Puzzles.Save(puzzle);
-
 			if (type is Type.Game) Current.Timer.TryStart(tile: mode);
-			if (type is Type.Game && Current.Settings.LineCompleteBlockRest) puzzle.BlockCompletedLines(tiles, position);
+			if (type is Type.Game && Current.Settings.LineCompleteBlockRest)
+			{
+				puzzle.BlockCompletedLines(Current.UI.Tiles, position);
+			}
+			Puzzles.Save(puzzle);
 		}
 
 		private bool ShouldLockFilledTiles(Vector2I position) => Current.Type is Type.Game
@@ -144,5 +137,12 @@ public sealed record class CurrentPuzzle
 	{
 		Puzzle.Clear();
 		UI.PuzzleSize = Puzzle.Size;
+	}
+
+	private bool TryGetValidInput(Vector2I position, out TileMode input)
+	{
+		Assert(CurrentStates.ContainsKey(position), $"No current tile in the data");
+		input = PressedMode;
+		return CurrentStates[position].IsValidInput(ref input);
 	}
 }
