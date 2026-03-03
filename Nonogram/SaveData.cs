@@ -70,6 +70,11 @@ public sealed partial class SaveData : Data, IPuzzleState
 		foreach (Vector2I key in Tiles.Keys) Tiles[key] = Mode.Clear;
 		return this;
 	}
+	public SaveData Save()
+	{
+		PuzzleManager.Save(this);
+		return this;
+	}
 	public bool IsLineComplete(Vector2I position, Side side)
 	{
 		foreach ((Vector2I pos, Mode current) in InLine(position, side))
