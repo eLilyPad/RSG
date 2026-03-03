@@ -30,16 +30,16 @@ public sealed partial class PuzzleSelector : PanelContainer
 		}
 		public static PackDisplay CreateForStudio(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
-			PackDisplay display = new PackDisplay { Name = name, Puzzles = CreateStudioPuzzles(name) }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 
-			return display.AddPuzzles(data, root);
+			return new PackDisplay { Name = name, Puzzles = CreateStudioPuzzles(name) }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+				.AddPuzzles(data, root);
 		}
 		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
-			PackDisplay display = new PackDisplay { Name = name, Puzzles = CreateSelectorPuzzles(name) }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			return display.AddPuzzles(data, root);
+			return new PackDisplay { Name = name, Puzzles = CreateSelectorPuzzles(name) }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+				.AddPuzzles(data, root);
 		}
 
 		private static Labelled<Container> CreateStudioPuzzles(string name) => new Labelled<Container>()
@@ -63,7 +63,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 
 		public required Labelled<Container> Puzzles { get; init; }
-		internal PackDisplay() { }
+		private PackDisplay() { }
 		public override void _Ready() => this.Add(Puzzles);
 		private PackDisplay AddPuzzles(IEnumerable<SaveData> saves, CanvasItem root)
 		{
