@@ -21,50 +21,74 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public override void _Ready() => this.Add(Background, Scroll.Add(Puzzles));
 
+
 	public sealed partial class PackDisplay : PanelContainer
 	{
 		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
 		{
 			return Create(config.name, root, config.data);
 		}
-		private static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
+		public static PackDisplay CreateForStudio(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
-			PackDisplay display = new PackDisplay { Name = name }
+			PackDisplay display = new PackDisplay { Name = name, Puzzles = CreateStudioPuzzles(name) }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			display.Puzzles.Label.Text = name;
-			foreach (SaveData puzzle in data)
-			{
-				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
-				puzzleDisplay.Button.Pressed += pressed;
-				display.Puzzles.Value.Add(puzzleDisplay);
 
-				void pressed()
-				{
-					if (!IsInstanceValid(root)) return;
-					PuzzleManager.Current.Puzzle = puzzle;
-					PuzzleManager.Current.UI.Show();
-					root.Hide();
-				}
-			}
-
-			return display;
+			return display.AddPuzzles(data, root);
+		}
+		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
+		{
+			PackDisplay display = new PackDisplay { Name = name, Puzzles = CreateSelectorPuzzles(name) }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			return display.AddPuzzles(data, root);
 		}
 
-		public Labelled<GridContainer> Puzzles { get; } = new Labelled<GridContainer>()
+		private static Labelled<Container> CreateStudioPuzzles(string name) => new Labelled<Container>()
 		{
 			Name = "Puzzles Display",
-			Label = new RichTextLabel { Name = "Label", FitContent = true }
+			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
+			Value = new VBoxContainer { Name = "Puzzles Container" }
+				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
+			Vertical = true
+		}.Preset(LayoutPreset.FullRect);
+		private static Labelled<Container> CreateSelectorPuzzles(string name) => new Labelled<Container>()
+		{
+			Name = "Puzzles Display",
+			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
 				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
 			Value = new GridContainer { Name = "Puzzles Container", Columns = 5 }
 				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
 			Vertical = true
-		}
-			.Preset(LayoutPreset.FullRect);
+		}.Preset(LayoutPreset.FullRect);
+
+
+		public required Labelled<Container> Puzzles { get; init; }
 		internal PackDisplay() { }
 		public override void _Ready() => this.Add(Puzzles);
+		private PackDisplay AddPuzzles(IEnumerable<SaveData> saves, CanvasItem root)
+		{
+			foreach (SaveData puzzle in saves)
+			{
+				Puzzles.Value.Add(PuzzleDisplay.Create(puzzle, root));
+			}
+			return this;
+		}
 	}
 	public sealed partial class PuzzleDisplay : PanelContainer
 	{
+		public static PuzzleDisplay Create(SaveData puzzle, CanvasItem root)
+		{
+			PuzzleDisplay display = Create(puzzle);
+			display.Button.Pressed += pressed;
+			return display;
+			void pressed()
+			{
+				if (!IsInstanceValid(root)) return;
+				PuzzleManager.Current.Puzzle = puzzle;
+				PuzzleManager.Current.UI.Show();
+				root.Hide();
+			}
+		}
 		public static PuzzleDisplay Create(SaveData puzzle)
 		{
 			Color statusColor = puzzle switch
