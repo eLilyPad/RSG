@@ -4,6 +4,14 @@ namespace RSG.Nonogram;
 
 public sealed partial class PuzzleSelector : PanelContainer
 {
+	public sealed partial class Studio : PanelContainer
+	{
+		public ScrollContainer Scroll { get; } = new ScrollContainer()
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public VBoxContainer Puzzles { get; } = new VBoxContainer()
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		public override void _Ready() => this.Add(Scroll.Add(Puzzles));
+	}
 	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkCyan }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public ScrollContainer Scroll { get; } = new ScrollContainer()
@@ -21,19 +29,19 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public override void _Ready() => this.Add(Background, Scroll.Add(Puzzles));
 
-
 	public sealed partial class PackDisplay : PanelContainer
 	{
 		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
 		{
-			return Create(config.name, root, config.data);
-		}
-		public static PackDisplay CreateForStudio(string name, CanvasItem root, IEnumerable<SaveData> data)
-		{
-
-			return new PackDisplay { Name = name, Puzzles = CreateStudioPuzzles(name) }
+			return new PackDisplay { Name = config.name, Puzzles = CreateSelectorPuzzles(config.name) }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-				.AddPuzzles(data, root);
+				.AddPuzzles(config.data, root);
+		}
+		public static PackDisplay CreateForStudio((string name, IEnumerable<SaveData> data) config, CanvasItem root)
+		{
+			return new PackDisplay { Name = config.name, Puzzles = CreateStudioPuzzles(config.name) }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
+				.AddPuzzles(config.data, root);
 		}
 		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
 		{
