@@ -8,6 +8,51 @@ using RSG.Dialogue;
 
 public sealed partial class CoreUI : Control
 {
+	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
+		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
+	private UIEventHandler Handler => field ??= new(UI: this);
+	public override void _Ready()
+	{
+		NonogramContainer nonogram = PuzzleManager.Current.UI;
+		this.Add(
+			nonogram,
+			Dialogues.Container,
+			Console.Container,
+			Menu,
+			LoadingScreen
+		);
+		nonogram.CompletionScreen.Value.Signals = Handler;
+	}
+	public void EscapePressed()
+	{
+		if (!Menu.Visible)
+		{
+			Menu.Show();
+			Menu.Buttons.Show();
+			return;
+		}
+		ReadOnlySpan<Control> steps = [
+			Console.Container,
+			PuzzleManager.Current.UI.CompletionScreen,
+			Menu.Settings,
+			Menu.Levels,
+			Menu.Dialogues
+		];
+		foreach (Control control in steps)
+		{
+			if (control.Visible)
+			{
+				control.Hide();
+				Menu.Show();
+				Menu.Buttons.Show();
+				return;
+			}
+		}
+	}
+	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;
 	private sealed class UIEventHandler(CoreUI UI) : PuzzleCompleteScreen.IHandleSignals
 	{
 		void PuzzleCompleteScreen.IHandleSignals.OnLevelsPressed()
@@ -43,55 +88,5 @@ public sealed partial class CoreUI : Control
 			}
 		}
 	}
-
-	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
-
-	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
-
-	private UIEventHandler Handler => field ??= new(UI: this);
-	public override void _Ready()
-	{
-		NonogramContainer nonogram = PuzzleManager.Current.UI;
-		this.Add(
-			nonogram,
-			Dialogues.Container,
-			Console.Container,
-			Menu,
-			LoadingScreen
-		);
-		nonogram.CompletionScreen.Value.Signals = Handler;
-	}
-
-	public void EscapePressed()
-	{
-		if (!Menu.Visible)
-		{
-			Menu.Show();
-			Menu.Buttons.Show();
-			return;
-		}
-		ReadOnlySpan<Control> steps = [
-			Console.Container,
-			PuzzleManager.Current.UI.CompletionScreen,
-			Menu.Settings,
-			Menu.Levels,
-			Menu.Dialogues
-		];
-		foreach (Control control in steps)
-		{
-			if (control.Visible)
-			{
-				control.Hide();
-				Menu.Show();
-				Menu.Buttons.Show();
-				return;
-			}
-		}
-	}
-
-	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;
 }
 
