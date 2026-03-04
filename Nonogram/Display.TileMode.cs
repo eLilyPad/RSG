@@ -18,13 +18,15 @@ public static class TileModeExtensions
 		Mode.Clear when current is Mode.Clear or Mode.Blocked => true,
 		_ => false
 	};
+	public static Mode ToClearWhenSame(this Mode current, Mode value) => value == current ? Mode.Clear : value;
+	public static Mode ToClearWhenSame(this Mode current, ref Mode value) => value = current.ToClearWhenSame(value);
 	public static bool IsValidInput(this Mode current, ref Mode input)
 	{
 		if (input is Mode.Clear) return false;
-		input = input == current ? Mode.Clear : input;
+		current.ToClearWhenSame(ref input);
 		return !Mode.Clear.AllEqual(current, input);
 	}
-	public static int AsBinaryMode(this Mode mode) => mode is Mode.Filled ? 1 : 0;
+	public static int AsBinaryMode(this Mode mode) => mode.IsFilled() ? 1 : 0;
 	public static bool IsFilled(this Mode mode) => mode is Mode.Filled;
 	public static Mode PlayAudio(this Mode mode)
 	{
