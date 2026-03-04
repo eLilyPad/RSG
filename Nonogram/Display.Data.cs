@@ -163,7 +163,7 @@ public abstract partial class Display
 			foreach (var value in InLine(position, Side.Row)) yield return value;
 			foreach (var value in InLine(position, Side.Column)) yield return value;
 		}
-		internal void ChangeState(Vector2I position, Mode mode)
+		internal virtual void ChangeState(Vector2I position, Mode mode)
 		{
 			Assert(Tiles.ContainsKey(position), "given position is not already in the base dictionary");
 			Tiles[position] = mode;
