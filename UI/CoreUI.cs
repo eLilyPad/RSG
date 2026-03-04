@@ -8,6 +8,17 @@ using RSG.Dialogue;
 
 public sealed partial class CoreUI : Control
 {
+	public static CoreUI Create<TSettings, TMenu>(Node parent, ColourPack colours, TMenu menu, TSettings settings)
+	where TSettings : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings
+	where TMenu : MainMenu.IPress, MainMenu.IReceiveSignals
+	{
+		CoreUI ui = new() { Name = "Core UI", Colours = colours };
+		parent.AddChild(ui);
+		ui.Menu.Signals = menu;
+		ui.Menu.OnPressed = menu;
+		ui.Menu.Settings.Nonogram.SettingsChanger = settings;
+		return ui.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
+	}
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
