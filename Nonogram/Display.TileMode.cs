@@ -18,8 +18,18 @@ public static class TileModeExtensions
 		Mode.Clear when current is Mode.Clear or Mode.Blocked => true,
 		_ => false
 	};
-	public static Mode ToClearWhenSame(this Mode current, Mode value) => value == current ? Mode.Clear : value;
-	public static Mode ToClearWhenSame(this Mode current, ref Mode value) => value = current.ToClearWhenSame(value);
+	public static Mode Input(this Mode ignored, bool filled, bool blocked) => blocked ? Mode.Blocked
+		: filled ? Mode.Filled
+		: ignored;
+	public static Mode ToClearWhenSame(this Mode value, Mode current)
+	{
+		return value == current ? Mode.Clear : value;
+	}
+	public static Mode ToClearWhenSame(this Mode current, ref Mode value)
+	{
+		return value = current.ToClearWhenSame(value);
+	}
+
 	public static bool IsValidInput(this Mode current, ref Mode input)
 	{
 		if (input is Mode.Clear) return false;
