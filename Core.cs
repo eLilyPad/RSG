@@ -10,14 +10,64 @@ using Dialogue;
 
 public sealed partial class Core : Node
 {
+
 	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
 	{
 		readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
 		readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
 		readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
 
-		public void PuzzleSelectorVisibilityChanged() => Refill(value: Core.Container.Menu.Levels);
-		public void DialogueSelectorVisibilityChanged() => Refill(value: Core.Container.Menu.Dialogues);
+		public void StudioPuzzleSelectorVisibilityChanged()
+		{
+			var root = PuzzleManager.Current.UI.Studio;
+			var puzzles = root.PacksTab;
+			puzzles.Remove(true, _studioSelectorDisplays);
+			_studioSelectorDisplays.Clear();
+			foreach (var config in PuzzleManager.SelectorConfigs)
+			{
+				var node = PuzzleSelector.PackDisplay.CreateForStudio(config, root);
+				puzzles.AddChild(node);
+				_studioSelectorDisplays.Add(node);
+			}
+		}
+		public void PuzzleSelectorVisibilityChanged()
+		{
+			var menu = Core.Container.Menu;
+			var value = menu.Levels;
+			var puzzles = value.Puzzles.Value;
+			if (!value.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			puzzles.Remove(true, _levelSelectorDisplays);
+			_levelSelectorDisplays.Clear();
+			foreach (var config in PuzzleManager.SelectorConfigs)
+			{
+				var node = PuzzleSelector.PackDisplay.Create(config, value);
+				puzzles.AddChild(node);
+				_levelSelectorDisplays.Add(node);
+			}
+		}
+		public void DialogueSelectorVisibilityChanged()
+		{
+			var menu = Core.Container.Menu;
+			var value = menu.Dialogues;
+			var dialogues = value.DisplayContainer.Value;
+			if (!value.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			dialogues.Remove(true, _dialogueSelectorDisplays);
+			_dialogueSelectorDisplays.Clear();
+			foreach (var config in Dialogues.AvailableDialogues)
+			{
+				var node = DialogueSelector.DialogueDisplay.Create(config, value);
+				dialogues.AddChild(node);
+				_dialogueSelectorDisplays.Add(node);
+			}
+		}
 		public void LevelsPressed() => Core.Container.Menu.Levels.Show();
 		public void DialoguesPressed() => Core.Container.Menu.Dialogues.Show();
 		public void SettingsPressed() => Core.Container.Menu.Settings.Show();
@@ -65,62 +115,7 @@ public sealed partial class Core : Node
 			CurrentPuzzle current = PuzzleManager.Current;
 			current.Type = Display.Type.Studio;
 			current.UI.Show();
-			switch (current)
-			{
-				case { PuzzleReady: false }:
-					Core.Container.Menu.Levels.Show();
-					Core.Container.Menu.Show();
-					break;
-				default:
-					Core.Container.Menu.Hide();
-					break;
-			}
-		}
-
-		private void Refill<T>(T value) where T : Control
-		{
-			MainMenu menu = Core.Container.Menu;
-			if (!value.Visible)
-			{
-				menu.Hide();
-				return;
-			}
-			switch (value)
-			{
-				case PuzzleSelector puzzle:
-					Refill(configs: PuzzleManager.SelectorConfigs, create: PuzzleSelector.PackDisplay.Create);
-					break;
-				case PuzzleSelector.Studio puzzle:
-					Refill(configs: PuzzleManager.SelectorConfigs, create: PuzzleSelector.PackDisplay.CreateForStudio);
-					break;
-				case DialogueSelector dialogue:
-					Refill(configs: Dialogues.AvailableDialogues, create: DialogueSelector.DialogueDisplay.Create);
-					break;
-				default:
-					GD.PrintErr($"Unhandled refill for type {value.GetType().Name}");
-					break;
-			}
-			void Refill<TConfig, TNode>(IEnumerable<TConfig> configs, Func<TConfig, CanvasItem, TNode> create)
-			where TNode : Node
-			{
-				if (!value.Visible) return;
-				(List<Node>, Node) a = value switch
-				{
-					PuzzleSelector puzzle => ([.. _levelSelectorDisplays], puzzle.Puzzles.Value),
-					PuzzleSelector.Studio puzzle => ([.. _studioSelectorDisplays], puzzle.Puzzles),
-					DialogueSelector dialogue => ([.. _dialogueSelectorDisplays], dialogue.DisplayContainer.Value),
-					_ => throw new NotImplementedException(),
-				};
-				(List<Node> nodes, Node parent) = a;
-				parent.Remove(true, nodes);
-				nodes.Clear();
-				foreach (TConfig config in configs)
-				{
-					TNode node = create(config, value);
-					parent.AddChild(node);
-					nodes.Add(node);
-				}
-			}
+			Core.Container.Menu.Hide();
 		}
 	}
 	private sealed class SettingsModifier(Core Core) : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings
@@ -307,7 +302,14 @@ public sealed partial class Core : Node
 		);
 		InitConsole(this);
 		PuzzleManager.Current.PuzzleCompleted = OnNonogramPuzzleCompleted;
+		PuzzleManager.Current.UI.Studio.VisibilityChanged += OnNonogramStudioVisibilityChanged;
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+		void OnNonogramStudioVisibilityChanged()
+		{
+			bool isVisible = PuzzleManager.Current.UI.Studio.Visible;
+			if (!isVisible) return;
+			_menuHandler.StudioPuzzleSelectorVisibilityChanged();
+		}
 		static void OnNonogramPuzzleCompleted(SaveData save)
 		{
 			PuzzleManager.Current.UI.CompletionScreen.Show();
