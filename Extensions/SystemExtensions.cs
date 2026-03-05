@@ -36,11 +36,12 @@ public static class SystemExtensions
 		int size = (int)Math.Sqrt(count);
 		return size * size == count;
 	}
-	public static bool AllEqual<T>(this T expected, params ReadOnlySpan<T> values) where T : notnull
+	public static bool AllEqual<T>(this T expected, params ReadOnlySpan<T> values)
 	{
+		EqualityComparer<T> comparer = EqualityComparer<T>.Default;
 		foreach (T value in values)
 		{
-			if (!value.Equals(expected)) return false;
+			if (!comparer.Equals(value, expected)) return false;
 		}
 		return true;
 	}
