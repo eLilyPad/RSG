@@ -94,6 +94,11 @@ public sealed partial class SaveData : Data, IPuzzleState
 		AssertHasPosition(position);
 		return Mode.Filled.AllEqual(Expected.States[position], States[position]);
 	}
+	internal override void ChangeState(Vector2I position, Mode mode)
+	{
+		base.ChangeState(position, mode);
+		if (IsComplete) Completed(this);
+	}
 	internal void BlockCompletedLines(Tile.Pool tiles, Vector2I position)
 	{
 		foreach ((Vector2I pos, Mode current) in InLines(position))
