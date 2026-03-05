@@ -15,13 +15,8 @@ public interface IPuzzleState
 
 public sealed partial class SaveData : Data, IPuzzleState
 {
-	public PuzzleData Expected
-	{
-		get; init
-		{
-			field = value;
-		}
-	} = new();
+	public PuzzleData Expected { get; init; } = new();
+	public Action<SaveData> Completed { get; set; } = _ => { };
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
 	[JsonConverter(typeof(Vector2IDictionaryConverter<Mode>))]
 	public override Dictionary<Vector2I, Mode> Tiles { protected get; init; } = CreateTiles(DefaultSize);
@@ -29,8 +24,8 @@ public sealed partial class SaveData : Data, IPuzzleState
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
-	public bool IsComplete => Tiles
-		.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
+	public bool IsComplete { get; private set; }
+	//Tiles.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
 
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
@@ -97,7 +92,10 @@ public sealed partial class SaveData : Data, IPuzzleState
 	internal override void ChangeState(Vector2I position, Mode mode)
 	{
 		base.ChangeState(position, mode);
+		IsComplete = Tiles.All(IsCorrect);
 		if (IsComplete) Completed(this);
+
+		bool IsCorrect(KeyValuePair<Vector2I, Mode> pair) => Expected.States.IsCorrect(position: pair.Key, current: pair.Value);
 	}
 	internal void BlockCompletedLines(Tile.Pool tiles, Vector2I position)
 	{
