@@ -18,13 +18,13 @@ public sealed partial class NonogramContainer : PanelContainer
 	public NonogramBackground Background { get; } = new NonogramBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Display.Default Display { get; } = new Display.Default { }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
 	public HBoxContainer Container { get; } = new HBoxContainer { Name = "Container" }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
 	public NonogramStudioBar Studio { get; } = new NonogramStudioBar { Name = "Studio", SizeFlagsStretchRatio = .6f }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
 	public MarginContainer Margin = new MarginContainer { Name = "Margin" }
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+		.SizeFlags(both: SizeFlags.ExpandFill)
 		.SetMarginAll(MarginValue);
 
 	public IColours Colours

@@ -61,7 +61,7 @@ public sealed record class CurrentPuzzle
 		_listener = new(Current: this);
 		UI = new NonogramContainer(_tiles.Tiles, _hints.Hints) { Name = "Nonogram", Visible = false }
 			.Preset(Control.LayoutPreset.FullRect)
-			.SizeFlags(horizontal: Control.SizeFlags.ExpandFill, vertical: Control.SizeFlags.ExpandFill);
+			.SizeFlags(both: Control.SizeFlags.ExpandFill);
 		Timer = new() { Provider = _timerHandler };
 		UI.Studio.PuzzleTab.Signals = new PuzzleModifier(this);
 	}
