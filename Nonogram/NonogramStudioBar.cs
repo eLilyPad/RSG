@@ -31,7 +31,7 @@ public sealed partial class NonogramStudioBar : Container
 		public RichTextLabel Header { get; } = CreateTabLabel("Header Label", "Packs");
 		public Button SavePuzzle { get; } = new Button { Name = "Save Puzzle", Text = "Save" };
 		public PuzzleSelector.Studio Scroll { get; } = new PuzzleSelector.Studio { Name = "Puzzles" }
-			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
 		public override void _Ready() => this.Add(Header, SavePuzzle, Scroll);
 	}
 	public sealed partial class PuzzleTabContainer : VBoxContainer
