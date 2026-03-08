@@ -51,8 +51,8 @@ public sealed partial class Hint : PanelContainer
 		{
 			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
 			Label = new RichTextLabel { Name = "Label", Text = EmptyHint, FitContent = true }
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+				.SizeFlags(SizeFlags.ExpandFill)
+		}.SizeFlags(SizeFlags.ExpandFill);
 		(hint.Label.HorizontalAlignment, hint.Label.VerticalAlignment) = position.Alignment();
 		hint.Label.AddThemeFontSizeOverride("normal_font_size", 15);
 		hint.Background.Color = position.Index % 2 == 0 ? colours.NonogramHintBackground1 : colours.NonogramHintBackground2;
