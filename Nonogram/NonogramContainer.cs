@@ -4,6 +4,7 @@ namespace RSG.Nonogram;
 
 public sealed partial class NonogramContainer : PanelContainer
 {
+	public const int MarginValue = 20;
 	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
 		Name = "PuzzleCompleteScreen",
@@ -19,9 +20,12 @@ public sealed partial class NonogramContainer : PanelContainer
 	public Display.Default Display { get; } = new Display.Default { }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public HBoxContainer Container { get; } = new HBoxContainer { Name = "Container" }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
 	public NonogramStudioBar Studio { get; } = new NonogramStudioBar { Name = "Studio", SizeFlagsStretchRatio = .6f }
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+	public MarginContainer Margin = new MarginContainer { Name = "Margin" }
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+		.SetMarginAll(MarginValue);
 
 	public IColours Colours
 	{
@@ -33,18 +37,7 @@ public sealed partial class NonogramContainer : PanelContainer
 			field = value;
 		}
 	} = Core.Colours;
-	public int PuzzleSize
-	{
-		set
-		{
-			Hints.Clear();
-			Tiles.Clear();
-			Tiles.Update(value);
-			Hints.TileSize = Tiles.TileSize;
-			Hints.Update(value);
-			Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
-		}
-	}
+	public int PuzzleSize { set => ChangePuzzleSize(value); }
 
 	internal Tile.Pool Tiles { get; }
 	internal Hints Hints { get; }
@@ -54,6 +47,24 @@ public sealed partial class NonogramContainer : PanelContainer
 		Tiles = tiles;
 		Hints = hints;
 	}
-	public override void _Ready() => this.Add(Background, Container.Add(Display, Studio), CompletionScreen);
-
+	public override void _Ready()
+	{
+		this.Add(
+			Background,
+			Margin.Add(Container.Add(Display, Studio)),
+			CompletionScreen
+		);
+		PuzzleSize = Nonogram.Display.Data.DefaultSize;
+	}
+	private void ChangePuzzleSize(int value)
+	{
+		Hints.Clear();
+		Tiles.Clear();
+		Tiles.Update(value);
+		Hints.TileSize = Tiles.TileSize;
+		Hints.Update(value);
+		Display.TilesGrid.Columns = value;
+		Studio.PuzzleTab.PuzzleSize.SetValueNoSignal(value);
+		Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
+	}
 }
