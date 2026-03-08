@@ -56,6 +56,10 @@ public static class UIX
 		(control.SizeFlagsHorizontal, control.SizeFlagsVertical) = (horizontal, vertical);
 		return control;
 	}
+	public static T SizeFlags<T>(this T control, SizeFlags both) where T : Control
+	{
+		return control.SizeFlags(horizontal: both, vertical: both);
+	}
 	public static T UniformPadding<T>(this T node, int margin) where T : Control
 	{
 		node.OffsetTop = node.OffsetBottom = node.OffsetLeft = node.OffsetRight = margin;
