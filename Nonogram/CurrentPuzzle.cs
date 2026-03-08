@@ -14,7 +14,15 @@ public sealed record class CurrentPuzzle
 	public PuzzleTimer Timer { get; }
 	public Puzzles.IHaveEvents? EventHandler { get; set; }
 	public Action<SaveData> PuzzleCompleted { private get => Puzzle.Completed; set => Puzzle.Completed = value; }
-	public Type Type { get; set => this.ChangeType(previous: field, current: field = value); } = Type.Studio;
+	public Type Type
+	{
+		get; set
+		{
+			var previous = field;
+			var current = value;
+			field = this.ChangeType(previous, current);
+		}
+	} = Type.Studio;
 	public Settings Settings
 	{
 		get; set
@@ -28,23 +36,18 @@ public sealed record class CurrentPuzzle
 		private get; set
 		{
 			if (value is null) return;
-
-			NonogramStudioBar.PuzzleTabContainer puzzleTab = UI.Studio.PuzzleTab;
-			_listener.Replace(field, value);
-			value.Completed = field.Completed;
-			field = value.Save();
-			Timer.Elapsed = field.TimeTaken;
-			puzzleTab.EditableName.Text = field.Name;
-			puzzleTab.PuzzleSize.Value = field.Size;
-			UI.PuzzleSize = UI.Display.TilesGrid.Columns = field.Size;
+			LineEdit studioName = UI.Studio.PuzzleTab.EditableName;
+			SaveData previous = field;
+			SaveData next = field = value.Save();
+			_listener.Replace(previous, next);
+			next.Completed = previous.Completed;
+			(Timer.Elapsed, UI.PuzzleSize, studioName.Text) = next;
 		}
 	} = new();
 	public bool PuzzleReady => Puzzle.Expected.States.Any(p => p.Value is not defaultValue);
 	public string CompletionDialogueName => Puzzle.Expected.DialogueName;
 
 	public NonogramContainer UI { get; }
-
-	private IImmutableDictionary<Vector2I, TileMode> CurrentStates => Type.InputData(Puzzle).States;
 
 	private readonly GameTimer _timerHandler;
 	private readonly PuzzleHints _hints;

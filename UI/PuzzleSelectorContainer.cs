@@ -31,102 +31,66 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public sealed partial class PackDisplay : PanelContainer
 	{
-		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
+		public static PackDisplay CreateForGame((string name, IEnumerable<SaveData> data) config)
 		{
-			return new PackDisplay { Name = config.name, Puzzles = CreateSelectorPuzzles(config.name) }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-				.AddPuzzles(config.data, root);
+			GridContainer grid = new GridContainer { Name = "Puzzles Container", Columns = 5 }
+				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill);
+			Labelled<Container> puzzles = CreatePuzzles(config.name, container: grid);
+			PackDisplay packDisplay = new PackDisplay { Name = config.name, Puzzles = puzzles }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			return packDisplay;
 		}
-		public static PackDisplay CreateForStudio((string name, IEnumerable<SaveData> data) config, CanvasItem root)
+		public static PackDisplay CreateForStudio((string name, IEnumerable<SaveData> data) config)
 		{
-			return new PackDisplay { Name = config.name, Puzzles = CreateStudioPuzzles(config.name) }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-				.AddPuzzles(config.data, root);
+			VBoxContainer list = new VBoxContainer { Name = "Puzzles Container" }
+				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill);
+			Labelled<Container> puzzles = CreatePuzzles(config.name, container: list);
+			PackDisplay packDisplay = new PackDisplay { Name = config.name, Puzzles = puzzles }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			return packDisplay;
 		}
-		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
+		private static Labelled<Container> CreatePuzzles<T>(string name, T container) where T : Container
 		{
-			return new PackDisplay { Name = name, Puzzles = CreateSelectorPuzzles(name) }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize)
-				.AddPuzzles(data, root);
-		}
-
-		private static Labelled<Container> CreateStudioPuzzles(string name) => new Labelled<Container>()
-		{
-			Name = "Puzzles Display",
-			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
+			return new Labelled<Container>
+			{
+				Name = "Puzzles Display",
+				Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
 				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
-			Value = new VBoxContainer { Name = "Puzzles Container" }
-				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
-			Vertical = true
-		}.Preset(LayoutPreset.FullRect);
-		private static Labelled<Container> CreateSelectorPuzzles(string name) => new Labelled<Container>()
-		{
-			Name = "Puzzles Display",
-			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
-				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
-			Value = new GridContainer { Name = "Puzzles Container", Columns = 5 }
-				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
-			Vertical = true
-		}.Preset(LayoutPreset.FullRect);
-
+				Value = container,
+				Vertical = true
+			}.Preset(LayoutPreset.FullRect);
+		}
 
 		public required Labelled<Container> Puzzles { get; init; }
 		private PackDisplay() { }
 		public override void _Ready() => this.Add(Puzzles);
-		private PackDisplay AddPuzzles(IEnumerable<SaveData> saves, CanvasItem root)
-		{
-			foreach (SaveData puzzle in saves)
-			{
-				Puzzles.Value.Add(PuzzleDisplay.Create(puzzle, root));
-			}
-			return this;
-		}
 	}
 	public sealed partial class PuzzleDisplay : PanelContainer
 	{
-		public static PuzzleDisplay Create(SaveData puzzle, CanvasItem root)
+		public static PuzzleDisplay Create(SaveData puzzle, Action pressed)
 		{
-			PuzzleDisplay display = Create(puzzle);
-			display.Button.Pressed += pressed;
-			return display;
-			void pressed()
-			{
-				if (!IsInstanceValid(root)) return;
-				PuzzleManager.Current.Puzzle = puzzle;
-				PuzzleManager.Current.UI.Show();
-				root.Hide();
-			}
-		}
-		public static PuzzleDisplay Create(SaveData puzzle)
-		{
-			Color statusColor = puzzle switch
-			{
-				{ IsComplete: true } => Colors.Green,
-				_ => Colors.Black
-			};
-			PuzzleDisplay display = new PuzzleDisplay
-			{
-				Name = puzzle.Name + " Display",
-				Button = new()
-				{
-					Name = puzzle.Name + " Button",
-					Text = puzzle.Name,
-					VerticalIconAlignment = VerticalAlignment.Top,
-					IconAlignment = HorizontalAlignment.Center,
-					Icon = puzzle.AsIcon(colours: Core.Colours, pixelSize: 16),
-				},
-				Background = new ColorRect { Name = "Background", Color = statusColor }
-					.Preset(LayoutPreset.LeftWide)
-					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			Color statusColor = puzzle.CompletionColour;
+			ImageTexture icon = puzzle.AsIcon(Core.Colours, 16);
+			string name = puzzle.Name;
 
-			display.Button.OverrideStyle<StyleBoxFlat, Button>(modify);
-			display.Button.OverrideStyle<StyleBoxFlat, Button>(modify, "hover");
-			display.Background.OverrideStyle((StyleBoxFlat style) =>
+			PuzzleDisplay display = new PuzzleDisplay { Name = name + " Display" }
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+
+			var background = display.Background;
+			background.OverrideStyle((StyleBoxFlat style) =>
 			{
 				style.SetCornerRadiusAll(0);
 				return style;
 			});
+			background.Color = statusColor;
+
+			Button button = display.Button;
+			button.OverrideStyle<StyleBoxFlat, Button>(modify);
+			button.OverrideStyle<StyleBoxFlat, Button>(modify, "hover");
+			button.Name = name + " Button";
+			button.Text = name;
+			button.Icon = icon;
+			button.Pressed += pressed;
 
 			return display;
 
@@ -137,8 +101,14 @@ public sealed partial class PuzzleSelector : PanelContainer
 				return style;
 			}
 		}
-		public required ColorRect Background { get; init; }
-		public required Button Button { get; init; }
+		public ColorRect Background { get; } = new ColorRect { Name = "Background", }
+			.Preset(LayoutPreset.LeftWide)
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		public Button Button { get; } = new()
+		{
+			VerticalIconAlignment = VerticalAlignment.Top,
+			IconAlignment = HorizontalAlignment.Center,
+		};
 		public override void _Ready() => this.Add(Background, Button);
 	}
 }
