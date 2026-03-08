@@ -52,13 +52,7 @@ public sealed partial class MainMenu : Container
 					style.SetContentMarginAll(10);
 					return style;
 				});
-			Label
-				.OverrideStyle(modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					return style;
-				})
-				.AddThemeFontSizeOverride("normal", 40);
+			Label.AddThemeFontSizeOverride("normal", 40);
 
 		}
 		static Color Colour(float value)
