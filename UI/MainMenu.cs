@@ -84,9 +84,9 @@ public sealed partial class MainMenu : Container
 		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			.SizeFlags(both: SizeFlags.ExpandFill);
 		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			.SizeFlags(both: SizeFlags.ExpandFill);
 		public override void _Ready() => this.Add(
 				Container.Add(Play, PlayMinesweeper, Studio, Levels, Dialogues, Settings, Quit),
 				Spacer
