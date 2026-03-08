@@ -25,7 +25,11 @@ public sealed partial class SaveData : Data, IPuzzleState
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
 	public bool IsComplete { get; private set; }
-	//Tiles.All(pair => Expected.States.IsCorrect(position: pair.Key, current: pair.Value));
+	public Color CompletionColour => this switch
+	{
+		{ IsComplete: true } => Colors.Green,
+		_ => Colors.Black
+	};
 
 	public SaveData() { }
 	public SaveData(PuzzleData expected) => Expected = expected;
@@ -88,6 +92,12 @@ public sealed partial class SaveData : Data, IPuzzleState
 	{
 		AssertHasPosition(position);
 		return Mode.Filled.AllEqual(Expected.States[position], States[position]);
+	}
+	public void Deconstruct(out TimeSpan timeTaken, out int size, out string name)
+	{
+		timeTaken = TimeTaken;
+		size = Size;
+		name = Name;
 	}
 	internal override void ChangeState(Vector2I position, Mode mode)
 	{
