@@ -12,6 +12,27 @@ public interface IPuzzleState
 	bool IsCorrectlyBlocked(Vector2I position);
 	bool IsCorrectlyFilled(Vector2I position);
 }
+public interface ISaveListener
+{
+	void Replace(SaveData previous, SaveData next)
+	{
+		next.Modified += SaveTilesChanged;
+		next.Expected.Modified += PuzzleTilesChanged;
+		var previousList = previous.Modified?.GetInvocationList() ?? [];
+		var previousExpectedList = previous.Expected.Modified?.GetInvocationList() ?? [];
+
+		if (previousList.Contains(SaveTilesChanged))
+		{
+			previous.Modified -= SaveTilesChanged;
+		}
+		if (previousExpectedList.Contains(PuzzleTilesChanged))
+		{
+			previous.Expected.Modified -= PuzzleTilesChanged;
+		}
+	}
+	void PuzzleTilesChanged(Vector2I position);
+	void SaveTilesChanged(Vector2I position);
+}
 
 public sealed partial class SaveData : Data, IPuzzleState
 {
