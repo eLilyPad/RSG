@@ -39,7 +39,7 @@ public sealed record class CurrentPuzzle
 			LineEdit studioName = UI.Studio.PuzzleTab.EditableName;
 			SaveData previous = field;
 			SaveData next = field = value.Save();
-			_listener.Replace(previous, next);
+			SaveListener?.Replace(previous, next);
 			next.Completed = previous.Completed;
 			(Timer.Elapsed, UI.PuzzleSize, studioName.Text) = next;
 		}
@@ -52,16 +52,15 @@ public sealed record class CurrentPuzzle
 	private readonly GameTimer _timerHandler;
 	private readonly PuzzleHints _hints;
 	private readonly PuzzleTiles _tiles;
-	private readonly PuzzleListener _listener;
+	public ISaveListener? SaveListener { get; set; }
 	internal CurrentPuzzle()
 	{
 		_timerHandler = new(Current: this);
 		_tiles = new(Current: this);
 		_hints = new(Current: this);
-		_listener = new(Current: this);
 		UI = new NonogramContainer(_tiles.Tiles, _hints.Hints) { Name = "Nonogram", Visible = false }
-			.Preset(Control.LayoutPreset.FullRect)
-			.SizeFlags(both: Control.SizeFlags.ExpandFill);
+		.Preset(Control.LayoutPreset.FullRect)
+		.SizeFlags(both: Control.SizeFlags.ExpandFill);
 		Timer = new() { Provider = _timerHandler };
 		UI.Studio.PuzzleTab.Signals = new PuzzleModifier(this);
 	}
@@ -70,7 +69,24 @@ public sealed record class CurrentPuzzle
 		Puzzle.Clear();
 		UI.PuzzleSize = Puzzle.Size;
 	}
-	private CurrentPuzzle ClearWhenInputMatchesCurrent(Vector2I position, ref TileMode mode, out TileMode current)
+	public void RefreshCurrentStudioIcon(
+		IColours colours,
+		IEnumerable<PuzzleSelector.PuzzleDisplay> displays
+	)
+	{
+		NonogramStudioBar studio = UI.Studio;
+		VBoxContainer puzzles = studio.PacksTab.Scroll.Puzzles;
+		PuzzleSelector.PuzzleDisplay? display = displays.FirstOrDefault(hasSameName);
+		if (display is null) return;
+		display.Button.Icon = Puzzle.Expected.AsIcon(colours);
+
+		bool hasSameName(PuzzleSelector.PuzzleDisplay display) => display.Name == Puzzle.Name;
+	}
+	private CurrentPuzzle ClearWhenInputMatchesCurrent(
+		Vector2I position,
+		ref TileMode mode,
+		out TileMode current
+	)
 	{
 		current = Type switch
 		{
@@ -106,15 +122,8 @@ public sealed record class CurrentPuzzle
 		if (_timerHandler.ShouldStartTimer(mode: input)) Timer.TryStart();
 		return this;
 	}
-	private sealed class PuzzleListener(CurrentPuzzle Current)
+	private sealed class PuzzleListener(CurrentPuzzle Current) : ISaveListener
 	{
-		public void Replace(SaveData previous, SaveData next)
-		{
-			previous.Modified -= SaveTilesChanged;
-			previous.Expected.Modified -= PuzzleTilesChanged;
-			next.Modified += SaveTilesChanged;
-			next.Expected.Modified += PuzzleTilesChanged;
-		}
 		public void PuzzleTilesChanged(Vector2I _) => Current._hints.Hints.Refresh();
 		public void SaveTilesChanged(Vector2I position)
 		{

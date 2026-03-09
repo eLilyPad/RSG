@@ -108,6 +108,10 @@ public sealed partial class Core : Node
 	private readonly SettingsModifier _settingsModifier;
 	private readonly MenuHandler _menuHandler;
 	private readonly GamesHandler _handler;
+	private readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
+	private readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
+	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
+	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
 	private Manager Minesweeper
 	{
 		get
@@ -152,6 +156,7 @@ public sealed partial class Core : Node
 		);
 		InitConsole(this);
 		current.PuzzleCompleted = OnNonogramPuzzleCompleted;
+		current.SaveListener = _handler;
 		current.UI.Studio.VisibilityChanged += _menuHandler.StudioPuzzleSelectorVisibilityChanged;
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 
@@ -182,26 +187,25 @@ public sealed partial class Core : Node
 
 		void DialogueFinished() => Container.Menu.Show();
 	}
+
 	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
 	{
-		readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
-		readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
-		readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
-
 		public void StudioPuzzleSelectorVisibilityChanged()
 		{
 			var root = PuzzleManager.Current.UI.Studio;
 			var puzzles = root.PacksTab.Scroll.Puzzles;
 			if (!root.Visible) return;
-			puzzles.Remove(true, _studioSelectorDisplays);
-			_studioSelectorDisplays.Clear();
+			puzzles.Remove(true, Core._studioSelectorDisplays);
+			Core._studioSelectorDisplays.Clear();
+			Core._studioPuzzleSelectorDisplays.Clear();
 			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
 			{
 				var node = PuzzleSelector.PackDisplay.CreateForStudio(config);
 				foreach (SaveData puzzle in config.Data)
 				{
-					var child = PuzzleSelector.PuzzleDisplay.Create(puzzle, pressed);
+					var child = PuzzleSelector.PuzzleDisplay.CreateStudioDisplay(puzzle, pressed);
 					node.Puzzles.Value.Add(child);
+					Core._studioPuzzleSelectorDisplays.Add(child);
 					void pressed()
 					{
 						PuzzleManager.Current.Puzzle = puzzle;
@@ -210,7 +214,7 @@ public sealed partial class Core : Node
 					}
 				}
 				puzzles.AddChild(node);
-				_studioSelectorDisplays.Add(node);
+				Core._studioSelectorDisplays.Add(node);
 			}
 		}
 		public void PuzzleSelectorVisibilityChanged()
@@ -223,14 +227,14 @@ public sealed partial class Core : Node
 				menu.Hide();
 				return;
 			}
-			puzzles.Remove(true, _levelSelectorDisplays);
-			_levelSelectorDisplays.Clear();
+			puzzles.Remove(true, Core._levelSelectorDisplays);
+			Core._levelSelectorDisplays.Clear();
 			foreach (var config in PuzzleManager.SelectorConfigs)
 			{
 				var node = PuzzleSelector.PackDisplay.CreateForGame(config);
 				foreach (SaveData puzzle in config.Data)
 				{
-					var child = PuzzleSelector.PuzzleDisplay.Create(puzzle, pressed);
+					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
 					node.Puzzles.Value.Add(child);
 					void pressed()
 					{
@@ -243,7 +247,7 @@ public sealed partial class Core : Node
 					}
 				}
 				puzzles.AddChild(node);
-				_levelSelectorDisplays.Add(node);
+				Core._levelSelectorDisplays.Add(node);
 			}
 		}
 		public void DialogueSelectorVisibilityChanged()
@@ -256,13 +260,13 @@ public sealed partial class Core : Node
 				menu.Hide();
 				return;
 			}
-			dialogues.Remove(true, _dialogueSelectorDisplays);
-			_dialogueSelectorDisplays.Clear();
+			dialogues.Remove(true, Core._dialogueSelectorDisplays);
+			Core._dialogueSelectorDisplays.Clear();
 			foreach (var config in Dialogues.AvailableDialogues)
 			{
 				var node = DialogueSelector.DialogueDisplay.Create(config, value);
 				dialogues.AddChild(node);
-				_dialogueSelectorDisplays.Add(node);
+				Core._dialogueSelectorDisplays.Add(node);
 			}
 		}
 		public void LevelsPressed() => Core.Container.Menu.Levels.Show();
@@ -342,7 +346,7 @@ public sealed partial class Core : Node
 			menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
 		}
 	}
-	private sealed class GamesHandler(Core Core) : IHandleEvents
+	private sealed class GamesHandler(Core Core) : IHandleEvents, ISaveListener
 	{
 		public void Failed(Manager.Data data)
 		{
@@ -356,6 +360,22 @@ public sealed partial class Core : Node
 			completionScreen.Show();
 			completionScreen.Value.TitleText = "Mines Located!";
 		}
+		public void PuzzleTilesChanged(Vector2I position)
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			Hints hints = current.UI.Hints;
+			hints.Refresh();
+			current.RefreshCurrentStudioIcon(
+				colours: Colours,
+				displays: Core._studioPuzzleSelectorDisplays
+			);
+		}
+		public void SaveTilesChanged(Vector2I position)
+		{
+			Display.Type type = PuzzleManager.Current.Type;
+			Nonogram.Tile.Pool tiles = PuzzleManager.Current.UI.Tiles;
+			if (type is not Display.Type.Game) return;
+			tiles.TryLock(position);
+		}
 	}
 }
-
