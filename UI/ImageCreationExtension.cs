@@ -19,7 +19,7 @@ public static class ImageCreationExtension
 		{
 			Color color = getColor(position, mode);
 			int baseSize = pixelSize * width;
-			int baseIndex = (position.Y * baseSize + position.X * pixelSize) * 4;
+			int baseIndex = (position.X * baseSize + position.Y * pixelSize) * 4;
 			int stride = width * 4;
 
 			byte
