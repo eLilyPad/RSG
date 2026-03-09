@@ -141,7 +141,8 @@ public abstract partial class Display
 		}
 		public ImageTexture AsIcon(IColours colours, int pixelSize = 16) => Tiles
 			.AsIcon(getColor: colours.ChequeredNonogramTile, size: Size, pixelSize)
-			.Rotate90()
+			//.Rotate90()
+			//.FlipX()
 			.ToImage();
 
 		public IEnumerable<(Vector2I Position, Mode Mode)> InLine(HintPosition position)
