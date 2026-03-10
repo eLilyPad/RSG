@@ -206,11 +206,13 @@ public sealed partial class Core : Node
 					var child = PuzzleSelector.PuzzleDisplay.CreateStudioDisplay(puzzle, pressed);
 					node.Puzzles.Value.Add(child);
 					Core._studioPuzzleSelectorDisplays.Add(child);
-					void pressed()
+					child.Button.GuiInput += OnRightClick;
+					void pressed() => PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
+					void OnRightClick(InputEvent input)
 					{
-						PuzzleManager.Current.Puzzle = puzzle;
-						PuzzleManager.Current.Type = Display.Type.Studio;
-						PuzzleManager.Current.UI.Show();
+						bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
+						if (!rightClicked) return;
+						PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
 					}
 				}
 				puzzles.AddChild(node);
@@ -236,15 +238,7 @@ public sealed partial class Core : Node
 				{
 					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
 					node.Puzzles.Value.Add(child);
-					void pressed()
-					{
-						if (!IsInstanceValid(selector)) return;
-						if (!IsInstanceValid(menu)) return;
-						PuzzleManager.Current.Puzzle = puzzle;
-						PuzzleManager.Current.UI.Show();
-						selector.Hide();
-						menu.Hide();
-					}
+					void pressed() => PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
 				}
 				puzzles.AddChild(node);
 				Core._levelSelectorDisplays.Add(node);

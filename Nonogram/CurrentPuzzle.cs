@@ -41,6 +41,22 @@ public sealed record class CurrentPuzzle
 		Puzzle.Clear();
 		UI.Refresh();
 	}
+	public void GamePuzzleDisplayPressed(UI.MainMenu menu, SaveData data)
+	{
+		if (!GodotObject.IsInstanceValid(menu.Levels)) return;
+		if (!GodotObject.IsInstanceValid(menu)) return;
+		Type = Type.Game;
+		Puzzle = data;
+		UI.Show();
+		menu.Levels.Hide();
+		menu.Hide();
+	}
+	public void StudioPuzzleDisplayPressed(SaveData data)
+	{
+		Puzzle = data;
+		Type = Type.Studio;
+		UI.Show();
+	}
 	public void RefreshCurrentStudioIcon(
 		IColours colours,
 		IEnumerable<PuzzleSelector.PuzzleDisplay> displays
