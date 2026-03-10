@@ -48,9 +48,9 @@ public sealed partial class PuzzleSelector : PanelContainer
 			return new GamePacks { Name = config.Name }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		}
-		public static PackDisplay CreateForStudio((string Name, IEnumerable<SaveData> Data) config)
+		public static PackDisplay CreateForStudio(string name)
 		{
-			return new StudioPacks { Name = config.Name }
+			return new StudioPacks { Name = name }
 				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		}
 		public new string Name
