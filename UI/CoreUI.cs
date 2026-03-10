@@ -34,12 +34,16 @@ public sealed partial class CoreUI : Control
 	private readonly Container[] _escapableContainers;
 	public CoreUI() => _escapableContainers = [Menu.Settings, Menu.Levels, Menu.Dialogues];
 	public override void _Ready() => this.Add(Dialogues.Container, Console.Container, Menu, LoadingScreen);
+	public void ShowMainMenu()
+	{
+		Menu.Show();
+		Menu.Buttons.Show();
+	}
 	public void ShowMainMenu(out bool shown)
 	{
 		shown = false;
 		if (Menu.Visible) { return; }
-		Menu.Show();
-		Menu.Buttons.Show();
+		ShowMainMenu();
 		shown = true;
 	}
 }
