@@ -10,7 +10,6 @@ public sealed partial class PuzzleManager
 	public interface INotifyCompletion { void Completed(SaveData puzzle); }
 	public interface IHaveEvents : IChangeWithSettings, INotifyCompletion;
 
-	public static CurrentPuzzle Current => field ??= new();
 	internal static PuzzleManager Instance => field ??= new();
 
 	public static IEnumerable<(string Name, IEnumerable<SaveData> Data)> SelectorConfigs => [
