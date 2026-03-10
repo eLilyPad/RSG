@@ -121,7 +121,7 @@ public sealed partial class Core : Node
 			field = new();
 			Container.Add(field.UI);
 			field.UI.Colours = Colours;
-			field.UI.CompletionScreen.Value.Signals = new UIEventHandler(Core: this);
+			field.UI.CompletionScreen.Value.Signals = new PuzzleCompleteScreenHandler(Core: this);
 			ConsoleCommand command = new()
 			{
 				Default = () => field.Type.LogCurrent(),
@@ -219,40 +219,40 @@ public sealed partial class Core : Node
 		}
 		if (input is InputEventMouseButton { Pressed: true })
 		{
-			Dialogues.Next(finished: DialogueFinished);
+			Dialogues.Next(finished: Container.ShowMainMenu);
 			return;
 		}
 		Input.RunEvent(input);
-
-		void DialogueFinished() => Container.Menu.Show();
 	}
 
-	private sealed class UIEventHandler(Core Core) : PuzzleCompleteScreen.IHandleSignals
+	private sealed class PuzzleCompleteScreenHandler(Core Core) : PuzzleCompleteScreen.IHandleSignals
 	{
 		void PuzzleCompleteScreen.IHandleSignals.OnLevelsPressed()
 		{
-			Core.Container.Menu.Show();
 			Core.Container.Menu.Levels.Show();
 			Core.Nonogram.UI.CompletionScreen.Hide();
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnDialoguesPressed()
 		{
-			Core.Container.Menu.Show();
 			Core.Container.Menu.Dialogues.Show();
 			Core.Nonogram.UI.CompletionScreen.Hide();
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
 		{
 			CurrentPuzzle current = Core.Nonogram;
+			var menu = Core.Container.Menu;
+			var completionScreen = current.UI.CompletionScreen;
 			Dialogues.Start(name: current.CompletionDialogueName);
-			Core.Container.Menu.Show();
-			Core.Container.Menu.Buttons.Hide();
-			current.UI.CompletionScreen.Hide();
+			menu.Show();
+			menu.Background.Hide();
+			menu.Buttons.Hide();
+			completionScreen.Hide();
 		}
 		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
 		{
 			CurrentPuzzle current = Core.Nonogram;
 			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
+			bool visible = completionScreen.Visible;
 			string name = current.CompletionDialogueName;
 			bool hasDialogue = Dialogues.Contains(name);
 			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
@@ -293,69 +293,18 @@ public sealed partial class Core : Node
 				Core._studioSelectorDisplays.Add(node);
 			}
 		}
-		public void PuzzleSelectorVisibilityChanged()
-		{
-			var menu = Core.Container.Menu;
-			var selector = menu.Levels;
-			var puzzles = selector.Puzzles.Value;
-			if (!selector.Visible)
-			{
-				menu.Hide();
-				return;
-			}
-			puzzles.Remove(true, Core._levelSelectorDisplays);
-			Core._levelSelectorDisplays.Clear();
-			foreach (var config in PuzzleManager.SelectorConfigs)
-			{
-				var node = PuzzleSelector.PackDisplay.CreateForGame(config);
-				foreach (SaveData puzzle in config.Data)
-				{
-					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
-					node.Puzzles.Value.Add(child);
-					void pressed() => Core.Nonogram.GamePuzzleDisplayPressed(menu, puzzle);
-				}
-				puzzles.AddChild(node);
-				Core._levelSelectorDisplays.Add(node);
-			}
-		}
-		public void DialogueSelectorVisibilityChanged()
-		{
-			var menu = Core.Container.Menu;
-			var value = menu.Dialogues;
-			var dialogues = value.DisplayContainer.Value;
-			if (!value.Visible)
-			{
-				menu.Hide();
-				return;
-			}
-			dialogues.Remove(true, Core._dialogueSelectorDisplays);
-			Core._dialogueSelectorDisplays.Clear();
-			foreach (var config in Dialogues.AvailableDialogues)
-			{
-				var node = DialogueSelector.DialogueDisplay.Create(config, value);
-				dialogues.AddChild(node);
-				Core._dialogueSelectorDisplays.Add(node);
-			}
-		}
-		public void LevelsPressed() => Core.Container.Menu.Levels.Show();
-		public void DialoguesPressed() => Core.Container.Menu.Dialogues.Show();
-		public void SettingsPressed() => Core.Container.Menu.Settings.Show();
-		public void QuitPressed() => Core.GetTree().Quit();
-		public void MenuVisibilityChanged()
-		{
-			NonogramContainer nonogram = Core.Nonogram.UI;
-			MinesweeperContainer minesweeper = Core.Minesweeper.UI;
-			if (!Core.Container.Menu.Visible) { return; }
-			if (nonogram.Visible) { nonogram.Hide(); }
-			if (minesweeper.Visible) { minesweeper.Hide(); }
-		}
-		public void PlayMinesweeperPressed()
+
+		void MainMenu.IPress.LevelsPressed() => Core.Container.Menu.Levels.Show();
+		void MainMenu.IPress.DialoguesPressed() => Core.Container.Menu.Dialogues.Show();
+		void MainMenu.IPress.SettingsPressed() => Core.Container.Menu.Settings.Show();
+		void MainMenu.IPress.QuitPressed() => Core.GetTree().Quit();
+		void MainMenu.IPress.PlayMinesweeperPressed()
 		{
 			Core.Minesweeper.Puzzle = Manager.Data.CreateRandom(10);
 			Core.Minesweeper.UI.Show();
 			Core.Container.Menu.Hide();
 		}
-		public void PlayPressed()
+		void MainMenu.IPress.PlayPressed()
 		{
 			CurrentPuzzle current = Core.Nonogram;
 			var menu = Core.Container.Menu;
@@ -379,12 +328,90 @@ public sealed partial class Core : Node
 			}
 			Core.Container.Menu.Buttons.Hide();
 		}
-		public void OpenStudioPressed()
+		void MainMenu.IPress.OpenStudioPressed()
 		{
 			CurrentPuzzle current = Core.Nonogram;
 			current.Type = Display.Type.Studio;
 			current.UI.Show();
 			Core.Container.Menu.Hide();
+		}
+
+		void MainMenu.IReceiveSignals.PuzzleSelectorVisibilityChanged()
+		{
+			MainMenu menu = Core.Container.Menu;
+			PuzzleSelector value = menu.Levels;
+			Container puzzles = value.Puzzles.Value;
+			menu.Buttons.Visible = !(menu.Visible = menu.Levels.Visible);
+			if (!value.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			puzzles.Remove(true, Core._levelSelectorDisplays);
+			Core._levelSelectorDisplays.Clear();
+			foreach (var config in PuzzleManager.SelectorConfigs)
+			{
+				var node = PuzzleSelector.PackDisplay.CreateForGame(config);
+				foreach (SaveData puzzle in config.Data)
+				{
+					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
+					node.Puzzles.Value.Add(child);
+					void pressed() => Core.Nonogram.GamePuzzleDisplayPressed(menu, puzzle);
+				}
+				puzzles.AddChild(node);
+				Core._levelSelectorDisplays.Add(node);
+			}
+		}
+		void MainMenu.IReceiveSignals.DialogueSelectorVisibilityChanged()
+		{
+			MainMenu menu = Core.Container.Menu;
+			DialogueSelector value = menu.Dialogues;
+			VBoxContainer dialogues = value.DisplayContainer.Value;
+			menu.Buttons.Visible = !(menu.Visible = value.Visible);
+			if (!value.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			dialogues.Remove(true, Core._dialogueSelectorDisplays);
+			Core._dialogueSelectorDisplays.Clear();
+			foreach (var config in Dialogues.AvailableDialogues)
+			{
+				var node = DialogueSelector.DialogueDisplay.Create(config, value);
+				dialogues.AddChild(node);
+				Core._dialogueSelectorDisplays.Add(node);
+			}
+		}
+		void MainMenu.IReceiveSignals.SettingsVisibilityChanged()
+		{
+			MainMenu menu = Core.Container.Menu;
+			MainMenu.SettingsContainer value = menu.Settings;
+			menu.Buttons.Visible = !(menu.Visible = value.Visible);
+		}
+		void MainMenu.IReceiveSignals.MenuVisibilityChanged()
+		{
+			NonogramContainer nonogram = Core.Nonogram.UI;
+			MinesweeperContainer minesweeper = Core.Minesweeper.UI;
+			MainMenu menu = Core.Container.Menu;
+			if (!menu.Visible) { return; }
+			if (nonogram.Visible) { nonogram.Hide(); }
+			if (minesweeper.Visible) { minesweeper.Hide(); }
+			Node[] visibleChildren = [.. menu.GetChildren()
+				.Where(n => n is Control control && control.Visible)
+			];
+
+			switch (visibleChildren)
+			{
+				case []:
+					menu.Buttons.Visible = menu.Background.Visible = true;
+					break;
+				case [MainMenu.MainButtons node] when node == menu.Buttons:
+					node.Visible = true;
+					break;
+				case [ColorRect node] when node == menu.Background:
+					node.Visible = true;
+					break;
+			}
 		}
 	}
 	private sealed class SettingsModifier(Core Core) : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings

@@ -4,8 +4,6 @@ namespace RSG.UI;
 
 public sealed partial class MainMenu : Container
 {
-
-
 	public const int Margin = 100;
 	public ColourPack Colours
 	{
@@ -76,35 +74,6 @@ public sealed partial class MainMenu : Container
 		}
 	}
 
-	public MainMenu()
-	{
-		VisibilityChanged += () =>
-		{
-			if (!Visible) return;
-			IEnumerable<Node> children = GetChildren();
-			IEnumerable<Node> visibleChildren = children
-				.Where(n => n is Control control && control.Visible);
-
-			switch (visibleChildren.Count())
-			{
-				case 0:
-					Buttons.Show();
-					Background.Show();
-					break;
-				case 1 when visibleChildren.First() == Background:
-					Buttons.Show();
-					break;
-				case 1 when visibleChildren.First() == Buttons:
-					Background.Show();
-					break;
-				default: break;
-			}
-		};
-		Settings.VisibilityChanged += () => Buttons.Visible = !Settings.Visible;
-		Dialogues.VisibilityChanged += () => Buttons.Visible = !Dialogues.Visible;
-		Levels.VisibilityChanged += () => Buttons.Visible = !(Visible = Levels.Visible);
-	}
-
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
 
 	public interface IPress
@@ -122,6 +91,7 @@ public sealed partial class MainMenu : Container
 		void MenuVisibilityChanged();
 		void PuzzleSelectorVisibilityChanged();
 		void DialogueSelectorVisibilityChanged();
+		void SettingsVisibilityChanged();
 	}
 
 	public sealed partial class SettingsContainer : TabContainer
