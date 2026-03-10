@@ -1,35 +1,13 @@
-using Godot;
-
 namespace RSG.Nonogram;
-
-using static Display;
 
 public static class TileExtensions
 {
-	public static bool IsCorrect<TKey>(this IImmutableDictionary<TKey, TileMode> tiles, TKey position, TileMode current)
+	public static IEnumerable<KeyValuePair<T, Tile>> HoverTiles<T>(this IEnumerable<KeyValuePair<T, Tile>> tiles, bool value)
 	{
-		if (!tiles.TryGetValue(position, out TileMode expected)) return false;
-		return current.IsCorrectMode(expected);
+		foreach ((T _, Tile tile) in tiles)
+		{
+			tile.Hovering = value;
+		}
+		return tiles;
 	}
-	public static bool IsCorrectMode(this TileMode current, TileMode expected) => expected switch
-	{
-		TileMode.Filled when current is TileMode.Filled => true,
-		TileMode.Clear when current is TileMode.Clear or TileMode.Blocked => true,
-		_ => false
-	};
-	public static void PlayAudio(this TileMode mode)
-	{
-		if (mode.AsAudioStream() is AudioStream stream) Audio.Buses.SoundEffects.Play(stream);
-	}
-	public static bool IsValidInput(this TileMode current, ref TileMode next)
-	{
-		next = next == current ? TileMode.Clear : next;
-		return !TileMode.Clear.AllEqual(current, next);
-	}
-	public static AudioStream? AsAudioStream(this TileMode mode) => mode switch
-	{
-		TileMode.Filled => Audio.NonogramSounds.FillTileClicked,
-		TileMode.Blocked => Audio.NonogramSounds.BlockTileClicked,
-		_ => null
-	};
 }

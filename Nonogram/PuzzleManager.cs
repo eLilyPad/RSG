@@ -6,11 +6,9 @@ using static Display;
 
 public sealed partial class PuzzleManager
 {
-	public interface IHaveEvents
-	{
-		void Completed(SaveData puzzle);
-		void SettingsChanged();
-	}
+	public interface IChangeWithSettings { void SettingsChanged(); }
+	public interface INotifyCompletion { void Completed(SaveData puzzle); }
+	public interface IHaveEvents : IChangeWithSettings, INotifyCompletion;
 
 	public static CurrentPuzzle Current => field ??= new();
 	internal static PuzzleManager Instance => field ??= new();
@@ -26,7 +24,6 @@ public sealed partial class PuzzleManager
 		puzzle.Switch(Puzzle, Savable);
 		static void Savable(SaveData save)
 		{
-			save = save with { Name = save.Name + " save" };
 			FileManager.Save(save);
 			Instance.Puzzles[save.Name] = save;
 		}
@@ -38,9 +35,7 @@ public sealed partial class PuzzleManager
 	}
 
 	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];
-	public Dictionary<string, bool> PuzzlesCompleted { private get; init; } = [];
-	public Dictionary<string, string> CompletionDialogues { private get; init; } = [];
-	public Dictionary<string, Data> Puzzles { private get; init; } = new() { [Data.DefaultName] = new PuzzleData() };
+	public Dictionary<string, Data> Puzzles { internal get; init; } = new() { [Data.DefaultName] = new PuzzleData() };
 
 	private PuzzleManager() { }
 }

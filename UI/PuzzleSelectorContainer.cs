@@ -4,100 +4,141 @@ namespace RSG.Nonogram;
 
 public sealed partial class PuzzleSelector : PanelContainer
 {
+	private static Labelled<Container> CreatePuzzles<T>(string name, T container)
+	where T : Container
+	{
+		return new Labelled<Container>
+		{
+			Name = "Puzzles Display",
+			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
+			Value = container,
+			Vertical = true
+		}.Preset(LayoutPreset.FullRect);
+	}
 	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkCyan }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public ScrollContainer Scroll { get; } = new ScrollContainer()
+	public ScrollContainer Scroll { get; } = new ScrollContainer { Name = "Scroll" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
+	public Labelled<Container> Puzzles { get; } = new Labelled<Container>
 	{
-		Name = "Puzzles Container",
+		Name = "Puzzles",
 		Vertical = true,
 		Label = new RichTextLabel { Name = "PuzzlesTitle", FitContent = true, Text = "Puzzles" }
 			.Preset(LayoutPreset.CenterTop, LayoutPresetMode.KeepSize),
-		Value = new VBoxContainer()
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
-	}
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		Value = new VBoxContainer { Name = "Container" }
+			.SizeFlags(both: SizeFlags.ExpandFill)
+	}.SizeFlags(both: SizeFlags.ExpandFill);
 
 	public override void _Ready() => this.Add(Background, Scroll.Add(Puzzles));
 
-	public sealed partial class PackDisplay : PanelContainer
+	public sealed partial class Studio : PanelContainer
 	{
-		public static PackDisplay Create((string name, IEnumerable<SaveData> data) config, CanvasItem root)
-		{
-			return Create(config.name, root, config.data);
-		}
-		public static PackDisplay Create(string name, CanvasItem root, IEnumerable<SaveData> data)
-		{
-			PackDisplay display = new PackDisplay { Name = name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			display.Puzzles.Label.Text = name;
-			foreach (SaveData puzzle in data)
-			{
-				PuzzleDisplay puzzleDisplay = PuzzleDisplay.Create(puzzle);
-				puzzleDisplay.Button.Pressed += pressed;
-				display.Puzzles.Value.Add(puzzleDisplay);
-
-				void pressed()
-				{
-					if (!IsInstanceValid(root)) return;
-					PuzzleManager.Current.Puzzle = puzzle;
-					PuzzleManager.Current.UI.Show();
-					root.Hide();
-				}
-			}
-
-			return display;
-		}
-
-		public Labelled<VBoxContainer> Puzzles { get; } = new Labelled<VBoxContainer>()
-		{
-			Name = "Puzzles Display",
-			Label = new RichTextLabel { Name = "Label", FitContent = true }
-				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
-			Value = new VBoxContainer { Name = "Puzzles Container" }
-				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill),
-			Vertical = true
-		}
-			.Preset(LayoutPreset.FullRect);
-		internal PackDisplay() { }
-		public override void _Ready() => this.Add(Puzzles);
+		public ScrollContainer Scroll { get; } = new ScrollContainer()
+			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+		public VBoxContainer Puzzles { get; } = new VBoxContainer()
+			.SizeFlags(both: SizeFlags.ExpandFill);
+		public override void _Ready() => this.Add(Scroll.Add(Puzzles));
 	}
-	public sealed partial class PuzzleDisplay : PanelContainer
+
+	public abstract partial class PackDisplay : PanelContainer
 	{
-		public static PuzzleDisplay Create(Display.Data puzzle)
+		public static PackDisplay CreateForGame((string Name, IEnumerable<SaveData> Data) config)
 		{
-			Color statusColor = puzzle switch
-			{
-				SaveData { IsComplete: true } => Colors.Green,
-				_ => Colors.Black
-			};
-			PuzzleDisplay display = new PuzzleDisplay
-			{
-				Name = puzzle.Name + " Display",
-				Button = new() { Name = puzzle.Name + " Button", Text = puzzle.Name },
-				Background = new ColorRect { Name = "Background", Color = statusColor }
-					.Preset(LayoutPreset.LeftWide)
-					.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-
-			display.Button.OverrideStyle((StyleBoxFlat style) =>
-			{
-				style.SetCornerRadiusAll(0);
-				return style;
-			});
-			display.Background.OverrideStyle((StyleBoxFlat style) =>
-			{
-				style.ContentMarginBottom = 50;
-				style.SetCornerRadiusAll(0);
-				return style;
-			});
-
-			return display;
+			return new GamePacks { Name = config.Name }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
 		}
-		public required ColorRect Background { get; init; }
-		public required Button Button { get; init; }
+		public static PackDisplay CreateForStudio((string Name, IEnumerable<SaveData> Data) config)
+		{
+			return new StudioPacks { Name = config.Name }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		}
+		public new string Name
+		{
+			get => base.Name;
+			set => base.Name = (Puzzles.Label.Text = value) + " Pack";
+		}
+		public virtual Labelled<Container> Puzzles { get; init; } = CreatePuzzles(
+			"Puzzles",
+			container: new VBoxContainer { Name = "List" }
+				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
+		);
+		public override void _Ready() => this.Add(Puzzles);
+
+	}
+	private sealed partial class GamePacks : PackDisplay
+	{
+		public override Labelled<Container> Puzzles { get; init; } = CreatePuzzles(
+			"Puzzles",
+			container: new GridContainer { Name = "Grid", Columns = 5 }
+				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
+		);
+	}
+	private sealed partial class StudioPacks : PackDisplay;
+	public partial class PuzzleDisplay : PanelContainer
+	{
+		public static PuzzleDisplay CreateGameDisplay(SaveData puzzle, Action pressed)
+		{
+			return new GamePuzzleDisplay(puzzle, pressed)
+			.SizeFlags(both: SizeFlags.ExpandFill);
+		}
+		public static PuzzleDisplay CreateStudioDisplay(SaveData puzzle, Action pressed)
+		{
+			return new StudioPuzzleDisplay(puzzle, pressed)
+			.SizeFlags(both: SizeFlags.ExpandFill);
+		}
+		public ColorRect Background { get; } = new ColorRect { Name = "Background", }
+		.Preset(LayoutPreset.LeftWide)
+		.SizeFlags(both: SizeFlags.ExpandFill)
+		.OverrideStyle((StyleBoxFlat style) =>
+		{
+			style.SetCornerRadiusAll(0);
+			return style;
+		});
+		public Button Button { get; } = new Button
+		{
+			VerticalIconAlignment = VerticalAlignment.Top,
+			IconAlignment = HorizontalAlignment.Center,
+		}
+		.OverrideStyle<StyleBoxFlat, Button>(Modify)
+		.OverrideStyle<StyleBoxFlat, Button>(Modify, "hover");
 		public override void _Ready() => this.Add(Background, Button);
+		static StyleBoxFlat Modify(StyleBoxFlat style)
+		{
+			style.SetCornerRadiusAll(0);
+			style.SetContentMarginAll(40);
+			return style;
+		}
+	}
+	private sealed partial class GamePuzzleDisplay(SaveData Puzzle, Action Pressed) : PuzzleDisplay
+	{
+		public override void _Ready()
+		{
+			base._Ready();
+			Name = Puzzle.Name;
+
+			Background.Color = Puzzle.CompletionColour;
+
+			Button.Name = Puzzle.Name + " Button";
+			Button.Text = Puzzle.Name;
+			Button.Icon = Puzzle.AsIcon(Core.Colours, 16);
+			Button.Pressed += Pressed;
+		}
+	}
+	private sealed partial class StudioPuzzleDisplay(SaveData Puzzle, Action Pressed) : PuzzleDisplay
+	{
+		public override void _Ready()
+		{
+			base._Ready();
+			Name = Puzzle.Name;
+
+			Background.Color = Puzzle.CompletionColour;
+
+			Button.Name = Name + " Button";
+			Button.Text = Name;
+			Button.Icon = Puzzle.Expected.AsIcon(Core.Colours, 16);
+			Button.Pressed += Pressed;
+		}
 	}
 }
 

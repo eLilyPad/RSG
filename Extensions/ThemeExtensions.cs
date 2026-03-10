@@ -4,6 +4,14 @@ namespace RSG.Extensions;
 
 public static class ThemeExtensions
 {
+	public static MarginContainer SetMarginAll(this MarginContainer margin, int marginValue)
+	{
+		margin.AddThemeConstantOverride("margin_top", marginValue);
+		margin.AddThemeConstantOverride("margin_left", marginValue);
+		margin.AddThemeConstantOverride("margin_bottom", marginValue);
+		margin.AddThemeConstantOverride("margin_right", marginValue);
+		return margin;
+	}
 	public static Button AddAllFontThemeOverride(this Button button, Color color)
 	{
 		button.AddThemeColorOverride("font_color", color);
@@ -20,11 +28,11 @@ public static class ThemeExtensions
 	where TStyle : StyleBox
 	where TControl : Control
 	{
-		if (control.GetThemeStylebox(name).Duplicate() as TStyle is TStyle style)
-		{
-			modify(style);
-			control.AddThemeStyleboxOverride(name, style);
-		}
+		var theme = control.GetThemeStylebox(name).Duplicate();
+		Assert(theme is TStyle, $"theme is {theme.GetType()}");
+		TStyle style = (TStyle)theme;
+		modify(style);
+		control.AddThemeStyleboxOverride(name, style);
 		return control;
 	}
 	public static void StyleChequeredButtons(

@@ -8,49 +8,22 @@ using RSG.Dialogue;
 
 public sealed partial class CoreUI : Control
 {
-	private sealed class UIEventHandler(CoreUI UI) : PuzzleCompleteScreen.IHandleSignals
+	public static CoreUI Create<TSettings, TMenu>(Node parent, ColourPack colours, TMenu menu, TSettings settings)
+	where TSettings : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings
+	where TMenu : MainMenu.IPress, MainMenu.IReceiveSignals
 	{
-		void PuzzleCompleteScreen.IHandleSignals.OnLevelsPressed()
-		{
-			UI.Menu.Show();
-			UI.Menu.Levels.Show();
-			PuzzleManager.Current.UI.CompletionScreen.Hide();
-		}
-		void PuzzleCompleteScreen.IHandleSignals.OnDialoguesPressed()
-		{
-			UI.Menu.Show();
-			UI.Menu.Dialogues.Show();
-			PuzzleManager.Current.UI.CompletionScreen.Hide();
-		}
-		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
-		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			Dialogues.Start(name: current.CompletionDialogueName);
-			UI.Menu.Show();
-			UI.Menu.Buttons.Show();
-			current.UI.CompletionScreen.Hide();
-		}
-		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
-		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
-			string name = current.CompletionDialogueName;
-			bool hasDialogue = Dialogues.Contains(name);
-			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
-			if (hasDialogue)
-			{
-				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
-			}
-		}
+		CoreUI ui = new() { Name = "Core UI", Colours = colours };
+		parent.AddChild(ui);
+		ui.Menu.Signals = menu;
+		ui.Menu.OnPressed = menu;
+		ui.Menu.Settings.Nonogram.SettingsChanger = settings;
+		return ui.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 	}
-
 	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
-
 	public required ColourPack Colours { set => PuzzleManager.Current.UI.Colours = Menu.Colours = value; }
-
 	private UIEventHandler Handler => field ??= new(UI: this);
 	public override void _Ready()
 	{
@@ -64,7 +37,6 @@ public sealed partial class CoreUI : Control
 		);
 		nonogram.CompletionScreen.Value.Signals = Handler;
 	}
-
 	public void EscapePressed()
 	{
 		if (!Menu.Visible)
@@ -91,7 +63,41 @@ public sealed partial class CoreUI : Control
 			}
 		}
 	}
-
 	public static void ToggleConsole() => Console.Container.Visible = !Console.Container.Visible;
+	private sealed class UIEventHandler(CoreUI UI) : PuzzleCompleteScreen.IHandleSignals
+	{
+		void PuzzleCompleteScreen.IHandleSignals.OnLevelsPressed()
+		{
+			UI.Menu.Show();
+			UI.Menu.Levels.Show();
+			PuzzleManager.Current.UI.CompletionScreen.Hide();
+		}
+		void PuzzleCompleteScreen.IHandleSignals.OnDialoguesPressed()
+		{
+			UI.Menu.Show();
+			UI.Menu.Dialogues.Show();
+			PuzzleManager.Current.UI.CompletionScreen.Hide();
+		}
+		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			Dialogues.Start(name: current.CompletionDialogueName);
+			UI.Menu.Show();
+			UI.Menu.Buttons.Hide();
+			current.UI.CompletionScreen.Hide();
+		}
+		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
+			string name = current.CompletionDialogueName;
+			bool hasDialogue = Dialogues.Contains(name);
+			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
+			if (hasDialogue)
+			{
+				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
+			}
+		}
+	}
 }
 

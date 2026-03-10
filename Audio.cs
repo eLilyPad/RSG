@@ -100,7 +100,7 @@ public sealed partial class Audio : Resource
 		public Labelled<VolumeSlider> SoundEffects { get; } = CreateVolumeControl(bus: Buses.SoundEffects);
 		public Labelled<VolumeSlider> Music { get; } = CreateVolumeControl(bus: Buses.Music);
 		public VBoxContainer Margin { get; } = new VBoxContainer()
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
+		.SizeFlags(both: SizeFlags.ExpandFill)
 		.Preset(preset: LayoutPreset.TopRight, resizeMode: LayoutPresetMode.KeepSize, 30);
 		public override void _Ready()
 		{
@@ -128,7 +128,7 @@ public sealed partial class Audio : Resource
 	public sealed partial class VolumeSlider : HBoxContainer
 	{
 		public RichTextLabel VolumeLabel { get; } = new RichTextLabel { FitContent = true }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
 		public HSlider Slider { get; } = new()
 		{
 			MaxValue = 1,

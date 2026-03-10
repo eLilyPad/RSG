@@ -75,7 +75,7 @@ public sealed partial class Tile : PanelContainer
 		protected override Tile Create(Vector2I position)
 		{
 			Tile tile = new Tile { Name = $"Tile (X: {position.X}, Y: {position.Y})", Colours = colours }
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+				.SizeFlags(both: SizeFlags.ExpandFill);
 			parent.AddChild(tile);
 
 			var button = tile.Button;
@@ -96,9 +96,9 @@ public sealed partial class Tile : PanelContainer
 		ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 		MouseFilter = MouseFilterEnum.Ignore
 	}
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		.SizeFlags(SizeFlags.ExpandFill);
 	public Button Button { get; } = new Button { Text = " ", ButtonMask = mask, ExpandIcon = false }
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+		.SizeFlags(SizeFlags.ExpandFill)
 		.OverrideStyle(modify: (StyleBoxFlat style) =>
 		{
 			style.CornerDetail = 1;

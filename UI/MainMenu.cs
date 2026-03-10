@@ -52,13 +52,7 @@ public sealed partial class MainMenu : Container
 					style.SetContentMarginAll(10);
 					return style;
 				});
-			Label
-				.OverrideStyle(modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					return style;
-				})
-				.AddThemeFontSizeOverride("normal", 40);
+			Label.AddThemeFontSizeOverride("normal", 40);
 
 		}
 		static Color Colour(float value)
@@ -79,6 +73,8 @@ public sealed partial class MainMenu : Container
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Studio { get; } = new MainButton(nameof(Studio))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
@@ -88,11 +84,11 @@ public sealed partial class MainMenu : Container
 		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
 			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
 		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			.SizeFlags(both: SizeFlags.ExpandFill);
 		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+			.SizeFlags(both: SizeFlags.ExpandFill);
 		public override void _Ready() => this.Add(
-				Container.Add(Play, PlayMinesweeper, Levels, Dialogues, Settings, Quit),
+				Container.Add(Play, PlayMinesweeper, Studio, Levels, Dialogues, Settings, Quit),
 				Spacer
 			);
 	}
@@ -100,6 +96,7 @@ public sealed partial class MainMenu : Container
 	{
 		void PlayPressed();
 		void PlayMinesweeperPressed();
+		void OpenStudioPressed();
 		void LevelsPressed();
 		void DialoguesPressed();
 		void SettingsPressed();
@@ -162,6 +159,7 @@ public sealed partial class MainMenu : Container
 		{
 			Buttons.Play.Pressed += value.PlayPressed;
 			Buttons.PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
+			Buttons.Studio.Pressed += value.OpenStudioPressed;
 			Buttons.Levels.Pressed += value.LevelsPressed;
 			Buttons.Dialogues.Pressed += value.DialoguesPressed;
 			Buttons.Settings.Pressed += value.SettingsPressed;
@@ -171,6 +169,7 @@ public sealed partial class MainMenu : Container
 				field = value;
 				return;
 			}
+			Buttons.Studio.Pressed -= field.OpenStudioPressed;
 			Buttons.Play.Pressed -= field.PlayPressed;
 			Buttons.PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
 			Buttons.Levels.Pressed -= field.LevelsPressed;

@@ -93,6 +93,12 @@ public static class VectorExtensions
 }
 public static class ImageExtensions
 {
+	public static ImageTexture ToImage(this Image image) => ImageTexture.CreateFromImage(image);
+	public static Image Rotate90(this Image image, ClockDirection direction = ClockDirection.Clockwise)
+	{
+		image.Rotate90(direction);
+		return image;
+	}
 	public static void SetPixel(this Image image, int x, int y, Color color, int size)
 	{
 		int half = size / 2;

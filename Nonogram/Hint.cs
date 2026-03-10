@@ -4,26 +4,35 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-sealed class Hints(Hints.IProvider Provider, IColours Colours) : NodePool<HintPosition, Hint>
+sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 {
-	internal interface IProvider
+	internal interface IProvider : IStringifyHints
 	{
 		Node Parent(HintPosition position);
-		string Text(HintPosition position);
 	}
-	public Vector2 TileSize { get; set; } = Vector2.Zero;
 
-	public void Update(int size)
+	public Vector2 TileSize { get; set; } = Vector2.Zero;
+	public IColours Colours { private get; set; } = Core.Colours;
+
+	public Hints Resize(int length)
 	{
-		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(size);
-		foreach (HintPosition position in hintValues)
+		Clear();
+		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(length);
+		foreach (HintPosition key in hintValues)
 		{
-			Hint hint = GetOrCreate(position);
-			ApplyText(position, hint);
+			_ = GetOrCreate(key);
 		}
 		Clear(exceptions: hintValues);
+		return this;
 	}
-	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.Text(position);
+	public Hints Refresh()
+	{
+		foreach ((HintPosition position, Hint hint) in _nodes)
+		{
+			hint.Label.Text = Provider.TextLineAt(position);
+		}
+		return this;
+	}
 	protected override Node Parent(HintPosition position) => Provider.Parent(position);
 	protected override Hint Create(HintPosition position)
 	{
@@ -42,8 +51,8 @@ public sealed partial class Hint : PanelContainer
 		{
 			Name = $"Hint (Side: {position.Side}, Index: {position.Index})",
 			Label = new RichTextLabel { Name = "Label", Text = EmptyHint, FitContent = true }
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
-		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+				.SizeFlags(SizeFlags.ExpandFill)
+		}.SizeFlags(SizeFlags.ExpandFill);
 		(hint.Label.HorizontalAlignment, hint.Label.VerticalAlignment) = position.Alignment();
 		hint.Label.AddThemeFontSizeOverride("normal_font_size", 15);
 		hint.Background.Color = position.Index % 2 == 0 ? colours.NonogramHintBackground1 : colours.NonogramHintBackground2;

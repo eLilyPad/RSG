@@ -4,6 +4,7 @@ namespace RSG.Nonogram;
 
 public sealed partial class NonogramContainer : PanelContainer
 {
+	public const int MarginValue = 20;
 	public Backgrounded<PuzzleCompleteScreen> CompletionScreen { get; } = new Backgrounded<PuzzleCompleteScreen>
 	{
 		Name = "PuzzleCompleteScreen",
@@ -17,7 +18,14 @@ public sealed partial class NonogramContainer : PanelContainer
 	public NonogramBackground Background { get; } = new NonogramBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public Display.Default Display { get; } = new Display.Default { }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
+	public HBoxContainer Container { get; } = new HBoxContainer { Name = "Container" }
+		.SizeFlags(both: SizeFlags.ExpandFill);
+	public NonogramStudioBar Studio { get; } = new NonogramStudioBar { Name = "Studio", SizeFlagsStretchRatio = .6f }
+		.SizeFlags(both: SizeFlags.ExpandFill);
+	public MarginContainer Margin = new MarginContainer { Name = "Margin" }
+		.SizeFlags(both: SizeFlags.ExpandFill)
+		.SetMarginAll(MarginValue);
 
 	public IColours Colours
 	{
@@ -25,28 +33,43 @@ public sealed partial class NonogramContainer : PanelContainer
 		{
 			Background.ColorBackground.Color = value.NonogramBackground;
 			Display.Timer.Background.Color = value.NonogramTimerBackground;
+			Tiles.Colours = Hints.Colours = value;
 			field = value;
 		}
-	}
-	public int PuzzleSize
-	{
-		set
-		{
-			Tiles.Update(value);
-			Hints.TileSize = Tiles.TileSize;
-			Hints.Update(value);
-			Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
-		}
-	}
+	} = Core.Colours;
+	public int PuzzleSize { set => ChangePuzzleSize(value); }
 
-	internal Tile.Pool Tiles { get; init; }
-	internal Hints Hints { get; init; }
+	internal Tile.Pool Tiles { get; }
+	internal Hints Hints { get; }
 
-	internal NonogramContainer(IColours colours, List<Func<Vector2I, bool>> rules, PuzzleManager.CurrentPuzzle puzzle)
+	internal NonogramContainer(Tile.Pool tiles, Hints hints)
 	{
-		Colours = colours;
-		Hints = new(Provider: puzzle, Colours: colours);
-		Tiles = new(Provider: puzzle, Colours: colours) { LockRules = new() { Rules = rules } };
+		Tiles = tiles;
+		Hints = hints;
 	}
-	public override void _Ready() => this.Add(Background, Display, CompletionScreen);
+	public override void _Ready()
+	{
+		this.Add(
+			Background,
+			Margin.Add(Container.Add(Display, Studio)),
+			CompletionScreen
+		);
+		PuzzleSize = Nonogram.Display.Data.DefaultSize;
+	}
+	public void Refresh()
+	{
+		Tiles.Refresh();
+		Hints.Refresh();
+	}
+	private void ChangePuzzleSize(int value)
+	{
+		Tiles.Resize(value)
+			.Refresh();
+		Hints.TileSize = Tiles.TileSize;
+		Hints.Resize(value)
+			.Refresh();
+		Display.TilesGrid.Columns = value;
+		Studio.PuzzleTab.PuzzleSize.SetValueNoSignal(value);
+		Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
+	}
 }

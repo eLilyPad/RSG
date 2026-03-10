@@ -87,9 +87,9 @@ public sealed partial class MinesweeperContainer : PanelContainer
 		public const MouseButton CheckButton = MouseButton.Left, FlagButton = MouseButton.Right;
 
 		public MarginContainer Margin { get; } = new MarginContainer { }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
 		public GridContainer TilesGrid { get; } = new GridContainer { Name = "Tiles", Columns = 2 }
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+			.SizeFlags(both: SizeFlags.ExpandFill);
 
 		public override void _Ready()
 		{
@@ -114,7 +114,7 @@ public sealed partial class MinesweeperContainer : PanelContainer
 	public MinesweeperBackground Background { get; } = new MinesweeperBackground { Name = "Background" }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public MinesweeperDisplay Display { get; } = new MinesweeperDisplay { }
-		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		.SizeFlags(both: SizeFlags.ExpandFill);
 
 	public int PuzzleSize
 	{

@@ -13,8 +13,15 @@ public sealed class PuzzleTimer
 	{
 		get; set
 		{
+			if (field.TotalSeconds == value.TotalSeconds) return;
 			field = value;
-			Provider.TimeChanged($"{field.TotalHours:00}:{field.Minutes:00}:{field.Seconds:00}");
+			_stringBuilder.Clear();
+			_stringBuilder.AppendFormat("{0:00}:{1:00}:{2:00}",
+				(int)field.TotalHours,
+				field.Minutes,
+				field.Seconds
+			);
+			Provider.TimeChanged(_stringBuilder.ToString());
 		}
 	}
 	public bool Running
@@ -27,19 +34,20 @@ public sealed class PuzzleTimer
 				return;
 			}
 			field = value;
+
 		}
 	} = false;
+
+	private readonly StringBuilder _stringBuilder = new();
+
 	public void Tick(double delta)
 	{
 		if (!Running) return;
 		Elapsed += TimeSpan.FromSeconds(delta);
 	}
-	public void TryStart(Display.TileMode inputMode)
+	public void TryStart()
 	{
-		if (Running || inputMode is not Display.TileMode.Filled)
-		{
-			return;
-		}
+		if (Running) return;
 		Running = true;
 	}
 }

@@ -13,7 +13,7 @@ public sealed partial class Input : Resource
 	{
 		public KeyBindsContainer InputsContainer { get; } = new KeyBindsContainer { Name = "KeyBindsContainer" };
 		public VBoxContainer MainContainer { get; } = new VBoxContainer { Name = "Container" }
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+			.SizeFlags(both: SizeFlags.ExpandFill);
 		public override void _Ready()
 		{
 			this.Add(MainContainer.Add(InputsContainer));

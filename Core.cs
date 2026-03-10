@@ -10,130 +10,6 @@ using Dialogue;
 
 public sealed partial class Core : Node
 {
-	private sealed class EventHandler(Core core) :
-	PuzzleManager.IHaveEvents,
-	IHandleEvents,
-	MainMenu.IPress,
-	MainMenu.IReceiveSignals,
-	SettingsMenuContainer.IChangeSettings
-	{
-		readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
-		readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
-		public void PuzzleSelectorVisibilityChanged() => Refill(value: core.Container.Menu.Levels);
-		public void DialogueSelectorVisibilityChanged() => Refill(value: core.Container.Menu.Dialogues);
-		public void MenuVisibilityChanged()
-		{
-			NonogramContainer nonogram = PuzzleManager.Current.UI;
-			MinesweeperContainer minesweeper = core.Minesweeper.UI;
-			if (!core.Container.Menu.Visible) { return; }
-			if (nonogram.Visible) { nonogram.Hide(); }
-			if (minesweeper.Visible) { minesweeper.Hide(); }
-		}
-		public void Completed(SaveData puzzle)
-		{
-			string dialogueName = puzzle.Expected.DialogueName;
-			PuzzleManager.Current.UI.CompletionScreen.Show();
-			Dialogues.Enable(dialogueName);
-		}
-		public void SettingsChanged()
-		{
-			SettingsMenuContainer menu = core.Container.Menu.Settings.Nonogram;
-			Settings settings = PuzzleManager.Current.Settings;
-
-			menu.AutoCompletion.LockFilledTiles.Value.ButtonPressed = settings.LockCompletedFilledTiles;
-			menu.AutoCompletion.LockBlockedTiles.Value.ButtonPressed = settings.LockCompletedBlockedTiles;
-			menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
-		}
-		public void PlayMinesweeperPressed()
-		{
-			core.Minesweeper.Puzzle = Manager.Data.CreateRandom(10);
-			core.Minesweeper.UI.Show();
-			core.Container.Menu.Hide();
-		}
-		public void PlayPressed()
-		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			switch (current)
-			{
-				case { PuzzleReady: true }:
-					core.Container.Menu.Hide();
-					PuzzleManager.Current.UI.Show();
-					break;
-				case { PuzzleReady: false }:
-					core.Container.Menu.Levels.Show();
-					core.Container.Menu.Show();
-					break;
-				default:
-					break;
-			}
-			core.Container.Menu.Buttons.Hide();
-		}
-		public void LevelsPressed() => core.Container.Menu.Levels.Show();
-		public void DialoguesPressed() => core.Container.Menu.Dialogues.Show();
-		public void SettingsPressed() => core.Container.Menu.Settings.Show();
-		public void QuitPressed() => core.GetTree().Quit();
-		public void ToggledLockFilledTiles(bool toggled)
-		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
-		}
-		public void ToggledLockBlockedTiles(bool toggled)
-		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
-		}
-		public void ToggledBlockCompleteLines(bool toggled)
-		{
-			PuzzleManager.CurrentPuzzle current = PuzzleManager.Current;
-			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
-		}
-
-		public void Failed(Manager.Data data)
-		{
-			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = core.Minesweeper.UI.CompletionScreen;
-			completionScreen.Show();
-			completionScreen.Value.TitleText = "Game Over";
-		}
-		public void Completed(Manager.Data data)
-		{
-			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = core.Minesweeper.UI.CompletionScreen;
-			completionScreen.Show();
-			completionScreen.Value.TitleText = "Mines Located!";
-		}
-
-		private void Refill<T>(T value) where T : Control
-		{
-			MainMenu menu = core.Container.Menu;
-			if (!value.Visible)
-			{
-				menu.Hide();
-				return;
-			}
-			switch (value)
-			{
-				case PuzzleSelector puzzle:
-					puzzle.Refill(
-						parent: puzzle.Puzzles.Value,
-						nodes: _levelSelectorDisplays,
-						configs: PuzzleManager.SelectorConfigs,
-						create: PuzzleSelector.PackDisplay.Create
-					);
-					break;
-				case DialogueSelector dialogue:
-					dialogue.Refill(
-						parent: dialogue.DisplayContainer.Value,
-						nodes: _dialogueSelectorDisplays,
-						configs: Dialogues.AvailableDialogues,
-						create: DialogueSelector.DialogueDisplay.Create
-					);
-					break;
-				default:
-					GD.PrintErr($"Unhandled refill for type {value.GetType().Name}");
-					break;
-			}
-		}
-	}
-
 	private static void InitConsole(Core core)
 	{
 		Console.Console.Command
@@ -171,7 +47,6 @@ public sealed partial class Core : Node
 			{
 				["start"] = obj =>
 				{
-
 					if (!TryConvertDialogueName(obj, out string? name)) return;
 					Dialogues.Start(name);
 					Console.Console.Log($"Started Dialogue: {name}");
@@ -186,12 +61,11 @@ public sealed partial class Core : Node
 		},
 		nonogramCommand = new()
 		{
-			Default = () => Console.Console.Log("Current Display: " + PuzzleManager.Current.Type.AsName()),
+			Default = () => PuzzleManager.Current.Type.LogCurrent(),
 			Flags = new()
 			{
-				["game"] = () => ChangeDisplayType(Display.Type.Game),
-				["paint"] = () => ChangeDisplayType(Display.Type.Paint),
-				["display"] = () => ChangeDisplayType(Display.Type.Display),
+				["game"] = () => (PuzzleManager.Current.Type = Display.Type.Game).LogChange(),
+				["paint"] = () => (PuzzleManager.Current.Type = Display.Type.Studio).LogChange(),
 			}
 		};
 		ReadOnlySpan<(string, Console.Console.Command)> configs = [
@@ -218,11 +92,6 @@ public sealed partial class Core : Node
 			name = value;
 			return true;
 		}
-		static void ChangeDisplayType(Display.Type type)
-		{
-			PuzzleManager.Current.Type = type;
-			Console.Console.Log($"Display changed too {type.AsName()}");
-		}
 	}
 
 	public const string
@@ -230,25 +99,19 @@ public sealed partial class Core : Node
 	MinesweeperTexturesPath = "res://Data/MinesweeperTextures.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
 	public static ColourPack Colours => field ??= ColourPackPath.LoadOrCreateResource<ColourPack>();
-
-
-	public CoreUI Container
-	{
-		get
-		{
-			if (field is not null) return field;
-			CoreUI ui = new() { Name = "Core UI", Colours = Colours };
-			AddChild(ui);
-			ui.Menu.Signals = Handler;
-			ui.Menu.OnPressed = Handler;
-			ui.Menu.Settings.Nonogram.SettingsChanger = Handler;
-			return field = ui
-				.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
-		}
-	}
-
-
-	private EventHandler Handler => field ??= new(this);
+	public CoreUI Container => field ??= CoreUI.Create(
+		parent: this,
+		colours: Colours,
+		menu: _menuHandler,
+		settings: _settingsModifier
+	);
+	private readonly SettingsModifier _settingsModifier;
+	private readonly MenuHandler _menuHandler;
+	private readonly GamesHandler _handler;
+	private readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
+	private readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
+	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
+	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
 	private Manager Minesweeper
 	{
 		get
@@ -259,7 +122,7 @@ public sealed partial class Core : Node
 				Name = "Minesweeper",
 				Visible = false,
 			}.Preset(LayoutPreset.FullRect);
-			Manager minesweeper = new() { UI = ui, EventHandler = Handler };
+			Manager minesweeper = new() { UI = ui, EventHandler = _handler };
 
 			Container.AddChild(ui);
 			ui.Tiles.Provider = minesweeper;
@@ -275,10 +138,16 @@ public sealed partial class Core : Node
 			return field = minesweeper;
 		}
 	}
-
+	public Core()
+	{
+		_menuHandler = new(this);
+		_settingsModifier = new(this);
+		_handler = new(this);
+	}
 	public override void _Ready()
 	{
 		Name = nameof(Core);
+		var current = PuzzleManager.Current;
 		Dialogues.Instance.BuildDialogues();
 
 		Input.Bind(bindsContainer: Container.Menu.Settings.Input.InputsContainer,
@@ -286,11 +155,16 @@ public sealed partial class Core : Node
 			(Key.Backslash, CoreUI.ToggleConsole, "Toggle Console")
 		);
 		InitConsole(this);
-
-		PuzzleManager.Current.Type = Display.Type.Game;
-		PuzzleManager.Current.EventHandler = Handler;
-
+		current.PuzzleCompleted = OnNonogramPuzzleCompleted;
+		current.SaveListener = _handler;
+		current.UI.Studio.VisibilityChanged += _menuHandler.StudioPuzzleSelectorVisibilityChanged;
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+
+		static void OnNonogramPuzzleCompleted(SaveData save)
+		{
+			PuzzleManager.Current.UI.CompletionScreen.Show();
+			Dialogues.Enable(save.Expected.DialogueName);
+		}
 	}
 	public override void _Process(double delta)
 	{
@@ -313,5 +187,189 @@ public sealed partial class Core : Node
 
 		void DialogueFinished() => Container.Menu.Show();
 	}
-}
 
+	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
+	{
+		public void StudioPuzzleSelectorVisibilityChanged()
+		{
+			var root = PuzzleManager.Current.UI.Studio;
+			var puzzles = root.PacksTab.Scroll.Puzzles;
+			if (!root.Visible) return;
+			puzzles.Remove(true, Core._studioSelectorDisplays);
+			Core._studioSelectorDisplays.Clear();
+			Core._studioPuzzleSelectorDisplays.Clear();
+			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
+			{
+				var node = PuzzleSelector.PackDisplay.CreateForStudio(config);
+				foreach (SaveData puzzle in config.Data)
+				{
+					var child = PuzzleSelector.PuzzleDisplay.CreateStudioDisplay(puzzle, pressed);
+					node.Puzzles.Value.Add(child);
+					Core._studioPuzzleSelectorDisplays.Add(child);
+					child.Button.GuiInput += OnRightClick;
+					void pressed() => PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
+					void OnRightClick(InputEvent input)
+					{
+						bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
+						if (!rightClicked) return;
+						PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
+					}
+				}
+				puzzles.AddChild(node);
+				Core._studioSelectorDisplays.Add(node);
+			}
+		}
+		public void PuzzleSelectorVisibilityChanged()
+		{
+			var menu = Core.Container.Menu;
+			var selector = menu.Levels;
+			var puzzles = selector.Puzzles.Value;
+			if (!selector.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			puzzles.Remove(true, Core._levelSelectorDisplays);
+			Core._levelSelectorDisplays.Clear();
+			foreach (var config in PuzzleManager.SelectorConfigs)
+			{
+				var node = PuzzleSelector.PackDisplay.CreateForGame(config);
+				foreach (SaveData puzzle in config.Data)
+				{
+					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
+					node.Puzzles.Value.Add(child);
+					void pressed() => PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
+				}
+				puzzles.AddChild(node);
+				Core._levelSelectorDisplays.Add(node);
+			}
+		}
+		public void DialogueSelectorVisibilityChanged()
+		{
+			var menu = Core.Container.Menu;
+			var value = menu.Dialogues;
+			var dialogues = value.DisplayContainer.Value;
+			if (!value.Visible)
+			{
+				menu.Hide();
+				return;
+			}
+			dialogues.Remove(true, Core._dialogueSelectorDisplays);
+			Core._dialogueSelectorDisplays.Clear();
+			foreach (var config in Dialogues.AvailableDialogues)
+			{
+				var node = DialogueSelector.DialogueDisplay.Create(config, value);
+				dialogues.AddChild(node);
+				Core._dialogueSelectorDisplays.Add(node);
+			}
+		}
+		public void LevelsPressed() => Core.Container.Menu.Levels.Show();
+		public void DialoguesPressed() => Core.Container.Menu.Dialogues.Show();
+		public void SettingsPressed() => Core.Container.Menu.Settings.Show();
+		public void QuitPressed() => Core.GetTree().Quit();
+		public void MenuVisibilityChanged()
+		{
+			NonogramContainer nonogram = PuzzleManager.Current.UI;
+			MinesweeperContainer minesweeper = Core.Minesweeper.UI;
+			if (!Core.Container.Menu.Visible) { return; }
+			if (nonogram.Visible) { nonogram.Hide(); }
+			if (minesweeper.Visible) { minesweeper.Hide(); }
+		}
+		public void PlayMinesweeperPressed()
+		{
+			Core.Minesweeper.Puzzle = Manager.Data.CreateRandom(10);
+			Core.Minesweeper.UI.Show();
+			Core.Container.Menu.Hide();
+		}
+		public void PlayPressed()
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			var menu = Core.Container.Menu;
+			switch (current)
+			{
+				case { Type: Display.Type.Studio }:
+					current.Type = Display.Type.Game;
+					menu.Levels.Show();
+					menu.Show();
+					break;
+				case { PuzzleReady: true }:
+					menu.Hide();
+					current.UI.Show();
+					break;
+				case { PuzzleReady: false }:
+					menu.Levels.Show();
+					menu.Show();
+					break;
+				default:
+					break;
+			}
+			Core.Container.Menu.Buttons.Hide();
+		}
+		public void OpenStudioPressed()
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			current.Type = Display.Type.Studio;
+			current.UI.Show();
+			Core.Container.Menu.Hide();
+		}
+	}
+	private sealed class SettingsModifier(Core Core) : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings
+	{
+		public void ToggledLockFilledTiles(bool toggled)
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			current.Settings = current.Settings with { LockCompletedFilledTiles = toggled };
+		}
+		public void ToggledLockBlockedTiles(bool toggled)
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			current.Settings = current.Settings with { LockCompletedBlockedTiles = toggled };
+		}
+		public void ToggledBlockCompleteLines(bool toggled)
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			current.Settings = current.Settings with { LineCompleteBlockRest = toggled };
+		}
+		public void SettingsChanged()
+		{
+			SettingsMenuContainer menu = Core.Container.Menu.Settings.Nonogram;
+			Settings settings = PuzzleManager.Current.Settings;
+
+			menu.AutoCompletion.LockFilledTiles.Value.ButtonPressed = settings.LockCompletedFilledTiles;
+			menu.AutoCompletion.LockBlockedTiles.Value.ButtonPressed = settings.LockCompletedBlockedTiles;
+			menu.AutoCompletion.BlockCompleteLines.Value.ButtonPressed = settings.LineCompleteBlockRest;
+		}
+	}
+	private sealed class GamesHandler(Core Core) : IHandleEvents, ISaveListener
+	{
+		public void Failed(Manager.Data data)
+		{
+			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = Core.Minesweeper.UI.CompletionScreen;
+			completionScreen.Show();
+			completionScreen.Value.TitleText = "Game Over";
+		}
+		public void Completed(Manager.Data data)
+		{
+			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = Core.Minesweeper.UI.CompletionScreen;
+			completionScreen.Show();
+			completionScreen.Value.TitleText = "Mines Located!";
+		}
+		public void PuzzleTilesChanged(Vector2I position)
+		{
+			CurrentPuzzle current = PuzzleManager.Current;
+			Hints hints = current.UI.Hints;
+			hints.Refresh();
+			current.RefreshCurrentStudioIcon(
+				colours: Colours,
+				displays: Core._studioPuzzleSelectorDisplays
+			);
+		}
+		public void SaveTilesChanged(Vector2I position)
+		{
+			Display.Type type = PuzzleManager.Current.Type;
+			Nonogram.Tile.Pool tiles = PuzzleManager.Current.UI.Tiles;
+			if (type is not Display.Type.Game) return;
+			tiles.TryLock(position);
+		}
+	}
+}

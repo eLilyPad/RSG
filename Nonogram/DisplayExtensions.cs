@@ -5,109 +5,67 @@ namespace RSG.Nonogram;
 
 using static Display;
 
-public static class HintExtensions
-{
-	public static string AsFormat(this Side side) => side switch
-	{
-		Side.Column => "\n",
-		Side.Row => " ",
-		_ => ""
-	};
-	public static int IndexFrom(this Side side, Vector2I position) => side switch
-	{
-		Side.Column => position.Y,
-		Side.Row => position.X,
-		_ => throw new ArgumentOutOfRangeException(nameof(position))
-	};
-	public static int OrderFrom(this Side side, Vector2I position) => side switch
-	{
-		Side.Column => position.X,
-		Side.Row => position.Y,
-		_ => throw new ArgumentOutOfRangeException(nameof(position))
-	};
-}
 public static class DisplayExtensions
 {
-	public static string AsName(this Type type) => type switch
-	{
-		Type.Game => "Game",
-		Type.Paint => "Paint",
-		_ => "Puzzle Display"
-	};
+	//public static IEnumerable<int> AsLineHints(
+	//	this IEnumerable<KeyValuePair<Vector2I, TileMode>> tiles,
+	//	HintPosition position
+	//)
+	//{
+	//	return tiles.CalculateHintsV2(position, selector: TileModeExtensions.IsFilled);
+	//}
+	//public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
+	//	this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
+	//	Vector2I position,
+	//	Side side
+	//)
+	//{
+	//	return tiles.InOrderedLine(position, Index, Order);
+	//	int Index(Vector2I pos) => side.IndexFrom(position: pos);
+	//	int Order(Vector2I pos) => side.OrderFrom(position: pos);
+	//}
+	//public static IEnumerable<int> CalculateHintsV2<TValue>(
+	//	this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
+	//	HintPosition position,
+	//	Func<TValue, bool> selector
+	//)
+	//{
+	//	int connected = 0;
+	//	foreach ((Vector2I pos, TValue value) in tiles
+	//		.InLine(Index(position.Origin), Index)
+	//		.OrderBy(Order)
+	//	)
+	//	{
+	//		if (selector(value))
+	//		{
+	//			connected++;
+	//			continue;
+	//		}
+	//		if (connected == 0) continue;
+	//		yield return connected;
+	//		connected = 0;
+	//	}
+	//	if (connected > 0) yield return connected;
 
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> OrderedLine<T>(
-		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
-		HintPosition position
-	) => tiles
-		.Where(pair => position.Side.IndexFrom(pair.Key) == position.Index)
-		.OrderBy(pair => position.Side.OrderFrom(pair.Key));
-	public static IEnumerable<KeyValuePair<Vector2I, T>> AllInLines<T>(
-		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
-		Vector2I position
-	)
-	{
-		return tiles.Where(pair => pair.Key.EitherEqual(position));
-	}
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, TileMode>> AllInLine(
-		this IEnumerable<KeyValuePair<Vector2I, TileMode>> tiles,
-		Vector2I position,
-		Side side,
-		TileMode without = TileMode.NULL
-	)
-	{
-		return tiles
-			.Where(
-				pair => side.IndexFrom(pair.Key) == side.IndexFrom(position)
-				&& pair.Value != without
-			)
-			.OrderBy(pair => side.OrderFrom(pair.Key));
-	}
-	public static IOrderedEnumerable<KeyValuePair<Vector2I, T>> InLine<T>(
-		this IEnumerable<KeyValuePair<Vector2I, T>> tiles,
-		Vector2I position,
-		Side side
-	)
-	{
-		return tiles
-			.Where(pair => side.IndexFrom(pair.Key) == side.IndexFrom(position))
-			.OrderBy(pair => side.OrderFrom(pair.Key));
-	}
-	public static string CalculateHints(this IImmutableDictionary<Vector2I, TileMode> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value is TileMode.Filled ? 1 : 0);
-	}
-	public static string CalculateHints(this Dictionary<Vector2I, Tile> tiles, HintPosition position)
-	{
-		return tiles.CalculateHints(position, selector: value => value.Button.Text is FillText ? 1 : 0);
-	}
-	private static string CalculateHints<TValue>(
-		this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
-		HintPosition position,
-		Func<TValue, int> selector
-	)
-	{
-		StringBuilder builder = new();
-		int run = 0;
+	//	int Index(Vector2I pos) => position.Side.IndexFrom(position: pos);
+	//	int Order(Vector2I pos) => position.Side.OrderFrom(position: pos);
+	//}
+	//private static string CalculateHints<TValue>(
+	//	this IEnumerable<KeyValuePair<Vector2I, TValue>> tiles,
+	//	HintPosition position,
+	//	Func<TValue, int> selector
+	//)
+	//{
+	//	StringBuilder builder = new();
+	//	foreach (int value in tiles.CalculateHintsV2(position, selector))
+	//	{
+	//		builder
+	//			.Append(value)
+	//			.Append(value: position.Side.AsFormat());
+	//	}
 
-		foreach ((Vector2I _, TValue? value) in tiles.OrderedLine(position))
-		{
-			if (selector(value) > 0)
-			{
-				run++;
-				continue;
-			}
-			builder.FlushRun(position.Side, ref run);
-		}
-		builder.FlushRun(position.Side, ref run);
-		return builder.Length > 0
-			? builder.ToString()
-			: EmptyHint + position.Side.AsFormat();
-	}
-	private static void FlushRun(this StringBuilder builder, Side side, ref int run)
-	{
-		if (run <= 0) return;
-		builder.Append(run);
-		builder.Append(side.AsFormat());
-		run = 0;
-	}
+	//	return builder.Length > 0
+	//		? builder.ToString()
+	//		: EmptyHint + position.Side.AsFormat();
+	//}
 }
