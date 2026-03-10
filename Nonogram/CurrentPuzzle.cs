@@ -13,41 +13,13 @@ public sealed record class CurrentPuzzle
 
 	public PuzzleTimer Timer { get; }
 	public Puzzles.IHaveEvents? EventHandler { get; set; }
+	public NonogramContainer UI { get; }
 	public Action<SaveData> PuzzleCompleted { private get => Puzzle.Completed; set => Puzzle.Completed = value; }
-	public Type Type
-	{
-		get; set
-		{
-			var previous = field;
-			var current = value;
-			field = this.ChangeType(previous, current);
-		}
-	} = Type.Studio;
-	public Settings Settings
-	{
-		get; set
-		{
-			field = value;
-			EventHandler?.SettingsChanged();
-		}
-	} = new Settings();
-	public SaveData Puzzle
-	{
-		private get; set
-		{
-			if (value is null) return;
-			LineEdit studioName = UI.Studio.PuzzleTab.EditableName;
-			SaveData previous = field;
-			SaveData next = field = value.Save();
-			SaveListener?.Replace(previous, next);
-			next.Completed = previous.Completed;
-			(Timer.Elapsed, UI.PuzzleSize, studioName.Text) = next;
-		}
-	} = new();
+	public Type Type { get; set => Set(ref field, value); } = Type.Studio;
+	public Settings Settings { get; set => Set(ref field, value); } = new();
+	public SaveData Puzzle { private get; set => Set(ref field, value.Save()); } = new();
 	public bool PuzzleReady => Puzzle.Expected.States.Any(p => p.Value is not defaultValue);
 	public string CompletionDialogueName => Puzzle.Expected.DialogueName;
-
-	public NonogramContainer UI { get; }
 
 	private readonly GameTimer _timerHandler;
 	private readonly PuzzleHints _hints;
@@ -82,27 +54,44 @@ public sealed record class CurrentPuzzle
 
 		bool hasSameName(PuzzleSelector.PuzzleDisplay display) => display.Name == Puzzle.Name;
 	}
-	private Type ChangeType(Type previous, Type current)
+	private void Set(ref SaveData field, SaveData value)
 	{
-		if (previous == current) return previous;
+		SaveListener?.Replace(field, value);
+		value.Completed = field.Completed;
+		(Timer.Elapsed, UI.PuzzleSize, UI.Studio.PuzzleTab.EditableName.Text) = field = value;
+	}
+	private void Set(ref Settings field, Settings value)
+	{
+		field = value;
+		EventHandler?.SettingsChanged();
+	}
+	private void Set(ref Type field, Type value)
+	{
+		if (field == value) return;
 		NonogramStudioBar studio = UI.Studio;
 		TimerContainer timer = UI.Display.Timer;
 		Tile.Pool tiles = UI.Tiles;
-		UI.Display.Name = current.AsName();
-		switch (current)
+		UI.Display.Name = value.AsName();
+		var previous = field;
+		field = value;
+		switch (value)
 		{
 			case Type.Game:
 				timer.Show();
 				studio.Hide();
-				if (previous is Type.Studio) ClearPuzzle();
+				if (previous is Type.Studio)
+				{
+					Puzzle.Clear();
+					UI.Refresh();
+				}
 				break;
 			case Type.Studio:
 				timer.Hide();
 				studio.Show();
+				tiles.Refresh();
 				tiles.UnLockAll();
 				break;
 		}
-		return current;
 	}
 	private CurrentPuzzle ClearWhenInputMatchesCurrent(
 		Vector2I position,
