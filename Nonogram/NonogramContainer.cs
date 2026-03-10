@@ -56,6 +56,11 @@ public sealed partial class NonogramContainer : PanelContainer
 		);
 		PuzzleSize = Nonogram.Display.Data.DefaultSize;
 	}
+	public void Refresh()
+	{
+		Tiles.Refresh();
+		Hints.Refresh();
+	}
 	private void ChangePuzzleSize(int value)
 	{
 		Tiles.Resize(value)

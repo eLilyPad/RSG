@@ -67,7 +67,7 @@ public sealed record class CurrentPuzzle
 	public void ClearPuzzle()
 	{
 		Puzzle.Clear();
-		UI.PuzzleSize = Puzzle.Size;
+		UI.Refresh();
 	}
 	public void RefreshCurrentStudioIcon(
 		IColours colours,
