@@ -14,22 +14,24 @@ sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 	public Vector2 TileSize { get; set; } = Vector2.Zero;
 	public IColours Colours { private get; set; } = Core.Colours;
 
-	public void Update(int size)
+	public Hints Resize(int length)
 	{
-		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(size);
-		foreach (HintPosition position in hintValues)
+		Clear();
+		IEnumerable<HintPosition> hintValues = HintPosition.AsRange(length);
+		foreach (HintPosition key in hintValues)
 		{
-			Hint hint = GetOrCreate(position);
-			ApplyText(position, hint);
+			_ = GetOrCreate(key);
 		}
 		Clear(exceptions: hintValues);
+		return this;
 	}
-	public void Refresh()
+	public Hints Refresh()
 	{
 		foreach ((HintPosition position, Hint hint) in _nodes)
 		{
 			ApplyText(position, hint);
 		}
+		return this;
 	}
 	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.TextLineAt(position)
 		?? EmptyHint;

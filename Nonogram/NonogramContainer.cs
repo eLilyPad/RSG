@@ -58,11 +58,11 @@ public sealed partial class NonogramContainer : PanelContainer
 	}
 	private void ChangePuzzleSize(int value)
 	{
-		Hints.Clear();
-		Tiles.Clear();
-		Tiles.Update(value);
+		Tiles.Resize(value)
+			.Refresh();
 		Hints.TileSize = Tiles.TileSize;
-		Hints.Update(value);
+		Hints.Resize(value)
+			.Refresh();
 		Display.TilesGrid.Columns = value;
 		Studio.PuzzleTab.PuzzleSize.SetValueNoSignal(value);
 		Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;

@@ -23,6 +23,11 @@ public sealed partial class Tile : PanelContainer
 		public required Locker LockRules { get; init; }
 		public Vector2 TileSize { get; private set; } = Vector2.One;
 		public IColours Colours { private get; set; } = Core.Colours;
+		public Pool UnLockAll()
+		{
+			foreach (Tile tile in _nodes.Values) tile.Locked = false;
+			return this;
+		}
 		public bool TryLock(Vector2I position)
 		{
 			Tile tile = GetOrCreate(position);
@@ -30,17 +35,15 @@ public sealed partial class Tile : PanelContainer
 			if (locked) tile.Locked = true;
 			return locked;
 		}
-		public void Update(int size)
+		public Pool Resize(int value)
 		{
-			IEnumerable<Vector2I> tileValues = (Vector2I.One * size).GridRange();
+			Clear();
+			Vector2I size = Vector2I.One * value;
+			IEnumerable<Vector2I> tileValues = size.GridRange();
 			bool firstTile = true;
 			foreach (Vector2I position in tileValues)
 			{
 				Tile tile = GetOrCreate(position);
-
-				tile.Mode = Provider.State(position);
-				tile.Locked = LockRules.ShouldLock(position);
-
 				if (firstTile)
 				{
 					TileSize = tile.Size;
@@ -49,6 +52,16 @@ public sealed partial class Tile : PanelContainer
 			}
 
 			Clear(exceptions: tileValues);
+			return this;
+		}
+		public Pool Refresh()
+		{
+			foreach ((Vector2I position, Tile tile) in _nodes)
+			{
+				tile.Mode = Provider.State(position);
+				tile.Locked = LockRules.ShouldLock(position);
+			}
+			return this;
 		}
 		protected override Node Parent(Vector2I position) => Provider.Parent();
 		protected override Tile Create(Vector2I position)

@@ -82,6 +82,28 @@ public sealed record class CurrentPuzzle
 
 		bool hasSameName(PuzzleSelector.PuzzleDisplay display) => display.Name == Puzzle.Name;
 	}
+	private Type ChangeType(Type previous, Type current)
+	{
+		if (previous == current) return previous;
+		NonogramStudioBar studio = UI.Studio;
+		TimerContainer timer = UI.Display.Timer;
+		Tile.Pool tiles = UI.Tiles;
+		UI.Display.Name = current.AsName();
+		switch (current)
+		{
+			case Type.Game:
+				timer.Show();
+				studio.Hide();
+				if (previous is Type.Studio) ClearPuzzle();
+				break;
+			case Type.Studio:
+				timer.Hide();
+				studio.Show();
+				tiles.UnLockAll();
+				break;
+		}
+		return current;
+	}
 	private CurrentPuzzle ClearWhenInputMatchesCurrent(
 		Vector2I position,
 		ref TileMode mode,
