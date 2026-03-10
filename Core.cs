@@ -113,54 +113,8 @@ public sealed partial class Core : Node
 	private readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
 	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
 	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
-	public CurrentPuzzle Nonogram
-	{
-		get
-		{
-			if (field is not null) return field;
-			field = new();
-			Container.Add(field.UI);
-			field.UI.Colours = Colours;
-			field.UI.CompletionScreen.Value.Signals = new PuzzleCompleteScreenHandler(Core: this);
-			ConsoleCommand command = new()
-			{
-				Default = () => field.Type.LogCurrent(),
-				Flags = new()
-				{
-					["game"] = () => (field.Type = Display.Type.Game).LogChange(),
-					["paint"] = () => (field.Type = Display.Type.Studio).LogChange(),
-				}
-			};
-			Add(Prefix, ("nonogram", command));
-			return field;
-		}
-	}
-	private Manager Minesweeper
-	{
-		get
-		{
-			if (field is not null) return field;
-			MinesweeperContainer ui = new MinesweeperContainer(Colours)
-			{
-				Name = "Minesweeper",
-				Visible = false,
-			}.Preset(LayoutPreset.FullRect);
-			Manager minesweeper = new() { UI = ui, EventHandler = _handler };
-
-			Container.AddChild(ui);
-			ui.Tiles.Provider = minesweeper;
-
-			ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
-			ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
-			{
-				ui.CompletionScreen.Hide();
-				ui.Hide();
-				Container.Menu.Show();
-			};
-
-			return field = minesweeper;
-		}
-	}
+	public CurrentPuzzle Nonogram => field ??= CreateNonogram();
+	private Manager Minesweeper => field ??= CreateMinesweeper();
 	public Core()
 	{
 		_menuHandler = new(this);
@@ -205,10 +159,7 @@ public sealed partial class Core : Node
 			}
 		}
 	}
-	public override void _Process(double delta)
-	{
-		Nonogram.Timer.Tick(delta);
-	}
+	public override void _Process(double delta) => Nonogram.Timer.Tick(delta);
 	public override void _Input(InputEvent input)
 	{
 		if (!input.IsPressed()) return;
@@ -223,6 +174,47 @@ public sealed partial class Core : Node
 			return;
 		}
 		Input.RunEvent(input);
+	}
+
+	private Manager CreateMinesweeper()
+	{
+		MinesweeperContainer ui = new MinesweeperContainer(Colours)
+		{
+			Name = "Minesweeper",
+			Visible = false,
+		}.Preset(LayoutPreset.FullRect);
+		Manager minesweeper = new() { UI = ui, EventHandler = _handler };
+
+		Container.AddChild(ui);
+		ui.Tiles.Provider = minesweeper;
+
+		ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
+		ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
+		{
+			ui.CompletionScreen.Hide();
+			ui.Hide();
+			Container.Menu.Show();
+		};
+
+		return minesweeper;
+	}
+	private CurrentPuzzle CreateNonogram()
+	{
+		CurrentPuzzle field = new();
+		Container.Add(field.UI);
+		field.UI.Colours = Colours;
+		field.UI.CompletionScreen.Value.Signals = new PuzzleCompleteScreenHandler(Core: this);
+		ConsoleCommand command = new()
+		{
+			Default = () => field.Type.LogCurrent(),
+			Flags = new()
+			{
+				["game"] = () => (field.Type = Display.Type.Game).LogChange(),
+				["paint"] = () => (field.Type = Display.Type.Studio).LogChange(),
+			}
+		};
+		Add(Prefix, ("nonogram", command));
+		return field;
 	}
 
 	private sealed class PuzzleCompleteScreenHandler(Core Core) : PuzzleCompleteScreen.IHandleSignals
