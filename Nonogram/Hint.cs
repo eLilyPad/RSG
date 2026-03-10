@@ -29,12 +29,10 @@ sealed class Hints(Hints.IProvider Provider) : NodePool<HintPosition, Hint>
 	{
 		foreach ((HintPosition position, Hint hint) in _nodes)
 		{
-			ApplyText(position, hint);
+			hint.Label.Text = Provider.TextLineAt(position);
 		}
 		return this;
 	}
-	public void ApplyText(HintPosition position, Hint hint) => hint.Label.Text = Provider.TextLineAt(position)
-		?? EmptyHint;
 	protected override Node Parent(HintPosition position) => Provider.Parent(position);
 	protected override Hint Create(HintPosition position)
 	{
