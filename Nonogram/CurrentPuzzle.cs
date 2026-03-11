@@ -30,7 +30,11 @@ public sealed record class CurrentPuzzle
 		_timerHandler = new(Current: this);
 		_tiles = new(Current: this);
 		_hints = new(Current: this);
-		UI = new NonogramContainer(_tiles.Tiles, _hints.Hints) { Name = "Nonogram", Visible = false }
+		UI = new NonogramContainer(_tiles.Tiles, _hints.Hints)
+		{
+			Name = "Nonogram",
+			Visible = false
+		}
 		.Preset(Control.LayoutPreset.FullRect)
 		.SizeFlags(both: Control.SizeFlags.ExpandFill);
 		Timer = new() { Provider = _timerHandler };
