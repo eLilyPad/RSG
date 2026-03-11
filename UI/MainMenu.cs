@@ -5,15 +5,6 @@ namespace RSG.UI;
 public sealed partial class MainMenu : Container
 {
 	public const int Margin = 100;
-	public ColourPack Colours
-	{
-		set
-		{
-			Levels.Background.Color = value.MainMenuDialoguesBackground;
-			Dialogues.Background.Color = value.MainMenuDialoguesBackground;
-			Background.Color = value.MainMenuBackground with { A = .3f };
-		}
-	}
 	public ColorRect Background { get; } = new ColorRect { Name = nameof(Background) }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public SettingsContainer Settings { get; } = new SettingsContainer { Name = "Settings", Visible = false }
@@ -31,6 +22,15 @@ public sealed partial class MainMenu : Container
 		Visible = false
 	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize, Margin);
 
+	public ColourPack Colours
+	{
+		set
+		{
+			Levels.Background.Color = value.MainMenuDialoguesBackground;
+			Dialogues.Background.Color = value.MainMenuDialoguesBackground;
+			Background.Color = value.MainMenuBackground with { A = .3f };
+		}
+	}
 	public IReceiveSignals Signals
 	{
 		set
