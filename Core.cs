@@ -256,35 +256,6 @@ public sealed partial class Core : Node
 	}
 	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
 	{
-		public void StudioPuzzleSelectorVisibilityChanged()
-		{
-			var root = Core.Nonogram.UI.Studio;
-			var puzzles = root.PacksTab.Scroll.Puzzles;
-			if (!root.Visible) return;
-			puzzles.Remove(true, Core._studioSelectorDisplays);
-			Core._studioSelectorDisplays.Clear();
-			Core._studioPuzzleSelectorDisplays.Clear();
-			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
-			{
-				var node = PuzzleSelector.PackDisplay.CreateForStudio(config);
-				foreach (SaveData puzzle in config.Data)
-				{
-					var child = PuzzleSelector.PuzzleDisplay.CreateStudioDisplay(puzzle, pressed);
-					node.Puzzles.Value.Add(child);
-					Core._studioPuzzleSelectorDisplays.Add(child);
-					child.Button.GuiInput += OnRightClick;
-					void pressed() => Core.Nonogram.StudioPuzzleDisplayPressed(puzzle);
-					void OnRightClick(InputEvent input)
-					{
-						bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
-						if (!rightClicked) return;
-						Core.Nonogram.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
-					}
-				}
-				puzzles.AddChild(node);
-				Core._studioSelectorDisplays.Add(node);
-			}
-		}
 
 		void MainMenu.IPress.LevelsPressed() => Core.Container.Menu.Levels.Show();
 		void MainMenu.IPress.DialoguesPressed() => Core.Container.Menu.Dialogues.Show();
@@ -299,33 +270,57 @@ public sealed partial class Core : Node
 		void MainMenu.IPress.PlayPressed()
 		{
 			CurrentPuzzle current = Core.Nonogram;
-			var menu = Core.Container.Menu;
-			switch (current)
+			MainMenu menu = Core.Container.Menu;
+			Display.Type type = current.Type;
+
+			(current.UI.Visible, current.Type, menu.Visible, menu.Levels.Visible) = current switch
 			{
-				case { Type: Display.Type.Studio }:
-					current.Type = Display.Type.Game;
-					menu.Levels.Show();
-					menu.Show();
-					break;
-				case { PuzzleReady: true }:
-					menu.Hide();
-					current.UI.Show();
-					break;
-				case { PuzzleReady: false }:
-					menu.Levels.Show();
-					menu.Show();
-					break;
-				default:
-					break;
-			}
-			Core.Container.Menu.Buttons.Hide();
+				{ PuzzleReady: false } => (false, type, true, true),
+				{ Type: Display.Type.Studio } => (current.UI.Visible, Display.Type.Game, true, true),
+				{ PuzzleReady: true } => (true, type, false, menu.Levels.Visible),
+			};
+			menu.Buttons.Visible = false;
 		}
 		void MainMenu.IPress.OpenStudioPressed()
 		{
 			CurrentPuzzle current = Core.Nonogram;
 			current.Type = Display.Type.Studio;
-			current.UI.Show();
-			Core.Container.Menu.Hide();
+			current.UI.Visible = true;
+			Core.Container.Menu.Visible = false;
+		}
+
+		public void StudioPuzzleSelectorVisibilityChanged()
+		{
+			NonogramStudioBar root = Core.Nonogram.UI.Studio;
+			VBoxContainer puzzles = root.PacksTab.Scroll.Puzzles;
+			if (!root.Visible) return;
+			puzzles.Remove(true, Core._studioSelectorDisplays);
+			Core._studioSelectorDisplays.Clear();
+			Core._studioPuzzleSelectorDisplays.Clear();
+			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
+			{
+				var node = PuzzleSelector.CreateStudioPack(config.Name);
+				puzzles.AddChild(node);
+				Core._studioSelectorDisplays.Add(node);
+				Control parent = node.Puzzles.Value;
+
+				foreach (SaveData data in config.Data) CreatePuzzleDisplay(parent, data);
+			}
+
+			void CreatePuzzleDisplay(Control parent, SaveData data)
+			{
+				var node = PuzzleSelector.CreateStudioDisplay(data, pressed, altPressed);
+				parent.Add(node);
+				Core._studioPuzzleSelectorDisplays.Add(node);
+
+				void pressed() => Core.Nonogram.StudioPuzzleDisplayPressed(data);
+				void altPressed()
+				{
+					bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
+					if (!rightClicked) return;
+					Core.Nonogram.GamePuzzleDisplayPressed(menu: Core.Container.Menu, data);
+				}
+			}
 		}
 
 		void MainMenu.IReceiveSignals.PuzzleSelectorVisibilityChanged()
@@ -333,20 +328,20 @@ public sealed partial class Core : Node
 			MainMenu menu = Core.Container.Menu;
 			PuzzleSelector value = menu.Levels;
 			Container puzzles = value.Puzzles.Value;
-			menu.Buttons.Visible = !(menu.Visible = menu.Levels.Visible);
-			if (!value.Visible)
-			{
-				menu.Hide();
-				return;
-			}
+
+			menu.Buttons.Visible = !(menu.Visible = value.Visible);
+			menu.Visible = value.Visible && menu.Visible;
+
+			if (!value.Visible) return;
+
 			puzzles.Remove(true, Core._levelSelectorDisplays);
 			Core._levelSelectorDisplays.Clear();
 			foreach (var config in PuzzleManager.SelectorConfigs)
 			{
-				var node = PuzzleSelector.PackDisplay.CreateForGame(config);
+				var node = PuzzleSelector.CreateGamePack(config.Name);
 				foreach (SaveData puzzle in config.Data)
 				{
-					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
+					var child = PuzzleSelector.CreateGameDisplay(puzzle, pressed);
 					node.Puzzles.Value.Add(child);
 					void pressed() => Core.Nonogram.GamePuzzleDisplayPressed(menu, puzzle);
 				}
@@ -359,12 +354,12 @@ public sealed partial class Core : Node
 			MainMenu menu = Core.Container.Menu;
 			DialogueSelector value = menu.Dialogues;
 			VBoxContainer dialogues = value.DisplayContainer.Value;
+
 			menu.Buttons.Visible = !(menu.Visible = value.Visible);
-			if (!value.Visible)
-			{
-				menu.Hide();
-				return;
-			}
+			menu.Visible = value.Visible && menu.Visible;
+
+			if (!value.Visible) return;
+
 			dialogues.Remove(true, Core._dialogueSelectorDisplays);
 			Core._dialogueSelectorDisplays.Clear();
 			foreach (var config in Dialogues.AvailableDialogues)
@@ -385,25 +380,22 @@ public sealed partial class Core : Node
 			NonogramContainer nonogram = Core.Nonogram.UI;
 			MinesweeperContainer minesweeper = Core.Minesweeper.UI;
 			MainMenu menu = Core.Container.Menu;
+
 			if (!menu.Visible) { return; }
-			if (nonogram.Visible) { nonogram.Hide(); }
-			if (minesweeper.Visible) { minesweeper.Hide(); }
+
+			nonogram.Visible = !nonogram.Visible && nonogram.Visible;
+			minesweeper.Visible = !minesweeper.Visible && minesweeper.Visible;
 			Node[] visibleChildren = [.. menu.GetChildren()
 				.Where(n => n is Control control && control.Visible)
 			];
 
-			switch (visibleChildren)
+			(menu.Buttons.Visible, menu.Background.Visible) = visibleChildren switch
 			{
-				case []:
-					menu.Buttons.Visible = menu.Background.Visible = true;
-					break;
-				case [MainMenu.MainButtons node] when node == menu.Buttons:
-					node.Visible = true;
-					break;
-				case [ColorRect node] when node == menu.Background:
-					node.Visible = true;
-					break;
-			}
+				[] => (true, true),
+				[ColorRect n] when n == menu.Background => (menu.Buttons.Visible, true),
+				[MainMenu.MainButtons n] when n == menu.Buttons => (true, menu.Background.Visible),
+				_ => (menu.Buttons.Visible, menu.Background.Visible)
+			};
 		}
 	}
 	private sealed class SettingsModifier(Core Core) : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings

@@ -38,6 +38,7 @@ public sealed partial class MainMenu : Container
 			VisibilityChanged += value.MenuVisibilityChanged;
 			Levels.VisibilityChanged += value.PuzzleSelectorVisibilityChanged;
 			Dialogues.VisibilityChanged += value.DialogueSelectorVisibilityChanged;
+			Settings.VisibilityChanged += value.SettingsVisibilityChanged;
 			if (field is null)
 			{
 				field = value;
@@ -46,6 +47,7 @@ public sealed partial class MainMenu : Container
 			VisibilityChanged -= field.MenuVisibilityChanged;
 			Levels.VisibilityChanged -= field.PuzzleSelectorVisibilityChanged;
 			Dialogues.VisibilityChanged -= field.DialogueSelectorVisibilityChanged;
+			Settings.VisibilityChanged -= field.SettingsVisibilityChanged;
 		}
 	}
 	public IPress OnPressed

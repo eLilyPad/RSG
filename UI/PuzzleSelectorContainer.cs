@@ -4,6 +4,27 @@ namespace RSG.Nonogram;
 
 public sealed partial class PuzzleSelector : PanelContainer
 {
+	public static PackDisplay CreateGamePack(string name)
+	{
+		return new GamePacks { Name = name }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+	}
+	public static PackDisplay CreateStudioPack(string name)
+	{
+		return new StudioPacks { Name = name }
+			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+	}
+	public static PuzzleDisplay CreateGameDisplay(SaveData puzzle, Action pressed)
+	{
+		return new GamePuzzleDisplay(puzzle, pressed)
+			.SizeFlags(both: SizeFlags.ExpandFill);
+	}
+	public static PuzzleDisplay CreateStudioDisplay(SaveData puzzle, Action pressed, Action altPressed)
+	{
+		return new StudioPuzzleDisplay(puzzle, pressed, altPressed)
+			.SizeFlags(both: SizeFlags.ExpandFill);
+	}
+
 	private static Labelled<Container> CreatePuzzles<T>(string name, T container)
 	where T : Container
 	{
@@ -43,16 +64,6 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public abstract partial class PackDisplay : PanelContainer
 	{
-		public static PackDisplay CreateForGame((string Name, IEnumerable<SaveData> Data) config)
-		{
-			return new GamePacks { Name = config.Name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		}
-		public static PackDisplay CreateForStudio(string name)
-		{
-			return new StudioPacks { Name = name }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		}
 		public new string Name
 		{
 			get => base.Name;
@@ -64,7 +75,6 @@ public sealed partial class PuzzleSelector : PanelContainer
 				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
 		);
 		public override void _Ready() => this.Add(Puzzles);
-
 	}
 	private sealed partial class GamePacks : PackDisplay
 	{
@@ -77,16 +87,6 @@ public sealed partial class PuzzleSelector : PanelContainer
 	private sealed partial class StudioPacks : PackDisplay;
 	public partial class PuzzleDisplay : PanelContainer
 	{
-		public static PuzzleDisplay CreateGameDisplay(SaveData puzzle, Action pressed)
-		{
-			return new GamePuzzleDisplay(puzzle, pressed)
-			.SizeFlags(both: SizeFlags.ExpandFill);
-		}
-		public static PuzzleDisplay CreateStudioDisplay(SaveData puzzle, Action pressed)
-		{
-			return new StudioPuzzleDisplay(puzzle, pressed)
-			.SizeFlags(both: SizeFlags.ExpandFill);
-		}
 		public ColorRect Background { get; } = new ColorRect { Name = "Background", }
 		.Preset(LayoutPreset.LeftWide)
 		.SizeFlags(both: SizeFlags.ExpandFill)
@@ -125,19 +125,17 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Button.Pressed += Pressed;
 		}
 	}
-	private sealed partial class StudioPuzzleDisplay(SaveData Puzzle, Action Pressed) : PuzzleDisplay
+	private sealed partial class StudioPuzzleDisplay(SaveData Puzzle, Action Pressed, Action AltPressed)
+		: PuzzleDisplay
 	{
 		public override void _Ready()
 		{
 			base._Ready();
-			Name = Puzzle.Name;
-
 			Background.Color = Puzzle.CompletionColour;
-
-			Button.Name = Name + " Button";
-			Button.Text = Name;
+			Button.Name = (Button.Text = Name = Puzzle.Name) + " Button";
 			Button.Icon = Puzzle.Expected.AsIcon(Core.Colours, 16);
 			Button.Pressed += Pressed;
+			Button.GuiInput += _ => AltPressed();
 		}
 	}
 }
