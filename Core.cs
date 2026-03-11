@@ -291,34 +291,32 @@ public sealed partial class Core : Node
 
 		public void StudioPuzzleSelectorVisibilityChanged()
 		{
-			NonogramStudioBar root = Core.Nonogram.UI.Studio;
+			CurrentPuzzle current = Core.Nonogram;
+			NonogramStudioBar root = current.UI.Studio;
 			VBoxContainer puzzles = root.PacksTab.Scroll.Puzzles;
+			MainMenu menu = Core.Container.Menu;
 			if (!root.Visible) return;
 			puzzles.Remove(true, Core._studioSelectorDisplays);
 			Core._studioSelectorDisplays.Clear();
 			Core._studioPuzzleSelectorDisplays.Clear();
 			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
 			{
-				var node = PuzzleSelector.CreateStudioPack(config.Name);
-				puzzles.AddChild(node);
-				Core._studioSelectorDisplays.Add(node);
+				PuzzleSelector.PackDisplay node = PuzzleSelector.CreateStudioPack(
+					name: config.Name,
+					packs: Core._studioSelectorDisplays,
+					parent: puzzles
+				);
 				Control parent = node.Puzzles.Value;
 
-				foreach (SaveData data in config.Data) CreatePuzzleDisplay(parent, data);
-			}
-
-			void CreatePuzzleDisplay(Control parent, SaveData data)
-			{
-				var node = PuzzleSelector.CreateStudioDisplay(data, pressed, altPressed);
-				parent.Add(node);
-				Core._studioPuzzleSelectorDisplays.Add(node);
-
-				void pressed() => Core.Nonogram.StudioPuzzleDisplayPressed(data);
-				void altPressed()
+				foreach (SaveData data in config.Data)
 				{
-					bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
-					if (!rightClicked) return;
-					Core.Nonogram.GamePuzzleDisplayPressed(menu: Core.Container.Menu, data);
+					_ = PuzzleSelector.CreateStudioDisplay(
+						puzzle: data,
+						values: Core._studioPuzzleSelectorDisplays,
+						parent,
+						menu,
+						handler: current
+					);
 				}
 			}
 		}
@@ -326,6 +324,7 @@ public sealed partial class Core : Node
 		void MainMenu.IReceiveSignals.PuzzleSelectorVisibilityChanged()
 		{
 			MainMenu menu = Core.Container.Menu;
+			CurrentPuzzle current = Core.Nonogram;
 			PuzzleSelector value = menu.Levels;
 			Container puzzles = value.Puzzles.Value;
 
@@ -338,15 +337,21 @@ public sealed partial class Core : Node
 			Core._levelSelectorDisplays.Clear();
 			foreach (var config in PuzzleManager.SelectorConfigs)
 			{
-				var node = PuzzleSelector.CreateGamePack(config.Name);
+				var node = PuzzleSelector.CreateGamePack(
+					name: config.Name,
+					parent: puzzles,
+					packs: Core._levelSelectorDisplays
+				);
+				Container puzzleParent = node.Puzzles.Value;
 				foreach (SaveData puzzle in config.Data)
 				{
-					var child = PuzzleSelector.CreateGameDisplay(puzzle, pressed);
-					node.Puzzles.Value.Add(child);
-					void pressed() => Core.Nonogram.GamePuzzleDisplayPressed(menu, puzzle);
+					_ = PuzzleSelector.CreateGameDisplay(
+						puzzle,
+						parent: puzzleParent,
+						menu,
+						handler: current
+					);
 				}
-				puzzles.AddChild(node);
-				Core._levelSelectorDisplays.Add(node);
 			}
 		}
 		void MainMenu.IReceiveSignals.DialogueSelectorVisibilityChanged()
@@ -441,20 +446,13 @@ public sealed partial class Core : Node
 		}
 		public void PuzzleTilesChanged(Vector2I position)
 		{
+			List<PuzzleSelector.PuzzleDisplay> displays = Core._studioPuzzleSelectorDisplays;
 			CurrentPuzzle current = Core.Nonogram;
-			Hints hints = current.UI.Hints;
-			hints.Refresh();
-			current.RefreshCurrentStudioIcon(
-				colours: Colours,
-				displays: Core._studioPuzzleSelectorDisplays
-			);
+			string name = current.Name;
+			current.UI.Hints.Refresh();
+			if (!displays.TryGetByName(name, value: out var display)) return;
+			display.Button.Icon = current.StudioIcon(colours: Colours);
 		}
-		public void SaveTilesChanged(Vector2I position)
-		{
-			Display.Type type = Core.Nonogram.Type;
-			Nonogram.Tile.Pool tiles = Core.Nonogram.UI.Tiles;
-			if (type is not Display.Type.Game) return;
-			tiles.TryLock(position);
-		}
+		public void SaveTilesChanged(Vector2I position) => Core.Nonogram.TryLockTile(position);
 	}
 }

@@ -7,7 +7,13 @@ using Puzzles = PuzzleManager;
 
 public interface IHavePuzzleSettings { Settings Settings { get; } }
 
-public sealed record class CurrentPuzzle
+public interface IHandleDisplaysPressed
+{
+	void GamePuzzleDisplayPressed(UI.MainMenu menu, SaveData data);
+	void StudioPuzzleDisplayPressed(SaveData data);
+}
+
+public sealed record class CurrentPuzzle : IHandleDisplaysPressed
 {
 	private const TileMode defaultValue = TileMode.Clear;
 
@@ -19,6 +25,7 @@ public sealed record class CurrentPuzzle
 	public Settings Settings { get; set => Set(ref field, value); } = new();
 	public SaveData Puzzle { private get; set => Set(ref field, value.Save()); } = new();
 	public bool PuzzleReady => Puzzle.Expected.States.Any(p => p.Value is not defaultValue);
+	public string Name => Puzzle.Name;
 	public string CompletionDialogueName => Puzzle.Expected.DialogueName;
 
 	private readonly GameTimer _timerHandler;
@@ -45,6 +52,12 @@ public sealed record class CurrentPuzzle
 		Puzzle.Clear();
 		UI.Refresh();
 	}
+	public void TryLockTile(Vector2I position)
+	{
+		Tile.Pool tiles = UI.Tiles;
+		if (Type is not Type.Game) return;
+		tiles.TryLock(position);
+	}
 	public void GamePuzzleDisplayPressed(UI.MainMenu menu, SaveData data)
 	{
 		if (!GodotObject.IsInstanceValid(menu.Levels)) return;
@@ -61,18 +74,10 @@ public sealed record class CurrentPuzzle
 		Type = Type.Studio;
 		UI.Show();
 	}
-	public void RefreshCurrentStudioIcon(
-		IColours colours,
-		IEnumerable<PuzzleSelector.PuzzleDisplay> displays
-	)
+	public ImageTexture StudioIcon(IColours colours) => Puzzle.Expected.AsIcon(colours);
+	public void RefreshCurrentStudioIcon(IColours colours, PuzzleSelector.PuzzleDisplay display)
 	{
-		NonogramStudioBar studio = UI.Studio;
-		VBoxContainer puzzles = studio.PacksTab.Scroll.Puzzles;
-		PuzzleSelector.PuzzleDisplay? display = displays.FirstOrDefault(hasSameName);
-		if (display is null) return;
 		display.Button.Icon = Puzzle.Expected.AsIcon(colours);
-
-		bool hasSameName(PuzzleSelector.PuzzleDisplay display) => display.Name == Puzzle.Name;
 	}
 	private void Set(ref SaveData field, SaveData value)
 	{

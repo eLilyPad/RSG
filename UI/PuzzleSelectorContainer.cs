@@ -4,25 +4,65 @@ namespace RSG.Nonogram;
 
 public sealed partial class PuzzleSelector : PanelContainer
 {
-	public static PackDisplay CreateGamePack(string name)
+	public static PackDisplay CreateGamePack(
+		string name,
+		Control parent,
+		List<PackDisplay> packs
+	)
 	{
-		return new GamePacks { Name = name }
+		GamePacks pack = new GamePacks { Name = name }
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		parent.Add(pack);
+		packs.Add(pack);
+
+		return pack;
 	}
-	public static PackDisplay CreateStudioPack(string name)
+	public static PackDisplay CreateStudioPack(
+		string name,
+		List<PackDisplay> packs,
+		Control parent
+	)
 	{
-		return new StudioPacks { Name = name }
+		StudioPacks pack = new StudioPacks { Name = name }
 			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+		packs.Add(pack);
+		parent.Add(pack);
+		return pack;
 	}
-	public static PuzzleDisplay CreateGameDisplay(SaveData puzzle, Action pressed)
+	public static PuzzleDisplay CreateGameDisplay(
+		SaveData puzzle,
+		Control parent,
+		UI.MainMenu menu,
+		IHandleDisplaysPressed handler
+	)
 	{
-		return new GamePuzzleDisplay(puzzle, pressed)
+		GamePuzzleDisplay display = new GamePuzzleDisplay(puzzle, pressed)
 			.SizeFlags(both: SizeFlags.ExpandFill);
+		parent.Add(display);
+		return display;
+		void pressed() => handler.GamePuzzleDisplayPressed(menu, puzzle);
 	}
-	public static PuzzleDisplay CreateStudioDisplay(SaveData puzzle, Action pressed, Action altPressed)
+	public static PuzzleDisplay CreateStudioDisplay(
+		SaveData puzzle,
+		List<PuzzleDisplay> values,
+		Control parent,
+		UI.MainMenu menu,
+		IHandleDisplaysPressed handler
+	)
 	{
-		return new StudioPuzzleDisplay(puzzle, pressed, altPressed)
+		StudioPuzzleDisplay display = new StudioPuzzleDisplay(puzzle, pressed, altPressed)
 			.SizeFlags(both: SizeFlags.ExpandFill);
+		values.Add(display);
+		parent.Add(display);
+		return display;
+
+		void pressed() => handler.StudioPuzzleDisplayPressed(puzzle);
+		void altPressed()
+		{
+			bool rightClicked = Input.IsMouseButtonPressed(MouseButton.Right);
+			if (!rightClicked) return;
+			handler.GamePuzzleDisplayPressed(menu, puzzle);
+		}
 	}
 
 	private static Labelled<Container> CreatePuzzles<T>(string name, T container)
