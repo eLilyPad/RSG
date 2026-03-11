@@ -124,6 +124,13 @@ public static class ImageExtensions
 }
 public static class GDX
 {
+	public static bool TryGetByName<T>(this IEnumerable<T> nodes, string name, [MaybeNullWhen(false)] out T value)
+	where T : Node
+	{
+		value = nodes.FirstOrDefault(hasSameName);
+		return value is not null;
+		bool hasSameName(Node display) => display.Name == name;
+	}
 	public static void LinkToParent<T>(this Node node, List<T> list) where T : Node
 	{
 		node.ChildEnteredTree += OnChildEnteredTree;
@@ -145,7 +152,6 @@ public static class GDX
 			}
 		}
 	}
-
 	public static T LoadOrCreateResource<T>(this string path) where T : Resource, new()
 	{
 		var resource = GD.Load<T>(path);
@@ -156,8 +162,6 @@ public static class GDX
 		}
 		return resource;
 	}
-
-
 	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
 	{
 		foreach (Node node in children)
