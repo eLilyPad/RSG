@@ -29,7 +29,15 @@ public static class TileModeExtensions
 	{
 		return value = current.ToClearWhenSame(value);
 	}
-
+	public static Mode? GetPressed(this MouseButton button)
+	{
+		return button switch
+		{
+			Display.FillButton when Godot.Input.IsMouseButtonPressed(button) => Mode.Filled,
+			Display.BlockButton when Godot.Input.IsMouseButtonPressed(button) => Mode.Blocked,
+			_ => null
+		};
+	}
 	public static bool IsValidInput(this Mode current, ref Mode input)
 	{
 		if (input is Mode.Clear) return false;
