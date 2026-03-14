@@ -33,8 +33,8 @@ public static class TileModeExtensions
 	{
 		return button switch
 		{
-			Display.FillButton when Godot.Input.IsMouseButtonPressed(button) => Mode.Filled,
-			Display.BlockButton when Godot.Input.IsMouseButtonPressed(button) => Mode.Blocked,
+			Display.FillButton when button.IsPressed() => Mode.Filled,
+			Display.BlockButton when button.IsPressed() => Mode.Blocked,
 			_ => null
 		};
 	}
