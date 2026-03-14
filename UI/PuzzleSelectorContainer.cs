@@ -50,17 +50,16 @@ public sealed partial class PuzzleSelector : PanelContainer
 		IHandleDisplaysPressed handler
 	)
 	{
-		StudioPuzzleDisplay display = new StudioPuzzleDisplay(puzzle, pressed, altPressed)
+		StudioPuzzleDisplay display = new StudioPuzzleDisplay(puzzle, Pressed, AltPressed)
 			.SizeFlags(both: SizeFlags.ExpandFill);
 		values.Add(display);
 		parent.Add(display);
 		return display;
 
-		void pressed() => handler.StudioPuzzleDisplayPressed(puzzle);
-		void altPressed()
+		void Pressed() => handler.StudioPuzzleDisplayPressed(puzzle);
+		void AltPressed()
 		{
-			bool rightClicked = Input.IsMouseButtonPressed(MouseButton.Right);
-			if (!rightClicked) return;
+			if (!MouseButton.Right.IsPressed()) return;
 			handler.GamePuzzleDisplayPressed(menu, puzzle);
 		}
 	}
@@ -72,7 +71,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 		{
 			Name = "Puzzles Display",
 			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
-			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
 			Value = container,
 			Vertical = true
 		}.Preset(LayoutPreset.FullRect);
