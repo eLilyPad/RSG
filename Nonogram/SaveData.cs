@@ -1,7 +1,5 @@
 using System.Text.Json.Serialization;
 using Godot;
-using RSG.UI;
-
 namespace RSG.Nonogram;
 
 using Mode = Display.TileMode;
@@ -128,7 +126,7 @@ public sealed partial class SaveData : Data, IPuzzleState
 
 		bool IsCorrect(KeyValuePair<Vector2I, Mode> pair) => Expected.States.IsCorrect(position: pair.Key, current: pair.Value);
 	}
-	internal void BlockCompletedLines(Tile.Pool tiles, Vector2I position)
+	internal void BlockCompletedLines(NodePool<Vector2I, Tile> tiles, Vector2I position)
 	{
 		foreach ((Vector2I pos, Mode current) in InLines(position))
 		{
