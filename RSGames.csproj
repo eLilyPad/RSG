@@ -1,7 +1,7 @@
 <Project Sdk="Godot.NET.Sdk/4.6.1">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
     <DOTNET_ROLL_FORWARD_TO_PRERELEASE>1</DOTNET_ROLL_FORWARD_TO_PRERELEASE>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <ImplicitUsings>true</ImplicitUsings>
