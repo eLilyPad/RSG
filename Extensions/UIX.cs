@@ -23,6 +23,22 @@ public sealed partial class Backgrounded<T> : Container where T : Control
 }
 public static class UIX
 {
+	public static void Refill<TNode>(
+		this CanvasItem root,
+		Node parent,
+		List<TNode> nodes,
+		IEnumerable<TNode> values
+	) where TNode : Node
+	{
+		if (!root.Visible) return;
+		parent.Remove(true, nodes);
+		nodes.Clear();
+		foreach (TNode node in values)
+		{
+			parent.AddChild(node);
+			nodes.Add(node);
+		}
+	}
 	public static void Refill<TConfig, TNode>(
 		this CanvasItem root,
 		Node parent,
