@@ -1,6 +1,7 @@
 namespace RSG.Nonogram;
 
 using Console;
+using RSG.Dialogue;
 using static Display;
 
 public static class CurrentPuzzleExtensions
@@ -10,17 +11,30 @@ public static class CurrentPuzzleExtensions
 		value.Colours = colours;
 		return value;
 	}
+	public static CurrentPuzzle ConnectVisibilityHandler<T>(this CurrentPuzzle value, T handler)
+	where T : IHandleStudioSelector
+	{
+		value.UI.SelectorSignals = handler;
+		value.UI.CompletionScreen.Value.VisibilityChanged += () =>
+		{
+			if (!value.UI.CompletionScreen.Value.Options.PlayDialogue.Visible) return;
+			Assert(Dialogues.Contains(value.CompletionDialogueName));
+			value.UI.CompletionScreen.Value.Report.Value.Log.Text = $"Dialogue: {value.CompletionDialogueName}";
+		};
+		return value;
+	}
 	public static CurrentPuzzle ConnectSignals(
 		this CurrentPuzzle value,
 		PuzzleCompleteScreen.IHandleSignals puzzleCompletionHandler,
-		IHandleStudioSelector studioSelector,
-		ISaveListener? saveListener,
-		Action<SaveData> onCompletion
+		ISaveListener? saveListener
 	)
 	{
 		value.UI.CompletionScreen.Value.Signals = puzzleCompletionHandler;
-		value.UI.SelectorSignals = studioSelector;
-		value.PuzzleCompleted = onCompletion;
+		value.PuzzleCompleted = save =>
+		{
+			value.UI.CompletionScreen.Show();
+			Dialogues.Enable(save.Expected.DialogueName);
+		};
 		value.SaveListener = saveListener;
 		return value;
 	}
