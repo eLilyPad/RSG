@@ -130,9 +130,11 @@ public abstract partial class Display
 
 		private readonly ExpectedHints _hints;
 		public Data(int size = DefaultSize)
-		: this(DefaultName, CreateTiles(size)) { }
+		: this(name: DefaultName, values: CreateTiles(size)) { }
 		public Data(string name, Func<Vector2I, bool> selector, int size)
-		: this(name, CreateTiles(selector, size)) { }
+		: this(name, values: CreateTiles(selector, size)) { }
+		public Data(Data data)
+		: this(name: data.Name, values: data.Tiles) { }
 		public Data(string name, Dictionary<Vector2I, Mode> values)
 		{
 			Name = name;
