@@ -128,6 +128,17 @@ public static class Input
 }
 public static class GDX
 {
+	public static bool AllValidInstances(this ReadOnlySpan<GodotObject> objects)
+	{
+		foreach (GodotObject obj in objects)
+		{
+			if (!GodotObject.IsInstanceValid(obj))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 	public static bool TryGetByName<T>(this IEnumerable<T> nodes, string name, [MaybeNullWhen(false)] out T value)
 	where T : Node
 	{
