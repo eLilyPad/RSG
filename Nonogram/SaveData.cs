@@ -34,6 +34,8 @@ public interface ISaveListener
 
 public sealed partial class SaveData : Data, IPuzzleState
 {
+
+	public static implicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
 	public PuzzleData Expected { get; init; } = new();
 	public Action<SaveData> Completed { get; set; } = _ => { };
 	public TimeSpan TimeTaken { get; set; } = TimeSpan.Zero;
