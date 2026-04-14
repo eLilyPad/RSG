@@ -212,7 +212,7 @@ public sealed partial class Core : Node
 		foreach (CanvasItem item in toShow) item.Show();
 	}
 
-	private class Displays<T, TPack, TDisplay>(T handler, MainMenu menu, Node parent)
+	private abstract class NonogramDisplays<T, TPack, TDisplay>(T handler, MainMenu menu, Node parent)
 	: NodePool<string, TPack>.PooledGrand<TDisplay>(parent),
 		PuzzleSelector.Display.IConfigure<TDisplay>
 	where T : PuzzleSelector.Display.IPressed, IIconize
@@ -258,13 +258,13 @@ public sealed partial class Core : Node
 		private Container DisplaysParent(PuzzleData puzzle) => GetOrCreate(puzzle.Name).Puzzles.Value;
 	}
 	private sealed class LevelSelectorDisplays(Core Core)
-	: Displays<CurrentPuzzle, PuzzleSelector.PackDisplay.Game, PuzzleSelector.Display.Game>(
+	: NonogramDisplays<CurrentPuzzle, PuzzleSelector.PackDisplay.Game, PuzzleSelector.Display.Game>(
 		handler: Core.Nonogram,
 		menu: Core.Container.Menu,
 		parent: Core.Container.Menu.Levels.Puzzles.Value
 	);
 	private sealed class StudioSelectorDisplays(Core Core)
-	: Displays<CurrentPuzzle, PuzzleSelector.PackDisplay.Studio, PuzzleSelector.Display.Studio>(
+	: NonogramDisplays<CurrentPuzzle, PuzzleSelector.PackDisplay.Studio, PuzzleSelector.Display.Studio>(
 		handler: Core.Nonogram,
 		menu: Core.Container.Menu,
 		parent: Core.Nonogram.UI.Studio.PacksTab.Scroll.Puzzles
