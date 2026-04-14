@@ -6,10 +6,7 @@ using static Display;
 using Puzzles = PuzzleManager;
 
 public interface IHavePuzzleSettings { Settings Settings { get; } }
-public interface IIconize
-{
-	ImageTexture ToIcon(IColours colours);
-}
+public interface IIconize { ImageTexture ToIcon(IColours colours); }
 
 
 public sealed record class CurrentPuzzle : PuzzleSelector.Display.IPressed, IIconize
