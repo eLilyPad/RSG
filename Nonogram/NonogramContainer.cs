@@ -2,6 +2,11 @@ using Godot;
 
 namespace RSG.Nonogram;
 
+public interface IHandleStudioSelector
+{
+	void StudioPuzzleSelectorVisibilityChanged();
+}
+
 public sealed partial class NonogramContainer : PanelContainer
 {
 	public const int MarginValue = 20;
@@ -27,49 +32,31 @@ public sealed partial class NonogramContainer : PanelContainer
 		.SizeFlags(both: SizeFlags.ExpandFill)
 		.SetMarginAll(MarginValue);
 
-	public IColours Colours
+	public IColours BackgroundColours
 	{
 		private get; set
 		{
 			Background.ColorBackground.Color = value.NonogramBackground;
 			Display.Timer.Background.Color = value.NonogramTimerBackground;
-			Tiles.Colours = Hints.Colours = value;
 			field = value;
 		}
 	} = Core.Colours;
-	public int PuzzleSize { set => ChangePuzzleSize(value); }
 
-	internal Tile.Pool Tiles { get; }
-	internal Hints Hints { get; }
+	public IHandleStudioSelector SelectorSignals
+	{
+		set
+		{
+			var previous = field;
+			field = value;
+			Studio.VisibilityChanged += value.StudioPuzzleSelectorVisibilityChanged;
+			if (previous is null) return;
+			Studio.VisibilityChanged -= previous.StudioPuzzleSelectorVisibilityChanged;
+		}
+	}
 
-	internal NonogramContainer(Tile.Pool tiles, Hints hints)
-	{
-		Tiles = tiles;
-		Hints = hints;
-	}
-	public override void _Ready()
-	{
-		this.Add(
-			Background,
-			Margin.Add(Container.Add(Display, Studio)),
-			CompletionScreen
-		);
-		PuzzleSize = Nonogram.Display.Data.DefaultSize;
-	}
-	public void Refresh()
-	{
-		Tiles.Refresh();
-		Hints.Refresh();
-	}
-	private void ChangePuzzleSize(int value)
-	{
-		Tiles.Resize(value)
-			.Refresh();
-		Hints.TileSize = Tiles.TileSize;
-		Hints.Resize(value)
-			.Refresh();
-		Display.TilesGrid.Columns = value;
-		Studio.PuzzleTab.PuzzleSize.SetValueNoSignal(value);
-		Display.TilesGrid.CustomMinimumSize = Mathf.CeilToInt(value) * Tiles.TileSize;
-	}
+	public override void _Ready() => this.Add(
+		Background,
+		Margin.Add(Container.Add(Display, Studio)),
+		CompletionScreen
+	);
 }

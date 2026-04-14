@@ -10,9 +10,14 @@ using Dialogue;
 using ConsoleCommand = Console.Console.Command;
 using static Console.Console;
 
+public static class CoreExtensions
+{
+
+}
+
 public sealed partial class Core : Node
 {
-	private const string Prefix = "\\";
+	public const string Prefix = "\\";
 	private static void InitConsole(Core core)
 	{
 		ConsoleCommand
@@ -91,34 +96,32 @@ public sealed partial class Core : Node
 	ColourPackPath = "res://Data/DefaultColours.tres",
 	MinesweeperTexturesPath = "res://Data/MinesweeperTextures.tres",
 	DialoguesPath = "res://Data/Dialogues.tres";
-	public static ColourPack Colours
-	{
-		get
-		{
-			if (field is not null) return field;
-			field = ColourPackPath.LoadOrCreateResource<ColourPack>();
-			return field;
-		}
-	}
-	public CoreUI Container => field ??= CoreUI.Create(
-		parent: this,
-		colours: Colours,
-		menu: _menuHandler,
-		settings: _settingsModifier
-	);
+	public static ColourPack Colours => field ?? ColourPackPath.LoadOrCreateResource<ColourPack>();
+	public CoreUI Container => field ??= CoreUI.Create(parent: this)
+		.SetSettings(_settingsModifier)
+		.SetMenu(_menuHandler);
 	private readonly SettingsModifier _settingsModifier;
 	private readonly MenuHandler _menuHandler;
 	private readonly GamesHandler _handler;
-	private readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
-	private readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
-	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
+	private readonly PuzzleCompleteScreenHandler _nonogramCompleteScreenHandler;
 	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
-	public CurrentPuzzle Nonogram => field ??= CreateNonogram();
+	private readonly LevelSelectorDisplays _levelSelectorDisplays;
+	private readonly StudioSelectorDisplays _studioSelectorDisplayPool;
+	public CurrentPuzzle Nonogram => _nonogram ??= CurrentPuzzle.Create(parent: Container)
+		.SetColours(colours: Colours)
+		.AddCommands()
+		.ConnectVisibilityHandler(handler: _menuHandler)
+		.ConnectSignals(puzzleCompletionHandler: _nonogramCompleteScreenHandler, saveListener: _handler);
 	private Manager Minesweeper => field ??= CreateMinesweeper();
+	private CurrentPuzzle? _nonogram;
+	private CoreUI? _container;
 	public Core()
 	{
-		_menuHandler = new(this);
 		_settingsModifier = new(this);
+		_menuHandler = new(this);
+		_nonogramCompleteScreenHandler = new(this);
+		_levelSelectorDisplays = new(this);
+		_studioSelectorDisplayPool = new(this);
 		_handler = new(this);
 	}
 	public override void _Ready()
@@ -131,35 +134,34 @@ public sealed partial class Core : Node
 			(Key.Backslash, ToggleConsole, "Toggle Console")
 		);
 		InitConsole(this);
-		Nonogram.PuzzleCompleted = OnNonogramPuzzleCompleted;
-		Nonogram.SaveListener = _handler;
-		Nonogram.UI.Studio.VisibilityChanged += _menuHandler.StudioPuzzleSelectorVisibilityChanged;
 		DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+		//Nonogram.ChangePuzzleSize(Display.Data.DefaultSize);
 
 		void ToggleConsole() => Console.Console.Container.Visible = !Console.Console.Container.Visible;
-		void OnNonogramPuzzleCompleted(SaveData save)
-		{
-			Nonogram.UI.CompletionScreen.Show();
-			Dialogues.Enable(save.Expected.DialogueName);
-		}
 		void EscapePressed()
 		{
+			ReadOnlySpan<Control> steps = [
+				Console.Console.Container,
+				Nonogram.UI.CompletionScreen,
+				Nonogram.UI,
+				Minesweeper.UI,
+				Container.Menu.Settings,
+				Container.Menu.Levels,
+				Container.Menu.Dialogues,
+			];
 			Container.ShowMainMenu(out bool shown);
 			if (shown) return;
-			ReadOnlySpan<Control> steps = [Console.Console.Container, Nonogram.UI.CompletionScreen, .. Container.Escapable];
 			foreach (Control control in steps)
 			{
-				if (control.Visible)
-				{
-					control.Hide();
-					Container.Menu.Show();
-					Container.Menu.Buttons.Show();
-					return;
-				}
+				if (!control.Visible) continue;
+				control.Hide();
+				Container.Menu.Show();
+				Container.Menu.Buttons.Show();
+				return;
 			}
 		}
 	}
-	public override void _Process(double delta) => Nonogram.Timer.Tick(delta);
+	public override void _Process(double delta) => _nonogram?.Timer.Tick(delta);
 	public override void _Input(InputEvent input)
 	{
 		if (!input.IsPressed()) return;
@@ -198,65 +200,98 @@ public sealed partial class Core : Node
 
 		return minesweeper;
 	}
-	private CurrentPuzzle CreateNonogram()
+
+	private void ReplaceNonogramCompletionScreen(CanvasItem toShow)
 	{
-		CurrentPuzzle field = new();
-		Container.Add(field.UI);
-		field.UI.Colours = Colours;
-		field.UI.CompletionScreen.Value.Signals = new PuzzleCompleteScreenHandler(Core: this);
-		ConsoleCommand command = new()
-		{
-			Default = () => field.Type.LogCurrent(),
-			Flags = new()
-			{
-				["game"] = () => (field.Type = Display.Type.Game).LogChange(),
-				["paint"] = () => (field.Type = Display.Type.Studio).LogChange(),
-			}
-		};
-		Add(Prefix, ("nonogram", command));
-		return field;
+		Nonogram.UI.CompletionScreen.Visible = !(toShow.Visible = true);
 	}
 
+	private static void ReplaceVisibility(ReadOnlySpan<CanvasItem> toHide, ReadOnlySpan<CanvasItem> toShow)
+	{
+		foreach (CanvasItem item in toHide) item.Hide();
+		foreach (CanvasItem item in toShow) item.Show();
+	}
+
+	private class Displays<T, TPack, TDisplay>(T handler, MainMenu menu, Node parent)
+	: NodePool<string, TPack>.PooledGrand<TDisplay>(parent),
+		PuzzleSelector.Display.IConfigure<TDisplay>
+	where T : PuzzleSelector.Display.IPressed, IIconize
+	where TPack : PuzzleSelector.PackDisplay, new()
+	where TDisplay : PuzzleSelector.Display, new()
+	{
+		public TDisplay Configure(TDisplay display, PuzzleData puzzle) => display
+			.ChangePuzzle(save: puzzle)
+			.ChangeInput(puzzle, menu, handler);
+		public void RefreshIcon(string puzzleName, string packName = PuzzleManager.SavedPackName)
+		{
+			Assert(_puzzleDisplays.ContainsKey(packName), $"Pack '{packName}' not found in pack display pool.");
+			if (!_puzzleDisplays[packName].TryGetByName(name: puzzleName, value: out var display)) return;
+			display.Button.Icon = handler.ToIcon(colours: Colours);
+		}
+		public void Load(IEnumerable<PuzzleData.Pack>? configs = null)
+		{
+			configs ??= PuzzleManager.SelectorConfigs;
+			foreach (PuzzleData.Pack data in configs)
+			{
+				IList<TDisplay> displays = GetGrandChildren(data.Name);
+				foreach ((int i, PuzzleData puzzle) in data.Puzzles.Index())
+				{
+					if (displays.Count <= i) displays.Add(Configure(CreateDisplay(puzzle), puzzle));
+					else Configure(displays[i], puzzle);
+				}
+				return;
+			}
+		}
+		protected override TPack Create(string key)
+		{
+			TPack pack = new TPack() { Name = key }
+				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+			Parent(key).AddChild(pack);
+			return pack;
+		}
+		private TDisplay CreateDisplay(PuzzleData puzzle)
+		{
+			TDisplay display = new() { Name = puzzle.Name };
+			DisplaysParent(puzzle).AddChild(display);
+			return display;
+		}
+		private Container DisplaysParent(PuzzleData puzzle) => GetOrCreate(puzzle.Name).Puzzles.Value;
+	}
+	private sealed class LevelSelectorDisplays(Core Core)
+	: Displays<CurrentPuzzle, PuzzleSelector.PackDisplay.Game, PuzzleSelector.Display.Game>(
+		handler: Core.Nonogram,
+		menu: Core.Container.Menu,
+		parent: Core.Container.Menu.Levels.Puzzles.Value
+	);
+	private sealed class StudioSelectorDisplays(Core Core)
+	: Displays<CurrentPuzzle, PuzzleSelector.PackDisplay.Studio, PuzzleSelector.Display.Studio>(
+		handler: Core.Nonogram,
+		menu: Core.Container.Menu,
+		parent: Core.Nonogram.UI.Studio.PacksTab.Scroll.Puzzles
+	);
 	private sealed class PuzzleCompleteScreenHandler(Core Core) : PuzzleCompleteScreen.IHandleSignals
 	{
-		void PuzzleCompleteScreen.IHandleSignals.OnLevelsPressed()
+		private CurrentPuzzle Puzzle => Core.Nonogram;
+		private MainMenu Menu => Core.Container.Menu;
+
+		public void OnLevelsPressed() => Core.ReplaceNonogramCompletionScreen(toShow: Menu.Levels);
+		public void OnDialoguesPressed() => Core.ReplaceNonogramCompletionScreen(toShow: Menu.Dialogues);
+		public void OnPlayDialoguePressed()
 		{
-			Core.Container.Menu.Levels.Show();
-			Core.Nonogram.UI.CompletionScreen.Hide();
+			Dialogues.Start(name: Puzzle.CompletionDialogueName);
+			ReplaceVisibility([Menu.Background, Menu.Buttons, Puzzle.UI.CompletionScreen, Puzzle.UI], [Menu.Dialogues]);
 		}
-		void PuzzleCompleteScreen.IHandleSignals.OnDialoguesPressed()
+		public void OnVisibilityChanged()
 		{
-			Core.Container.Menu.Dialogues.Show();
-			Core.Nonogram.UI.CompletionScreen.Hide();
-		}
-		void PuzzleCompleteScreen.IHandleSignals.OnPlayDialoguePressed()
-		{
-			CurrentPuzzle current = Core.Nonogram;
-			var menu = Core.Container.Menu;
-			var completionScreen = current.UI.CompletionScreen;
-			Dialogues.Start(name: current.CompletionDialogueName);
-			menu.Show();
-			menu.Background.Hide();
-			menu.Buttons.Hide();
-			completionScreen.Hide();
-		}
-		void PuzzleCompleteScreen.IHandleSignals.OnVisibilityChanged()
-		{
-			CurrentPuzzle current = Core.Nonogram;
-			PuzzleCompleteScreen completionScreen = current.UI.CompletionScreen.Value;
-			bool visible = completionScreen.Visible;
-			string name = current.CompletionDialogueName;
-			bool hasDialogue = Dialogues.Contains(name);
-			completionScreen.Options.PlayDialogue.Visible = hasDialogue;
-			if (hasDialogue)
-			{
-				completionScreen.Report.Value.Log.Text = "Dialogue: " + name;
-			}
+			bool hasDialogue = Dialogues.Contains(Puzzle.CompletionDialogueName);
+			Puzzle.UI.CompletionScreen.Value.Options.PlayDialogue.Visible = hasDialogue;
 		}
 	}
-	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
+	private sealed class MenuHandler(Core Core) :
+		MainMenu.IPress,
+		MainMenu.IReceiveSignals,
+		IHandleStudioSelector
 	{
-
 		void MainMenu.IPress.LevelsPressed() => Core.Container.Menu.Levels.Show();
 		void MainMenu.IPress.DialoguesPressed() => Core.Container.Menu.Dialogues.Show();
 		void MainMenu.IPress.SettingsPressed() => Core.Container.Menu.Settings.Show();
@@ -269,110 +304,39 @@ public sealed partial class Core : Node
 		}
 		void MainMenu.IPress.PlayPressed()
 		{
-			CurrentPuzzle current = Core.Nonogram;
-			MainMenu menu = Core.Container.Menu;
-			Display.Type type = current.Type;
+			var current = Core.Nonogram;
+			var menu = Core.Container.Menu;
+			var type = current.Type;
 
-			(current.UI.Visible, current.Type, menu.Visible, menu.Levels.Visible) = current switch
-			{
-				{ PuzzleReady: false } => (false, type, true, true),
-				{ Type: Display.Type.Studio } => (current.UI.Visible, Display.Type.Game, true, true),
-				{ PuzzleReady: true } => (true, type, false, menu.Levels.Visible),
-			};
+			current.Type = type is Display.Type.Studio ? Display.Type.Game : type;
+			current.UI.Visible = current.PuzzleReady;
+			menu.Visible = menu.Levels.Visible = !current.PuzzleReady;
 			menu.Buttons.Visible = false;
 		}
 		void MainMenu.IPress.OpenStudioPressed()
 		{
-			CurrentPuzzle current = Core.Nonogram;
+			var current = Core.Nonogram;
 			current.Type = Display.Type.Studio;
 			current.UI.Visible = true;
 			Core.Container.Menu.Visible = false;
 		}
 
-		public void StudioPuzzleSelectorVisibilityChanged()
-		{
-			CurrentPuzzle current = Core.Nonogram;
-			NonogramStudioBar root = current.UI.Studio;
-			VBoxContainer puzzles = root.PacksTab.Scroll.Puzzles;
-			MainMenu menu = Core.Container.Menu;
-			if (!root.Visible) return;
-			puzzles.Remove(true, Core._studioSelectorDisplays);
-			Core._studioSelectorDisplays.Clear();
-			Core._studioPuzzleSelectorDisplays.Clear();
-			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
-			{
-				PuzzleSelector.PackDisplay node = PuzzleSelector.CreateStudioPack(
-					name: config.Name,
-					packs: Core._studioSelectorDisplays,
-					parent: puzzles
-				);
-				Control parent = node.Puzzles.Value;
-
-				foreach (SaveData data in config.Data)
-				{
-					_ = PuzzleSelector.CreateStudioDisplay(
-						puzzle: data,
-						values: Core._studioPuzzleSelectorDisplays,
-						parent,
-						menu,
-						handler: current
-					);
-				}
-			}
-		}
-
-		void MainMenu.IReceiveSignals.PuzzleSelectorVisibilityChanged()
-		{
-			MainMenu menu = Core.Container.Menu;
-			CurrentPuzzle current = Core.Nonogram;
-			PuzzleSelector value = menu.Levels;
-			Container puzzles = value.Puzzles.Value;
-
-			menu.Buttons.Visible = !(menu.Visible = value.Visible);
-			menu.Visible = value.Visible && menu.Visible;
-
-			if (!value.Visible) return;
-
-			puzzles.Remove(true, Core._levelSelectorDisplays);
-			Core._levelSelectorDisplays.Clear();
-			foreach (var config in PuzzleManager.SelectorConfigs)
-			{
-				var node = PuzzleSelector.CreateGamePack(
-					name: config.Name,
-					parent: puzzles,
-					packs: Core._levelSelectorDisplays
-				);
-				Container puzzleParent = node.Puzzles.Value;
-				foreach (SaveData puzzle in config.Data)
-				{
-					_ = PuzzleSelector.CreateGameDisplay(
-						puzzle,
-						parent: puzzleParent,
-						menu,
-						handler: current
-					);
-				}
-			}
-		}
+		void IHandleStudioSelector.StudioPuzzleSelectorVisibilityChanged() => Core._studioSelectorDisplayPool.Load();
+		void MainMenu.IReceiveSignals.PuzzleSelectorVisibilityChanged() => Core._levelSelectorDisplays.Load();
 		void MainMenu.IReceiveSignals.DialogueSelectorVisibilityChanged()
 		{
 			MainMenu menu = Core.Container.Menu;
 			DialogueSelector value = menu.Dialogues;
-			VBoxContainer dialogues = value.DisplayContainer.Value;
 
 			menu.Buttons.Visible = !(menu.Visible = value.Visible);
 			menu.Visible = value.Visible && menu.Visible;
 
-			if (!value.Visible) return;
-
-			dialogues.Remove(true, Core._dialogueSelectorDisplays);
-			Core._dialogueSelectorDisplays.Clear();
-			foreach (var config in Dialogues.AvailableDialogues)
-			{
-				var node = DialogueSelector.DialogueDisplay.Create(config, value);
-				dialogues.AddChild(node);
-				Core._dialogueSelectorDisplays.Add(node);
-			}
+			value.Refill(
+				parent: value.DisplayContainer.Value,
+				nodes: Core._dialogueSelectorDisplays,
+				configs: Dialogues.AvailableDialogues,
+				create: DialogueSelector.DialogueDisplay.Create
+			);
 		}
 		void MainMenu.IReceiveSignals.SettingsVisibilityChanged()
 		{
@@ -388,8 +352,6 @@ public sealed partial class Core : Node
 
 			if (!menu.Visible) { return; }
 
-			nonogram.Visible = !nonogram.Visible && nonogram.Visible;
-			minesweeper.Visible = !minesweeper.Visible && minesweeper.Visible;
 			Node[] visibleChildren = [.. menu.GetChildren()
 				.Where(n => n is Control control && control.Visible)
 			];
@@ -432,27 +394,21 @@ public sealed partial class Core : Node
 	}
 	private sealed class GamesHandler(Core Core) : IHandleEvents, ISaveListener
 	{
-		public void Failed(Manager.Data data)
+		void IHandleEvents.Failed(Manager.Data data)
 		{
 			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = Core.Minesweeper.UI.CompletionScreen;
-			completionScreen.Show();
-			completionScreen.Value.TitleText = "Game Over";
+			(completionScreen.Visible, completionScreen.Value.TitleText) = (true, "Game Over");
 		}
-		public void Completed(Manager.Data data)
+		void IHandleEvents.Completed(Manager.Data data)
 		{
 			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = Core.Minesweeper.UI.CompletionScreen;
-			completionScreen.Show();
-			completionScreen.Value.TitleText = "Mines Located!";
+			(completionScreen.Visible, completionScreen.Value.TitleText) = (true, "Mines Located!");
 		}
-		public void PuzzleTilesChanged(Vector2I position)
+		void ISaveListener.PuzzleTilesChanged(Vector2I position)
 		{
-			List<PuzzleSelector.PuzzleDisplay> displays = Core._studioPuzzleSelectorDisplays;
-			CurrentPuzzle current = Core.Nonogram;
-			string name = current.Name;
-			current.UI.Hints.Refresh();
-			if (!displays.TryGetByName(name, value: out var display)) return;
-			display.Button.Icon = current.StudioIcon(colours: Colours);
+			Core.Nonogram.RefreshHints();
+			Core._studioSelectorDisplayPool.RefreshIcon(puzzleName: Core.Nonogram.Name);
 		}
-		public void SaveTilesChanged(Vector2I position) => Core.Nonogram.TryLockTile(position);
+		void ISaveListener.SaveTilesChanged(Vector2I position) => Core.Nonogram.Tiles.TryLock(position);
 	}
 }

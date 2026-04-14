@@ -126,6 +126,31 @@ public static class Input
 {
 	public static bool IsPressed(this MouseButton button) => Godot.Input.IsMouseButtonPressed(button);
 }
+public static class GDCollectionExtensions
+{
+	public static bool TryGetByName<T>(this IEnumerable<T> nodes, string name, [MaybeNullWhen(false)] out T value)
+		where T : Node
+	{
+		value = nodes.FirstOrDefault(hasSameName);
+		return value is not null;
+		bool hasSameName(Node display) => display.Name == name;
+	}
+
+	public static void FreeAll<TKey, TNode>(this IDictionary<TKey, TNode> nodes, Node? parent = null)
+	where TKey : notnull
+	where TNode : Node
+	{
+		foreach (var (key, node) in nodes)
+		{
+			if (parent is not null && parent.HasChild(node))
+			{
+				parent.RemoveChild(node);
+			}
+			nodes.Remove(key);
+			node.QueueFree();
+		}
+	}
+}
 public static class GDX
 {
 	public static bool AllValidInstances(this ReadOnlySpan<GodotObject> objects)
@@ -139,13 +164,7 @@ public static class GDX
 		}
 		return true;
 	}
-	public static bool TryGetByName<T>(this IEnumerable<T> nodes, string name, [MaybeNullWhen(false)] out T value)
-	where T : Node
-	{
-		value = nodes.FirstOrDefault(hasSameName);
-		return value is not null;
-		bool hasSameName(Node display) => display.Name == name;
-	}
+
 	public static void LinkToParent<T>(this Node node, List<T> list) where T : Node
 	{
 		node.ChildEnteredTree += OnChildEnteredTree;
@@ -214,20 +233,7 @@ public static class GDX
 		else parent.Remove(free, children);
 		return parent;
 	}
-	public static void FreeAll<TKey, TNode>(this Dictionary<TKey, TNode> nodes, Node? parent = null)
-	where TKey : notnull
-	where TNode : Node
-	{
-		foreach (var (key, node) in nodes)
-		{
-			if (parent is not null && parent.HasChild(node))
-			{
-				parent.RemoveChild(node);
-			}
-			nodes.Remove(key);
-			node.QueueFree();
-		}
-	}
+
 	public static T ReplaceChild<T>(this T parent, Node old, Node replacement, bool free = false) where T : Node
 	{
 		if (parent.HasChild(old))

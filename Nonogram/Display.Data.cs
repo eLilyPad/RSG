@@ -229,7 +229,6 @@ public abstract partial class Display
 		}
 		private int[][] Get(Side side) => side switch { Side.Row => Rows, _ => Columns };
 	}
-
 	private readonly record struct MaskGen(int Index, int Position, ulong Mask)
 	{
 		public const ulong Null = 0UL;
@@ -244,5 +243,4 @@ public abstract partial class Display
 			return gen;
 		}
 	}
-
 }

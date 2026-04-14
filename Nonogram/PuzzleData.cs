@@ -7,8 +7,25 @@ using RSG.Dialogue;
 namespace RSG.Nonogram;
 
 using static PuzzleBuilder;
-public sealed class PuzzleData : Display.Data
+using Data = Display.Data;
+
+public sealed class PuzzleData : Data
 {
+	public static implicit operator PuzzleData(SaveData puzzle) => new(puzzle);
+
+	public string DialogueName { get; init; } = string.Empty;
+	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
+	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = Display.CreateTiles(DefaultSize);
+
+	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
+	public PuzzleData(int size = DefaultSize) : base(size) { }
+	public PuzzleData(Data data) : base(data) { }
+	public void Deconstruct(out string name, out Dictionary<Vector2I, Display.TileMode> tiles)
+	{
+		name = Name;
+		tiles = Tiles;
+	}
+
 	public sealed class Converter : JsonConverter<PuzzleData>
 	{
 		public override PuzzleData? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -61,6 +78,65 @@ public sealed class PuzzleData : Display.Data
 	}
 	public readonly record struct Code
 	{
+		private const char SizeBarrier = '-', BlankToken = '_', FillToken = 'x';
+		public static (string X, string Filled) Examples => (
+			"10-xooooooooxoxooooooxoooxooooxoooooxooxoooooooxxooooooooxxoooooooxooxoooooxooooxoooxooooooxoxoooooooox",
+			"10-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		);
+		public static implicit operator string(Code code) => code.States;
+		public static Code Encode(string value)
+		{
+			string[] s = value.Split(SizeBarrier);
+			int width = DefaultSize;
+			Span<char> sizeSpan = [];
+			foreach (char c in value)
+			{
+				if (c is ' ') continue;
+				Assert(c is BlankToken or FillToken or SizeBarrier || char.IsNumber(c));
+				if (c is SizeBarrier) continue;
+			}
+			return new Code { Size = width, States = s[1] };
+		}
+
+		public static Code Encode(PuzzleData value)
+		{
+			string code = "";
+			code += value.Size + SizeBarrier;
+			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
+			{
+				code += state is Display.TileMode.Filled ? FillToken : BlankToken;
+			}
+			return new()
+			{
+				Size = value.Size,
+				States = code
+			};
+		}
+
+		public string States
+		{
+			get; private init
+			{
+				ReadOnlySpan<char> codeSpan = value;
+				foreach (char c in codeSpan) Assert(Valid(c));
+				field = value;
+				static bool Valid(char c) => c is BlankToken or FillToken;
+			}
+		}
+		public int Size { get; private init; }
+		public PuzzleData Decode()
+		{
+			string states = States;
+			int width = Size;
+			return new PuzzleData(DefaultName, IsFillToken, Size);
+			bool IsFillToken(Vector2I position)
+			{
+				int index = position.Y * width + position.X;
+				if (states.Length <= index) return false;
+				return states[index] is FillToken;
+			}
+		}
+
 		public readonly record struct ConversionError
 		{
 			public static ConversionError MissingSizeBarrier { get; } = new(
@@ -76,58 +152,9 @@ public sealed class PuzzleData : Display.Data
 			public string Message { get; }
 			private ConversionError(string message) { Message = message; }
 		}
-		private const char SizeBarrier = '-', BlankToken = '_', FillToken = 'x';
-
-		public static (string X, string Filled) Examples => (
-			"10-xooooooooxoxooooooxoooxooooxoooooxooxoooooooxxooooooooxxoooooooxooxoooooxooooxoooxooooooxoxoooooooox",
-			"10-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-		);
-
-		public static implicit operator string(Code code) => code.States;
-		public static OneOf<ConversionError, Code> Encode(string value)
-		{
-			string[] s = value.Split(SizeBarrier);
-
-			if (s.Length is 0) return ConversionError.MissingSizeBarrier;
-			if (s.Length is not 2) return ConversionError.MissingSizeBarriers;
-
-			string widthText = s[0], states = s[1];
-
-			if (!int.TryParse(widthText, result: out int width)) return ConversionError.MissingSize;
-
-			return new Code { Size = width, States = states };
-		}
-		public static Code Encode(PuzzleData value)
-		{
-			string code = "";
-			code += value.Size + SizeBarrier;
-			foreach ((Vector2I position, Display.TileMode state) in value.Tiles)
-			{
-				code += state is Display.TileMode.Filled ? FillToken : BlankToken;
-			}
-			return new()
-			{
-				States = code
-			};
-		}
-
-		public string States { get; private init; }
-		public int Size { get; private init; }
-		public PuzzleData Decode()
-		{
-			string states = States;
-			int width = Size;
-			return new PuzzleData(DefaultName, IsFillToken, Size);
-			bool IsFillToken(Vector2I position)
-			{
-				int index = position.Y * width + position.X;
-				if (states.Length <= index) return false;
-				return states[index] is FillToken;
-			}
-		}
 
 	}
-	public sealed record Pack
+	public readonly record struct Pack(IReadOnlyCollection<PuzzleData> Puzzles, string Name = "Pack")
 	{
 		public static Pack Procedural()
 		{
@@ -137,13 +164,10 @@ public sealed class PuzzleData : Display.Data
 			{
 				Name = "Procedural",
 				Puzzles = [
-					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Data.Intro},
-					new("Kitty", selector: Cat, size) { DialogueName = Data.CatOnThePath},
+					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Dialogue.Data.Intro},
+					new("Kitty", selector: Cat, size) { DialogueName = Dialogue.Data.CatOnThePath},
 					new("Spiral", selector: Spiral, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
-					//new("Noise", selector: position => position.IsOverNoiseThreshold(threshold: 0), size),
-					//new("Grid", selector: position => position.X % 3 == 0 || position.Y % 3 == 0, size),
-					//new("Border", selector: BorderSelector, size),
 				]
 			};
 
@@ -230,22 +254,5 @@ public sealed class PuzzleData : Display.Data
 			//	static bool isBorder(int value) => value is size - 1 or size - 2 or 0 or 1;
 			//}
 		}
-		public static (string Name, IEnumerable<SaveData> Puzzles) Convert(Pack pack)
-		{
-			return (pack.Name, pack.Puzzles.Select(puzzle => new SaveData(expected: puzzle)));
-		}
-
-		public string Name { get; init; } = "Pack";
-		public IReadOnlyCollection<PuzzleData> Puzzles { get; init; } = [];
 	}
-
-	public static explicit operator SaveData(PuzzleData puzzle) => new(expected: puzzle);
-
-	public string DialogueName { get; init; } = string.Empty;
-	[JsonConverter(typeof(Vector2IDictionaryConverter<Display.TileMode>))]
-	public override Dictionary<Vector2I, Display.TileMode> Tiles { protected get; init; } = (Vector2I.One * DefaultSize)
-		.GridRange().ToDictionary(elementSelector: _ => Display.TileMode.Clear);
-
-	public PuzzleData(string name, Func<Vector2I, bool> selector, int size) : base(name, selector, size) { }
-	public PuzzleData(int size = DefaultSize) : base(size) { }
 }

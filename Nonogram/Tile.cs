@@ -13,114 +13,67 @@ public sealed partial class Tile : PanelContainer
 	}
 	internal interface IProvider
 	{
-		Node Parent();
 		void OnActivate(Vector2I position, Tile tile) { }
 		TileMode State(Vector2I position) => TileMode.Clear;
 	}
-	internal sealed class Pool(IProvider Provider) : NodePool<Vector2I, Tile>
+	public interface ILockPool
 	{
-		public const int ChunkSize = 5;
-		public required Locker LockRules { get; init; }
-		public Vector2 TileSize { get; private set; } = Vector2.One;
-		public IColours Colours { private get; set; } = Core.Colours;
-		public Pool UnLockAll()
+		bool ShouldLock(Vector2I position);
+		void UnLockAll();
+		bool TryLock(Vector2I position);
+		bool TryLock(Vector2I position, Type type)
 		{
-			foreach (Tile tile in _nodes.Values) tile.Locked = false;
-			return this;
-		}
-		public bool TryLock(Vector2I position)
-		{
-			Tile tile = GetOrCreate(position);
-			bool locked = LockRules.ShouldLock(position);
-			if (locked) tile.Locked = true;
-			return locked;
-		}
-		public Pool Resize(int value)
-		{
-			Clear();
-			Vector2I size = Vector2I.One * value;
-			IEnumerable<Vector2I> tileValues = size.GridRange();
-			bool firstTile = true;
-			foreach (Vector2I position in tileValues)
-			{
-				Tile tile = GetOrCreate(position);
-				if (firstTile)
-				{
-					TileSize = tile.Size;
-					firstTile = false;
-				}
-			}
-
-			Clear(exceptions: tileValues);
-			return this;
-		}
-		public Pool Refresh()
-		{
-			foreach ((Vector2I position, Tile tile) in _nodes)
-			{
-				tile.Mode = Provider.State(position);
-				tile.Locked = LockRules.ShouldLock(position);
-			}
-			return this;
-		}
-		protected override Node Parent(Vector2I position) => Provider.Parent();
-		protected override Tile Create(Vector2I position)
-		{
-			Tile tile = new Tile
-			{
-				Name = $"Tile (X: {position.X}, Y: {position.Y})",
-				IsAlternative = (position.X / ChunkSize + position.Y / ChunkSize) % 2 == 0,
-				Colours = Colours,
-				Mode = TileMode.Clear,
-			}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
-			Provider.Parent().AddChild(tile);
-
-			tile.Resized += () => tile.Button.PivotOffset = tile.Button.Size / 2;
-			tile.Button.ButtonDown += () => Provider.OnActivate(position, tile);
-			tile.Button.MouseExited += () => _nodes
-				.AllInLines(position)
-				.HoverTiles(false);
-			tile.Button.MouseEntered += () =>
-			{
-				Provider.OnActivate(position, tile);
-				_nodes
-					.AllInLines(position)
-					.HoverTiles(true);
-			};
-
-			tile.Button
-				.OverrideStyle(modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.SetCornerRadiusAll(0);
-					return style;
-				})
-				.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.SetCornerRadiusAll(0);
-					style.BgColor = Colors.Transparent;
-					return style;
-				})
-				.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty())
-				.AddAllFontThemeOverride(Colors.Transparent);
-			tile.Button.AddThemeFontSizeOverride("font_size", 10);
-
-			return tile;
+			if (type is not Type.Game) return false;
+			return TryLock(position);
 		}
 	}
+	public interface IRefresh { void Refresh(); }
+	public interface IPool : ILockPool, IRefresh
+	{
+		Vector2 TileSize { get; }
+		void Resize(int value);
+	}
+	internal sealed class Pool
+	{
+		public const int ChunkSize = 5;
+	}
 	private const MouseButtonMask mask = MouseButtonMask.Left | MouseButtonMask.Right;
+	public static Tile Create(Vector2I position)
+	{
+		return new Tile
+		{
+			Name = $"Tile (X: {position.X}, Y: {position.Y})",
+			IsAlternative = (position.X / Pool.ChunkSize + position.Y / Pool.ChunkSize) % 2 == 0,
+			Colours = Core.Colours,
+			Mode = TileMode.Clear,
+		}.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+	}
 
 	public Button Button { get; } = new Button { Text = EmptyText, ButtonMask = mask }
-		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill);
+		.SizeFlags(SizeFlags.ExpandFill, SizeFlags.ExpandFill)
+		.OverrideStyle(modify: (StyleBoxFlat style) =>
+		{
+			style.CornerDetail = 1;
+			style.SetCornerRadiusAll(0);
+			return style;
+		})
+		.OverrideStyle(name: "hover", modify: (StyleBoxFlat style) =>
+		{
+			style.CornerDetail = 1;
+			style.SetCornerRadiusAll(0);
+			style.BgColor = Colors.Transparent;
+			return style;
+		})
+		.OverrideStyle(name: "focus", modify: (StyleBox style) => new StyleBoxEmpty())
+		.AddAllFontThemeOverride(Colors.Transparent);
 
-	public bool IsAlternative { get; private init; } = false;
+	public bool IsAlternative { get; init; } = false;
 	public required IColours Colours { private get; set; }
 	[Export] public bool Locked { get; set => ChangeLocked(field = value); } = false;
 	[Export] public bool Hovering { get; set => ChangeHovering(field = value); } = false;
 	[Export] public TileMode Mode { get; set => ChangeMode(field = value); } = TileMode.Clear;
 
-	private Tile() { }
+	private Tile() => Resized += () => Button.PivotOffset = Button.Size / 2;
 	public override void _Ready() => this.Add(Button);
 
 	private void ChangeHovering(bool value) => Button.Scale = Vector2.One * (value ? .9f : 1);

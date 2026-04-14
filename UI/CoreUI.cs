@@ -6,33 +6,44 @@ using Nonogram;
 using RSG.Console;
 using RSG.Dialogue;
 
+public static class CoreExtensions
+{
+	public static CoreUI SetMenu<T>(this CoreUI ui, T value)
+	where T : MainMenu.IPress, MainMenu.IReceiveSignals
+	{
+		Assert(value is not null, "Menu handler cannot be null");
+		ui.Menu.Signals = value;
+		ui.Menu.OnPressed = value;
+		return ui;
+	}
+	public static CoreUI SetSettings<T>(this CoreUI ui, T value)
+	where T : SettingsMenuContainer.IChangeSettings
+	{
+		Assert(value is not null, "Settings modifier cannot be null");
+		ui.Menu.Settings.Nonogram.SettingsChanger = value;
+		return ui;
+	}
+}
 public sealed partial class CoreUI : Control
 {
-	public static CoreUI Create<TSettings, TMenu>(
-		Node parent,
-		ColourPack colours,
-		TMenu menu,
-		TSettings settings
-	)
-	where TSettings : SettingsMenuContainer.IChangeSettings, PuzzleManager.IChangeWithSettings
-	where TMenu : MainMenu.IPress, MainMenu.IReceiveSignals
+	public static CoreUI Create(Node parent)
 	{
 		CoreUI ui = new CoreUI { Name = "Core UI" }
 			.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 		parent.AddChild(ui);
-		ui.Menu.Colours = colours;
-		ui.Menu.Signals = menu;
-		ui.Menu.OnPressed = menu;
-		ui.Menu.Settings.Nonogram.SettingsChanger = settings;
 		return ui;
 	}
-	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer { Name = "Loading Screen", TopLevel = true }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
-	public MainMenu Menu { get; } = new MainMenu { Name = "MainMenu", TopLevel = true }
-		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
-	public ReadOnlySpan<Container> Escapable => _escapableContainers;
-	private readonly Container[] _escapableContainers;
-	public CoreUI() => _escapableContainers = [Menu.Settings, Menu.Levels, Menu.Dialogues];
+	public TitleScreenContainer LoadingScreen { get; } = new TitleScreenContainer
+	{
+		Name = "Loading Screen",
+		TopLevel = true
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+	public MainMenu Menu { get; } = new MainMenu
+	{
+		Name = "MainMenu",
+		Colours = Core.Colours,
+		TopLevel = true
+	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.Minsize);
 	public override void _Ready() => this.Add(Dialogues.Container, Console.Container, Menu, LoadingScreen);
 	public void ShowMainMenu()
 	{

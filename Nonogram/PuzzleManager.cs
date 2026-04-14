@@ -12,9 +12,10 @@ public sealed partial class PuzzleManager
 
 	internal static PuzzleManager Instance => field ??= new();
 
-	public static IEnumerable<(string Name, IEnumerable<SaveData> Data)> SelectorConfigs => [
-		("Saved Puzzles", GetSavedPuzzles()),
-		.. GetPuzzlePacks().Select(Pack.Convert)
+	public const string SavedPackName = "Saved Puzzles";
+	public static IReadOnlyList<Pack> SelectorConfigs => [
+		new([.. FileManager.GetSaved()], SavedPackName),
+		.. Instance.PuzzlePacks
 	];
 	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
 	public static IList<SaveData> GetSavedPuzzles() => FileManager.GetSaved();

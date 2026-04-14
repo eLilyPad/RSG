@@ -2,80 +2,48 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-public sealed partial class PuzzleSelector : PanelContainer
+public static class PuzzleSelectorExtensions
 {
-	public static PackDisplay CreateGamePack(
-		string name,
-		Control parent,
-		List<PackDisplay> packs
-	)
+	public static T ChangePuzzle<T>(this T display, SaveData save) where T : PuzzleSelector.Display
 	{
-		GamePacks pack = new GamePacks { Name = name }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		parent.Add(pack);
-		packs.Add(pack);
-
-		return pack;
-	}
-	public static PackDisplay CreateStudioPack(
-		string name,
-		List<PackDisplay> packs,
-		Control parent
-	)
-	{
-		StudioPacks pack = new StudioPacks { Name = name }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-		packs.Add(pack);
-		parent.Add(pack);
-		return pack;
-	}
-	public static PuzzleDisplay CreateGameDisplay(
-		SaveData puzzle,
-		Control parent,
-		UI.MainMenu menu,
-		IHandleDisplaysPressed handler
-	)
-	{
-		GamePuzzleDisplay display = new GamePuzzleDisplay(puzzle, pressed)
-			.SizeFlags(both: SizeFlags.ExpandFill);
-		parent.Add(display);
+		display.Background.Color = save.CompletionColour;
+		display.Button.Name = (display.Button.Text = display.Name = save.Name) + " Button";
+		display.Button.Icon = save.Expected.AsIcon(Core.Colours, 16);
 		return display;
-		void pressed() => handler.GamePuzzleDisplayPressed(menu, puzzle);
 	}
-	public static PuzzleDisplay CreateStudioDisplay(
-		SaveData puzzle,
-		List<PuzzleDisplay> values,
-		Control parent,
-		UI.MainMenu menu,
-		IHandleDisplaysPressed handler
-	)
+	public static T ChangeInput<T>(this T display, SaveData puzzle, UI.MainMenu menu, PuzzleSelector.Display.IPressed handler)
+	where T : PuzzleSelector.Display
 	{
-		StudioPuzzleDisplay display = new StudioPuzzleDisplay(puzzle, Pressed, AltPressed)
-			.SizeFlags(both: SizeFlags.ExpandFill);
-		values.Add(display);
-		parent.Add(display);
+		display.InputHandler = InputHandler;
 		return display;
 
-		void Pressed() => handler.StudioPuzzleDisplayPressed(puzzle);
-		void AltPressed()
+		void InputHandler(InputEvent input)
 		{
-			if (!MouseButton.Right.IsPressed()) return;
-			handler.GamePuzzleDisplayPressed(menu, puzzle);
+			if (input is InputEventMouseButton { Pressed: false }) return;
+			if (!MouseButton.Left.IsPressed() && !MouseButton.Right.IsPressed()) return;
+			handler.Pressed(display, menu, puzzle);
 		}
 	}
 
+}
+
+public sealed partial class PuzzleSelector : PanelContainer
+{
+	public static PackDisplay CreateGamePack() => new PackDisplay.Game { }
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+	public static PackDisplay CreateStudioPack() => new PackDisplay.Studio { }
+		.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
+
 	private static Labelled<Container> CreatePuzzles<T>(string name, T container)
-	where T : Container
+	where T : Container => new Labelled<Container>
 	{
-		return new Labelled<Container>
-		{
-			Name = "Puzzles Display",
-			Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
-				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
-			Value = container,
-			Vertical = true
-		}.Preset(LayoutPreset.FullRect);
-	}
+		Name = "Puzzles Display",
+		Label = new RichTextLabel { Name = "Label", Text = name, FitContent = true }
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ShrinkBegin),
+		Value = container,
+		Vertical = true
+	}.Preset(LayoutPreset.FullRect);
+
 	public ColorRect Background { get; } = new ColorRect { Name = "Background", Color = Colors.DarkCyan }
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public ScrollContainer Scroll { get; } = new ScrollContainer { Name = "Scroll" }
@@ -103,6 +71,15 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public abstract partial class PackDisplay : PanelContainer
 	{
+		public sealed partial class Game : PackDisplay
+		{
+			public override Labelled<Container> Puzzles { get; init; } = CreatePuzzles(
+				"Puzzles",
+				container: new GridContainer { Name = "Grid", Columns = 5 }
+					.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
+			);
+		}
+		public sealed partial class Studio : PackDisplay;
 		public new string Name
 		{
 			get => base.Name;
@@ -115,17 +92,21 @@ public sealed partial class PuzzleSelector : PanelContainer
 		);
 		public override void _Ready() => this.Add(Puzzles);
 	}
-	private sealed partial class GamePacks : PackDisplay
+
+	public partial class Display : PanelContainer
 	{
-		public override Labelled<Container> Puzzles { get; init; } = CreatePuzzles(
-			"Puzzles",
-			container: new GridContainer { Name = "Grid", Columns = 5 }
-				.SizeFlags(horizontal: SizeFlags.Fill, vertical: SizeFlags.ExpandFill)
-		);
-	}
-	private sealed partial class StudioPacks : PackDisplay;
-	public partial class PuzzleDisplay : PanelContainer
-	{
+		public interface IConfigure<T> where T : Display
+		{
+			IEnumerable<T> Configure(PuzzleData puzzle, params IEnumerable<T> displays)
+			{
+				foreach (T display in displays) Configure(display, puzzle);
+				return displays;
+			}
+			T Configure(T display, PuzzleData puzzle);
+		}
+		public interface IPressed { T Pressed<T>(T display, UI.MainMenu menu, SaveData data) where T : Display; }
+		public sealed partial class Game : Display;
+		public sealed partial class Studio : Display;
 		public ColorRect Background { get; } = new ColorRect { Name = "Background", }
 		.Preset(LayoutPreset.LeftWide)
 		.SizeFlags(both: SizeFlags.ExpandFill)
@@ -141,41 +122,26 @@ public sealed partial class PuzzleSelector : PanelContainer
 		}
 		.OverrideStyle<StyleBoxFlat, Button>(Modify)
 		.OverrideStyle<StyleBoxFlat, Button>(Modify, "hover");
-		public override void _Ready() => this.Add(Background, Button);
-		static StyleBoxFlat Modify(StyleBoxFlat style)
+
+		public GuiInputEventHandler InputHandler
+		{
+			set
+			{
+				if (field is not null) Button.GuiInput -= field;
+				field = value;
+				Button.GuiInput += field;
+			}
+		}
+		public override void _Ready() => this
+			.Add(Background, Button)
+			.SizeFlags(both: SizeFlags.ExpandFill);
+		private static StyleBoxFlat Modify(StyleBoxFlat style)
 		{
 			style.SetCornerRadiusAll(0);
 			style.SetContentMarginAll(40);
 			return style;
 		}
-	}
-	private sealed partial class GamePuzzleDisplay(SaveData Puzzle, Action Pressed) : PuzzleDisplay
-	{
-		public override void _Ready()
-		{
-			base._Ready();
-			Name = Puzzle.Name;
 
-			Background.Color = Puzzle.CompletionColour;
-
-			Button.Name = Puzzle.Name + " Button";
-			Button.Text = Puzzle.Name;
-			Button.Icon = Puzzle.AsIcon(Core.Colours, 16);
-			Button.Pressed += Pressed;
-		}
-	}
-	private sealed partial class StudioPuzzleDisplay(SaveData Puzzle, Action Pressed, Action AltPressed)
-		: PuzzleDisplay
-	{
-		public override void _Ready()
-		{
-			base._Ready();
-			Background.Color = Puzzle.CompletionColour;
-			Button.Name = (Button.Text = Name = Puzzle.Name) + " Button";
-			Button.Icon = Puzzle.Expected.AsIcon(Core.Colours, 16);
-			Button.Pressed += Pressed;
-			Button.GuiInput += _ => AltPressed();
-		}
 	}
 }
 
