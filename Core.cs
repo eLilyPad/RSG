@@ -224,7 +224,10 @@ public sealed partial class Core : Node
 			.ChangeInput(puzzle, menu, handler);
 		public void RefreshIcon(string puzzleName, string packName = PuzzleManager.SavedPackName)
 		{
-			Assert(_puzzleDisplays.ContainsKey(packName), $"Pack '{packName}' not found in pack display pool.");
+			Assert(
+				condition: _puzzleDisplays.ContainsKey(packName),
+				$"Pack '{packName}' not found in pack display pool."
+			);
 			if (!_puzzleDisplays[packName].TryGetByName(name: puzzleName, value: out var display)) return;
 			display.Button.Icon = handler.ToIcon(colours: Colours);
 		}
