@@ -17,8 +17,6 @@ public sealed partial class PuzzleManager
 		new([.. FileManager.GetSaved()], SavedPackName),
 		.. Instance.PuzzlePacks
 	];
-	public static IReadOnlyList<Pack> GetPuzzlePacks() => [.. Instance.PuzzlePacks];
-	public static IList<SaveData> GetSavedPuzzles() => FileManager.GetSaved();
 	public static void Save(OneOf<PuzzleData, SaveData> puzzle)
 	{
 		puzzle.Switch(Puzzle, Savable);
