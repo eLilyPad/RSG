@@ -15,12 +15,15 @@ public interface IColours
 	Color NonogramTileBackground2 { get; }
 	Color NonogramTileBackground1 { get; }
 	Color NonogramTileBackgroundFilled { get; }
+	Color NonogramPuzzleComplete { get; }
+	Color NonogramPuzzleInComplete { get; }
 
 	Color ChequeredNonogramTile(Vector2I position, Mode mode)
 	{
 		bool alternative = position.IsOnChequered(Tile.Pool.ChunkSize);
 		return NonogramTileBackground(mode, alternative);
 	}
+	Color CompletionColour(SaveData save) => save.IsComplete ? NonogramPuzzleComplete : NonogramPuzzleInComplete;
 	Color NonogramTileBackground(Mode mode, bool alternative)
 	{
 		Color

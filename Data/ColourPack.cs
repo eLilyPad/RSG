@@ -19,9 +19,12 @@ public sealed partial class ColourPack : Resource, Nonogram.IColours, Minesweepe
 	[Export] public Color NonogramTileBackground2 { get; private set; } = Colors.BlanchedAlmond;
 	[Export] public Color NonogramTileBackground1 { get; private set; } = Colors.FloralWhite;
 	[Export] public Color NonogramTileBackgroundFilled { get; private set; } = Colors.Gold;
+	[Export] public Color NonogramPuzzleComplete { get; private set; } = Colors.Green;
+	[Export] public Color NonogramPuzzleInComplete { get; private set; } = Colors.Black;
 
 	[Export] public Color MinesweeperBombBackground { get; private set; } = Colors.Black;
 	[Export] public Color MinesweeperEmptyBackground { get; private set; } = Colors.White;
 	[Export] public Color MinesweeperCoveredBackground { get; private set; } = Colors.Beige;
 	[Export] public Color MinesweeperBackground { get; private set; } = Colors.DarkSeaGreen;
+
 }
