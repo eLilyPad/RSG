@@ -21,7 +21,7 @@ public static class PuzzleSelectorExtensions
 		{
 			if (input is InputEventMouseButton { Pressed: false }) return;
 			if (!MouseButton.Left.IsPressed() && !MouseButton.Right.IsPressed()) return;
-			handler.Pressed(display, menu, puzzle);
+			handler.Pressed(display, toHide: [menu, menu.Levels], data: puzzle);
 		}
 	}
 
@@ -104,7 +104,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 			}
 			T Configure(T display, PuzzleData puzzle);
 		}
-		public interface IPressed { T Pressed<T>(T display, UI.MainMenu menu, SaveData data) where T : Display; }
+		public interface IPressed { T Pressed<T>(T display, ReadOnlySpan<Control> toHide, SaveData data) where T : Display; }
 		public sealed partial class Game : Display;
 		public sealed partial class Studio : Display;
 		public ColorRect Background { get; } = new ColorRect { Name = "Background", }

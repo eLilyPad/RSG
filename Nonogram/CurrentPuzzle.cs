@@ -115,17 +115,16 @@ public sealed record class CurrentPuzzle : PuzzleSelector.Display.IPressed, IIco
 
 	public void RefreshHints() => _hints.Refresh();
 	public ImageTexture ToIcon(IColours colours) => Puzzle.Expected.AsIcon(colours);
-	public T Pressed<T>(T display, UI.MainMenu menu, SaveData data)
+	public T Pressed<T>(T display, ReadOnlySpan<Control> toHide, SaveData data)
 	where T : PuzzleSelector.Display
 	{
 		bool leftPressed = MouseButton.Left.IsPressed(), rightPressed = MouseButton.Right.IsPressed();
-		ReadOnlySpan<Control> menuToHide = [menu, menu.Levels];
 		Assert(
 			condition: leftPressed || rightPressed,
 			"Pressed event should only be triggered by mouse button input"
 		);
 		Assert(
-			condition: menuToHide.AllValidInstances(),
+			condition: toHide.AllValidInstances(),
 			"Menu and levels display must be valid"
 		);
 		switch (display)
@@ -133,7 +132,7 @@ public sealed record class CurrentPuzzle : PuzzleSelector.Display.IPressed, IIco
 			case PuzzleSelector.Display.Game when leftPressed:
 			case PuzzleSelector.Display.Studio when rightPressed:
 				Type = Type.Game;
-				foreach (var c in menuToHide) c.Visible = false;
+				foreach (var c in toHide) c.Visible = false;
 				break;
 			case PuzzleSelector.Display.Studio when leftPressed:
 				Type = Type.Studio;
