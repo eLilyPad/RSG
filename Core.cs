@@ -185,7 +185,12 @@ public sealed partial class Core : Node
 		}
 		Input.RunEvent(input);
 
-		void DialogueFinished() => Container.Menu.Show();
+		void DialogueFinished()
+		{
+			Container.Menu.Show();
+			Container.Menu.Buttons.Show();
+		}
+
 	}
 
 	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
