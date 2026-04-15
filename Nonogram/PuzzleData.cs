@@ -139,7 +139,7 @@ public sealed class PuzzleData : Display.Data
 				Puzzles = [
 					new("Heart Emoji", selector: HeartEmoji, size) { DialogueName = Data.Intro},
 					new("Kitty", selector: Cat, size) { DialogueName = Data.CatOnThePath},
-					new("Spiral", selector: Spiral, size),
+					//new("Spiral", selector: Spiral, size),
 					new("Smiley Face", selector: SmileyEmoji, size),
 					//new("Noise", selector: position => position.IsOverNoiseThreshold(threshold: 0), size),
 					//new("Grid", selector: position => position.X % 3 == 0 || position.Y % 3 == 0, size),
