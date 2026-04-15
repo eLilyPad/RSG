@@ -120,7 +120,7 @@ public sealed partial class PuzzleSelector : PanelContainer
 			Background.Color = Puzzle.CompletionColour;
 
 			Button.Name = Puzzle.Name + " Button";
-			Button.Text = Puzzle.Name;
+			Button.Text = Puzzle.IsComplete ? Puzzle.Name : string.Empty;
 			Button.Icon = Puzzle.AsIcon(Core.Colours, 16);
 			Button.Pressed += Pressed;
 		}
