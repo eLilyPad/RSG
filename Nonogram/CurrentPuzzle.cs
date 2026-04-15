@@ -55,7 +55,7 @@ public sealed record class CurrentPuzzle : PuzzleSelector.Display.IPressed, IIco
 					break;
 			}
 		}
-	} = Type.Studio;
+	} = Type.Game;
 	public Settings Settings
 	{
 		get; set
@@ -114,7 +114,12 @@ public sealed record class CurrentPuzzle : PuzzleSelector.Display.IPressed, IIco
 	}
 
 	public void RefreshHints() => _hints.Refresh();
-	public ImageTexture ToIcon(IColours colours) => Puzzle.Expected.AsIcon(colours);
+	public ImageTexture ToIcon(IColours colours) => Type switch
+	{
+		Type.Studio => Puzzle.Expected.AsIcon(colours),
+		Type.Game => Puzzle.AsIcon(colours),
+		_ => throw new InvalidOperationException("Invalid puzzle type")
+	};
 	public T Pressed<T>(T display, ReadOnlySpan<Control> toHide, SaveData data)
 	where T : PuzzleSelector.Display
 	{
@@ -141,21 +146,6 @@ public sealed record class CurrentPuzzle : PuzzleSelector.Display.IPressed, IIco
 		Puzzle = data;
 		UI.Visible = true;
 		return display;
-	}
-	public void GamePuzzleDisplayPressed(UI.MainMenu menu, SaveData data)
-	{
-		if (!GodotObject.IsInstanceValid(menu.Levels)) return;
-		if (!GodotObject.IsInstanceValid(menu)) return;
-		Type = Type.Game;
-		Puzzle = data;
-		UI.Visible = true;
-		menu.Levels.Visible = menu.Visible = false;
-	}
-	public void StudioPuzzleDisplayPressed(SaveData data)
-	{
-		Puzzle = data;
-		Type = Type.Studio;
-		UI.Visible = true;
 	}
 	public void ChangePuzzleSize(int size)
 	{
