@@ -113,7 +113,8 @@ public sealed record Console
 	{
 		Name = "Console",
 		Visible = false,
-		TopLevel = true
+		TopLevel = true,
+		ZIndex = (int)RenderingServer.CanvasItemZMax
 	}.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 
 	public IEnumerable<string> Prefixes => [.. Modules.Keys];
