@@ -88,15 +88,16 @@ public sealed record Console
 		ReadOnlySpan<char> span = prefix.AsSpan().Trim();
 		while (CommandInput.IsValidPrefix(ref i, ref span)) i++;
 		Assert(i == prefix.Length, "given prefix is not valid");
-		Instance.Modules[prefix] = [];
+		var module = Instance.Modules.GetOrCreate(prefix, create: _ => []);
 		foreach ((string phrase, Command command) in configs)
 		{
-			Instance.Modules[prefix][phrase] = command;
+			module[phrase] = command;
 		}
+		Instance.Modules[prefix] = module;
 	}
 	public static void Log(string value)
 	{
-		Container.Log.Label.Text += value + "\n"; ;
+		Container.Log.Label.Text += value + "\n";
 	}
 	public static void GrabInputFocus(bool clearSuggestions = false)
 	{
@@ -121,8 +122,7 @@ public sealed record Console
 	public Dictionary<string, Dictionary<string, Command>> Modules { private get; init; } = [];
 	private Console()
 	{
-		ConsoleContainer console = Container;
-		ConsoleContainer.InputContainer input = console.Input;
+		ConsoleContainer.InputContainer input = Container.Input;
 		LineEdit line = input.Line;
 		ItemList suggestionDisplay = input.SuggestionDisplay;
 
