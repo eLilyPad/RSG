@@ -45,7 +45,7 @@ public sealed partial class SaveData : Data, IPuzzleState
 	public override string Name => Expected.Name;
 	public override int Size => Expected.Size;
 	public int Scale => Mathf.CeilToInt(Size * Size / Size);
-	public bool IsComplete { get; private set; }
+	public bool IsComplete => Tiles.All(IsCorrect);
 	public Color CompletionColour => this switch
 	{
 		{ IsComplete: true } => Colors.Green,
@@ -123,11 +123,12 @@ public sealed partial class SaveData : Data, IPuzzleState
 	internal override void ChangeState(Vector2I position, Mode mode)
 	{
 		base.ChangeState(position, mode);
-		IsComplete = Tiles.All(IsCorrect);
-		if (IsComplete) Completed(this);
-
-		bool IsCorrect(KeyValuePair<Vector2I, Mode> pair) => Expected.States.IsCorrect(position: pair.Key, current: pair.Value);
+		if (IsComplete)
+		{
+			Completed(this);
+		}
 	}
+	bool IsCorrect(KeyValuePair<Vector2I, Mode> pair) => Expected.States.IsCorrect(position: pair.Key, current: pair.Value);
 	internal void BlockCompletedLines(Tile.Pool tiles, Vector2I position)
 	{
 		foreach ((Vector2I pos, Mode current) in InLines(position))
