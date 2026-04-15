@@ -213,15 +213,11 @@ public sealed partial class Core : Node
 	}
 
 	private abstract class NonogramDisplays<T, TPack, TDisplay>(T handler, MainMenu menu, Node parent)
-	: NodePool<string, TPack>.PooledGrand<TDisplay>(parent),
-		PuzzleSelector.Display.IConfigure<TDisplay>
+	: NodePool<string, TPack>.PooledGrand<TDisplay>(parent)
 	where T : PuzzleSelector.Display.IPressed, IIconize
 	where TPack : PuzzleSelector.PackDisplay, new()
 	where TDisplay : PuzzleSelector.Display, new()
 	{
-		public TDisplay Configure(TDisplay display, PuzzleData puzzle) => display
-			.ChangePuzzle(save: puzzle)
-			.ChangeInput(puzzle, menu, handler);
 		public void RefreshIcon(string puzzleName, string packName = PuzzleManager.SavedPackName)
 		{
 			Assert(
@@ -234,12 +230,18 @@ public sealed partial class Core : Node
 		public void Load(IEnumerable<PuzzleData.Pack>? configs = null)
 		{
 			configs ??= PuzzleManager.SelectorConfigs;
-			foreach (PuzzleData.Pack data in configs)
+			foreach ((IReadOnlyCollection<PuzzleData> Puzzles, string Name) in configs)
 			{
-				IList<TDisplay> displays = GetGrandChildren(data.Name);
-				foreach ((int i, PuzzleData puzzle) in data.Puzzles.Index())
+				IList<TDisplay> displays = GetGrandChildren(Name);
+				var parent = GetOrCreate(Name).Puzzles.Value;
+				foreach ((int i, PuzzleData puzzle) in Puzzles.Index())
 				{
-					if (displays.Count <= i) displays.Add(Configure(CreateDisplay(puzzle), puzzle));
+					if (displays.Count <= i)
+					{
+						TDisplay display = new() { Name = puzzle.Name };
+						parent.AddChild(display);
+						displays.Add(Configure(display, puzzle));
+					}
 					else Configure(displays[i], puzzle);
 				}
 				return;
@@ -252,13 +254,9 @@ public sealed partial class Core : Node
 			Parent(key).AddChild(pack);
 			return pack;
 		}
-		private TDisplay CreateDisplay(PuzzleData puzzle)
-		{
-			TDisplay display = new() { Name = puzzle.Name };
-			DisplaysParent(puzzle).AddChild(display);
-			return display;
-		}
-		private Container DisplaysParent(PuzzleData puzzle) => GetOrCreate(puzzle.Name).Puzzles.Value;
+		private TDisplay Configure(TDisplay display, PuzzleData puzzle) => display
+			.ChangePuzzle(save: puzzle)
+			.ChangeInput(puzzle, menu, handler);
 	}
 	private sealed class LevelSelectorDisplays(Core Core)
 	: NonogramDisplays<CurrentPuzzle, PuzzleSelector.PackDisplay.Game, PuzzleSelector.Display.Game>(

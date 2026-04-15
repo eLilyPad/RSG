@@ -95,15 +95,6 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public partial class Display : PanelContainer
 	{
-		public interface IConfigure<T> where T : Display
-		{
-			IEnumerable<T> Configure(PuzzleData puzzle, params IEnumerable<T> displays)
-			{
-				foreach (T display in displays) Configure(display, puzzle);
-				return displays;
-			}
-			T Configure(T display, PuzzleData puzzle);
-		}
 		public interface IPressed { T Pressed<T>(T display, ReadOnlySpan<Control> toHide, SaveData data) where T : Display; }
 		public sealed partial class Game : Display;
 		public sealed partial class Studio : Display;
