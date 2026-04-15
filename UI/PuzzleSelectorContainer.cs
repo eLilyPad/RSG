@@ -2,19 +2,59 @@ using Godot;
 
 namespace RSG.Nonogram;
 
-public static class PuzzleSelectorExtensions
+public abstract class Displays<T, TPack, TDisplay>(
+	T handler,
+	IColours colours,
+	UI.MainMenu menu,
+	Node parent
+)
+: NodePool<string, TPack>.PooledGrand<TDisplay>(parent)
+	where T : PuzzleSelector.Display.IPressed, IIconize
+	where TPack : PuzzleSelector.PackDisplay, new()
+	where TDisplay : PuzzleSelector.Display, new()
 {
-	public static T ChangePuzzle<T>(this T display, SaveData save) where T : PuzzleSelector.Display
+	public void RefreshIcon(string puzzleName, string packName = PuzzleManager.SavedPackName)
 	{
-		display.Background.Color = save.CompletionColour;
-		display.Button.Name = (display.Button.Text = display.Name = save.Name) + " Button";
-		display.Button.Icon = save.Expected.AsIcon(Core.Colours, 16);
-		return display;
+		Assert(
+			condition: _puzzleDisplays.ContainsKey(packName),
+			$"Pack '{packName}' not found in pack display pool."
+		);
+		if (!_puzzleDisplays[packName].TryGetByName(name: puzzleName, value: out var display)) return;
+		display.Button.Icon = handler.ToIcon(colours: colours);
 	}
-	public static T ChangeInput<T>(this T display, SaveData puzzle, UI.MainMenu menu, PuzzleSelector.Display.IPressed handler)
-	where T : PuzzleSelector.Display
+	public void Load(IEnumerable<PuzzleData.Pack>? configs = null)
 	{
+		configs ??= PuzzleManager.SelectorConfigs;
+		foreach ((IReadOnlyCollection<PuzzleData> Puzzles, string Name) in configs)
+		{
+			IList<TDisplay> displays = GetGrandChildren(Name);
+			var parent = GetOrCreate(Name).Puzzles.Value;
+			foreach ((int i, PuzzleData puzzle) in Puzzles.Index())
+			{
+				if (displays.Count <= i)
+				{
+					TDisplay display = new() { Name = puzzle.Name };
+					parent.AddChild(display);
+					displays.Add(Configure(display, puzzle));
+				}
+				else Configure(displays[i], puzzle);
+			}
+		}
+	}
+	protected override TPack Create(string key)
+	{
+		TPack pack = new TPack() { Name = key }
+			.Preset(Control.LayoutPreset.FullRect, Control.LayoutPresetMode.KeepSize);
+		Parent(key).AddChild(pack);
+		return pack;
+	}
+	private TDisplay Configure(TDisplay display, PuzzleData puzzle)
+	{
+		display.Background.Color = colours.CompletionColour(puzzle);
+		display.Button.Name = (display.Button.Text = display.Name = puzzle.Name) + " Button";
+		display.Button.Icon = handler.ToIcon(colours);
 		display.InputHandler = InputHandler;
+
 		return display;
 
 		void InputHandler(InputEvent input)
@@ -24,7 +64,6 @@ public static class PuzzleSelectorExtensions
 			handler.Pressed(display, toHide: [menu, menu.Levels], data: puzzle);
 		}
 	}
-
 }
 
 public sealed partial class PuzzleSelector : PanelContainer

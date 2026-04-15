@@ -212,61 +212,17 @@ public sealed partial class Core : Node
 		foreach (CanvasItem item in toShow) item.Show();
 	}
 
-	private abstract class NonogramDisplays<T, TPack, TDisplay>(T handler, MainMenu menu, Node parent)
-	: NodePool<string, TPack>.PooledGrand<TDisplay>(parent)
-	where T : PuzzleSelector.Display.IPressed, IIconize
-	where TPack : PuzzleSelector.PackDisplay, new()
-	where TDisplay : PuzzleSelector.Display, new()
-	{
-		public void RefreshIcon(string puzzleName, string packName = PuzzleManager.SavedPackName)
-		{
-			Assert(
-				condition: _puzzleDisplays.ContainsKey(packName),
-				$"Pack '{packName}' not found in pack display pool."
-			);
-			if (!_puzzleDisplays[packName].TryGetByName(name: puzzleName, value: out var display)) return;
-			display.Button.Icon = handler.ToIcon(colours: Colours);
-		}
-		public void Load(IEnumerable<PuzzleData.Pack>? configs = null)
-		{
-			configs ??= PuzzleManager.SelectorConfigs;
-			foreach ((IReadOnlyCollection<PuzzleData> Puzzles, string Name) in configs)
-			{
-				IList<TDisplay> displays = GetGrandChildren(Name);
-				var parent = GetOrCreate(Name).Puzzles.Value;
-				foreach ((int i, PuzzleData puzzle) in Puzzles.Index())
-				{
-					if (displays.Count <= i)
-					{
-						TDisplay display = new() { Name = puzzle.Name };
-						parent.AddChild(display);
-						displays.Add(Configure(display, puzzle));
-					}
-					else Configure(displays[i], puzzle);
-				}
-				return;
-			}
-		}
-		protected override TPack Create(string key)
-		{
-			TPack pack = new TPack() { Name = key }
-				.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepSize);
-			Parent(key).AddChild(pack);
-			return pack;
-		}
-		private TDisplay Configure(TDisplay display, PuzzleData puzzle) => display
-			.ChangePuzzle(save: puzzle)
-			.ChangeInput(puzzle, menu, handler);
-	}
 	private sealed class LevelSelectorDisplays(Core Core)
-	: NonogramDisplays<CurrentPuzzle, PuzzleSelector.PackDisplay.Game, PuzzleSelector.Display.Game>(
+	: Displays<CurrentPuzzle, PuzzleSelector.PackDisplay.Game, PuzzleSelector.Display.Game>(
 		handler: Core.Nonogram,
+		colours: Colours,
 		menu: Core.Container.Menu,
 		parent: Core.Container.Menu.Levels.Puzzles.Value
 	);
 	private sealed class StudioSelectorDisplays(Core Core)
-	: NonogramDisplays<CurrentPuzzle, PuzzleSelector.PackDisplay.Studio, PuzzleSelector.Display.Studio>(
+	: Displays<CurrentPuzzle, PuzzleSelector.PackDisplay.Studio, PuzzleSelector.Display.Studio>(
 		handler: Core.Nonogram,
+		colours: Colours,
 		menu: Core.Container.Menu,
 		parent: Core.Nonogram.UI.Studio.PacksTab.Scroll.Puzzles
 	);
@@ -307,9 +263,8 @@ public sealed partial class Core : Node
 		{
 			var current = Core.Nonogram;
 			var menu = Core.Container.Menu;
-			var type = current.Type;
 
-			current.Type = type is Display.Type.Studio ? Display.Type.Game : type;
+			current.Type = Display.Type.Game;
 			current.UI.Visible = current.PuzzleReady;
 			menu.Visible = menu.Levels.Visible = !current.PuzzleReady;
 			menu.Buttons.Visible = false;
