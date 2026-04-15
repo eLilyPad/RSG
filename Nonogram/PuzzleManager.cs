@@ -15,7 +15,7 @@ public sealed partial class PuzzleManager
 	public const string SavedPackName = "Saved Puzzles";
 	public static IReadOnlyList<Pack> SelectorConfigs => [
 		new([.. FileManager.GetSaved()], SavedPackName),
-		.. Instance.PuzzlePacks
+		Pack.Procedural
 	];
 	public static void Save(OneOf<PuzzleData, SaveData> puzzle)
 	{
@@ -31,8 +31,6 @@ public sealed partial class PuzzleManager
 			Instance.Puzzles[data.Name] = data;
 		}
 	}
-
-	public List<Pack> PuzzlePacks { get; } = [Pack.Procedural()];
 	public Dictionary<string, Data> Puzzles { internal get; init; } = new() { [Data.DefaultName] = new PuzzleData() };
 
 	private PuzzleManager() { }
