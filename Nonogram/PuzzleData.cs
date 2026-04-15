@@ -156,7 +156,8 @@ public sealed class PuzzleData : Data
 	}
 	public readonly record struct Pack(IReadOnlyCollection<PuzzleData> Puzzles, string Name = "Pack")
 	{
-		public static Pack Procedural()
+		public static readonly Pack Procedural = CreateProcedural();
+		private static Pack CreateProcedural()
 		{
 			const int size = DefaultSize, radius = size / 2;
 			Vector2I puzzleCenter = Vector2I.One * radius;
