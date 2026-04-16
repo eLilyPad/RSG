@@ -32,6 +32,9 @@ public sealed partial class DialogueSelector : PanelContainer
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
 	public ScrollContainer Scroll { get; } = new ScrollContainer()
 		.Preset(preset: LayoutPreset.FullRect, resizeMode: LayoutPresetMode.KeepSize);
+
+	public Container EmptyDialoguesNotification { get; } = new NoDialoguesNotificationContainer();
+
 	public Labelled<VBoxContainer> DisplayContainer { get; } = new Labelled<VBoxContainer>()
 	{
 		Name = "Dialogues Container",
@@ -42,6 +45,31 @@ public sealed partial class DialogueSelector : PanelContainer
 			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill)
 	}
 		.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
-	public override void _Ready() => this.Add(Background, Scroll.Add(DisplayContainer));
+	public override void _Ready() => this.Add(
+		Background,
+		EmptyDialoguesNotification,
+		Scroll.Add(DisplayContainer)
+	);
 
+	private sealed partial class NoDialoguesNotificationContainer : PanelContainer
+	{
+		public RichTextLabel EmptyDialoguesLabel { get; } = new RichTextLabel
+		{
+			Name = "EmptyDialoguesLabel",
+			Text = "No Dialogues Available, Play Some Puzzles To Unlock Dialogues!",
+			FitContent = true,
+			VerticalAlignment = VerticalAlignment.Center,
+			HorizontalAlignment = HorizontalAlignment.Center
+		}
+			.Preset(LayoutPreset.Center, LayoutPresetMode.KeepSize)
+			.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+
+		public override void _Ready()
+		{
+			Name = "EmptyDialoguesNotification";
+			Visible = false;
+			this.Add(EmptyDialoguesLabel)
+				.SizeFlags(horizontal: SizeFlags.ExpandFill, vertical: SizeFlags.ExpandFill);
+		}
+	}
 }

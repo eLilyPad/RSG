@@ -252,20 +252,29 @@ public sealed partial class Core : Node
 		public void DialogueSelectorVisibilityChanged()
 		{
 			var menu = Core.Container.Menu;
-			var value = menu.Dialogues;
-			var dialogues = value.DisplayContainer.Value;
-			if (!value.Visible)
+			var selector = menu.Dialogues;
+			var container = selector.DisplayContainer.Value;
+
+			if (!selector.Visible)
 			{
 				menu.Hide();
 				return;
 			}
-			dialogues.Remove(true, Core._dialogueSelectorDisplays);
+
+			var availableDialogues = Dialogues.AvailableDialogues;
+			bool hasDialogues = availableDialogues.Any();
+
+			container.Remove(true, Core._dialogueSelectorDisplays);
 			Core._dialogueSelectorDisplays.Clear();
-			foreach (var config in Dialogues.AvailableDialogues)
+			selector.EmptyDialoguesNotification.Visible = !hasDialogues;
+
+			if (!hasDialogues) return;
+
+			foreach (var config in availableDialogues)
 			{
-				var node = DialogueSelector.DialogueDisplay.Create(config, value);
-				dialogues.AddChild(node);
-				Core._dialogueSelectorDisplays.Add(node);
+				var display = DialogueSelector.DialogueDisplay.Create(config, selector);
+				container.AddChild(display);
+				Core._dialogueSelectorDisplays.Add(display);
 			}
 		}
 		public void LevelsPressed() => Core.Container.Menu.Levels.Show();
