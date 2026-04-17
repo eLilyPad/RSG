@@ -64,7 +64,7 @@ public static class SystemExtensions
 		Array.Resize(ref result, actualSize);
 		return values;
 	}
-	public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> create)
+	public static TValue GetOrCreate<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> create)
 	where TKey : notnull
 	{
 		if (!dictionary.TryGetValue(key, out TValue? value))
