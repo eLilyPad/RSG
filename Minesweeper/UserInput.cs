@@ -14,7 +14,7 @@ sealed class UserInput
 	public OneOf<Flag, UnCovered, Nothing> MousePressed(Vector2I position)
 	{
 		Tile tile = Tiles.GetOrCreate(position);
-		bool flagPressed = Input.IsMouseButtonPressed(FlagButton);
+		bool flagPressed = FlagButton.IsPressed();
 		if (flagPressed)
 		{
 			tile.Flagged = !tile.Flagged;
