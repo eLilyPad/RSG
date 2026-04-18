@@ -122,9 +122,9 @@ public static class ImageExtensions
 		return x >= 0 && y >= 0 && x < image.GetWidth() && y < image.GetHeight();
 	}
 }
-public static class Input
+public static class InputExtensions
 {
-	public static bool IsPressed(this MouseButton button) => Godot.Input.IsMouseButtonPressed(button);
+	public static bool IsPressed(this MouseButton button) => Input.IsMouseButtonPressed(button);
 }
 public static class GDX
 {
