@@ -9,8 +9,8 @@ public abstract partial class Display : AspectRatioContainer
 	public const string BlockText = "X", FillText = "O", EmptyText = " ", EmptyHint = "0";
 	public const MouseButton FillButton = MouseButton.Left, BlockButton = MouseButton.Right;
 
-	public static TileMode PressedMode => Input.IsMouseButtonPressed(BlockButton) ? TileMode.Blocked
-		: Input.IsMouseButtonPressed(FillButton) ? TileMode.Filled
+	public static TileMode PressedMode => BlockButton.IsPressed() ? TileMode.Blocked
+		: FillButton.IsPressed() ? TileMode.Filled
 		: TileMode.Clear;
 
 	public MarginContainer Margin { get; } = new MarginContainer { }
@@ -35,6 +35,10 @@ public abstract partial class Display : AspectRatioContainer
 		_ => this
 	};
 	public override sealed void _Ready() => this.Add(
-		Margin.Add(Grid.Add(Spacer.Add(Timer), Columns, Rows, TilesGrid))
+		Margin.Add(
+			Grid.Add(
+				Spacer.Add(Timer), Columns, Rows, TilesGrid
+			)
+		)
 	);
 }

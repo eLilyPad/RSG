@@ -109,6 +109,8 @@ public sealed partial class Core : Node
 	private readonly MenuHandler _menuHandler;
 	private readonly GamesHandler _handler;
 	private readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
+	private LevelSelectorDisplays LevelDisplays => field ??= new(Core: this);
+	private StudioSelectorDisplays StudioDisplays => field ??= new(Core: this);
 	private readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
 	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
 	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
@@ -192,62 +194,121 @@ public sealed partial class Core : Node
 		}
 
 	}
+	private sealed class LevelSelectorDisplays(Core Core)
+	: Displays<PuzzleSelector.PackDisplay.Game, PuzzleSelector.PuzzleDisplay.Game>(
+		colours: Colours,
+		menu: Core.Container.Menu,
+		parent: Core.Container.Menu.Levels.Puzzles.Value
+	)
+	{
+		protected override PuzzleSelector.PuzzleDisplay.Game Configure(
+			PuzzleSelector.PuzzleDisplay.Game display,
+			SaveData puzzle
+		)
+		{
+			display = base.Configure(display, puzzle);
+			display.Background.Color = Colours.NonogramCompletionColour(puzzle);
+			puzzle.Modified += _ => display.Button.Icon = GetIcon(puzzle);
+
+			return display;
+		}
+		protected override void Pressed(PuzzleSelector.PuzzleDisplay.Game display, SaveData puzzle, MouseButton _)
+		{
+			var menu = Core.Container.Menu;
+			menu.Visible = menu.Levels.Visible = false;
+			PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
+		}
+	}
+	private sealed class StudioSelectorDisplays(Core Core)
+	: Displays<PuzzleSelector.PackDisplay.Studio, PuzzleSelector.PuzzleDisplay.Studio>(
+		colours: Colours,
+		menu: Core.Container.Menu,
+		parent: PuzzleManager.Current.UI.Studio.PacksTab.Scroll.Puzzles
+	)
+	{
+		protected override Texture2D GetIcon(SaveData puzzle) => puzzle.Expected.AsIcon(Colours);
+		protected override void Pressed(PuzzleSelector.PuzzleDisplay.Studio display, SaveData puzzle, MouseButton button)
+		{
+			switch (button)
+			{
+				case MouseButton.Left:
+					PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
+					break;
+				case MouseButton.Right:
+					PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
+					break;
+			}
+		}
+		protected override PuzzleSelector.PuzzleDisplay.Studio Configure(
+			PuzzleSelector.PuzzleDisplay.Studio display,
+			SaveData puzzle
+		)
+		{
+			display = base.Configure(display, puzzle);
+			puzzle.Expected.Modified += _ => display.Button.Icon = GetIcon(puzzle);
+			return display;
+		}
+	}
 
 	private sealed class MenuHandler(Core Core) : MainMenu.IPress, MainMenu.IReceiveSignals
 	{
 		public void StudioPuzzleSelectorVisibilityChanged()
 		{
 			var root = PuzzleManager.Current.UI.Studio;
-			var puzzles = root.PacksTab.Scroll.Puzzles;
+			//var puzzles = root.PacksTab.Scroll.Puzzles;
 			if (!root.Visible) return;
-			puzzles.Remove(true, Core._studioSelectorDisplays);
-			Core._studioSelectorDisplays.Clear();
-			Core._studioPuzzleSelectorDisplays.Clear();
-			foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
-			{
-				var node = PuzzleSelector.PackDisplay.CreateForStudio(config);
-				foreach (SaveData puzzle in config.Data)
-				{
-					var child = PuzzleSelector.PuzzleDisplay.CreateStudioDisplay(puzzle, pressed);
-					node.Puzzles.Value.Add(child);
-					Core._studioPuzzleSelectorDisplays.Add(child);
-					child.Button.GuiInput += OnRightClick;
-					void pressed() => PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
-					void OnRightClick(InputEvent input)
-					{
-						bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
-						if (!rightClicked) return;
-						PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
-					}
-				}
-				puzzles.AddChild(node);
-				Core._studioSelectorDisplays.Add(node);
-			}
+			//puzzles.Remove(true, Core._studioSelectorDisplays);
+			//Core._studioSelectorDisplays.Clear();
+			//Core._studioPuzzleSelectorDisplays.Clear();
+			//foreach ((string Name, IEnumerable<SaveData> Data) config in PuzzleManager.SelectorConfigs)
+			//{
+			//	var node = PuzzleSelector.PackDisplay.CreateForStudio(config);
+			//	foreach (SaveData puzzle in config.Data)
+			//	{
+			//		var child = PuzzleSelector.PuzzleDisplay.CreateStudioDisplay(puzzle, pressed);
+			//		node.Puzzles.Value.Add(child);
+			//		Core._studioPuzzleSelectorDisplays.Add(child);
+			//		child.Button.GuiInput += OnRightClick;
+			//		void pressed() => PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
+			//		void OnRightClick(InputEvent input)
+			//		{
+			//			bool rightClicked = Godot.Input.IsMouseButtonPressed(MouseButton.Right);
+			//			if (!rightClicked) return;
+			//			PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
+			//		}
+			//	}
+			//	puzzles.AddChild(node);
+			//	Core._studioSelectorDisplays.Add(node);
+			//}
+
+			Core.StudioDisplays.Load(PuzzleManager.SelectorConfigs);
 		}
 		public void PuzzleSelectorVisibilityChanged()
 		{
 			var menu = Core.Container.Menu;
 			var selector = menu.Levels;
-			var puzzles = selector.Puzzles.Value;
+			//var puzzles = selector.Puzzles.Value;
 			if (!selector.Visible)
 			{
 				menu.Hide();
 				return;
 			}
-			puzzles.Remove(true, Core._levelSelectorDisplays);
-			Core._levelSelectorDisplays.Clear();
-			foreach (var config in PuzzleManager.SelectorConfigs)
-			{
-				var node = PuzzleSelector.PackDisplay.CreateForGame(config);
-				foreach (SaveData puzzle in config.Data)
-				{
-					var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
-					node.Puzzles.Value.Add(child);
-					void pressed() => PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
-				}
-				puzzles.AddChild(node);
-				Core._levelSelectorDisplays.Add(node);
-			}
+			//puzzles.Remove(true, Core._levelSelectorDisplays);
+			//Core._levelSelectorDisplays.Clear();
+			//foreach (var config in PuzzleManager.SelectorConfigs)
+			//{
+			//	var node = PuzzleSelector.PackDisplay.CreateForGame(config);
+			//	foreach (SaveData puzzle in config.Data)
+			//	{
+			//		var child = PuzzleSelector.PuzzleDisplay.CreateGameDisplay(puzzle, pressed);
+			//		node.Puzzles.Value.Add(child);
+			//		void pressed() => PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
+			//	}
+			//	puzzles.AddChild(node);
+			//	Core._levelSelectorDisplays.Add(node);
+			//}
+
+			Core.LevelDisplays.Load(PuzzleManager.SelectorConfigs);
 		}
 		public void DialogueSelectorVisibilityChanged()
 		{
@@ -359,12 +420,14 @@ public sealed partial class Core : Node
 		public void Failed(Manager.Data data)
 		{
 			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = Core.Minesweeper.UI.CompletionScreen;
+
 			completionScreen.Show();
 			completionScreen.Value.TitleText = "Game Over";
 		}
 		public void Completed(Manager.Data data)
 		{
 			Backgrounded<MinesweeperContainer.CompletedScreen> completionScreen = Core.Minesweeper.UI.CompletionScreen;
+
 			completionScreen.Show();
 			completionScreen.Value.TitleText = "Mines Located!";
 		}
@@ -372,6 +435,7 @@ public sealed partial class Core : Node
 		{
 			CurrentPuzzle current = PuzzleManager.Current;
 			Hints hints = current.UI.Hints;
+
 			hints.Refresh();
 			current.RefreshCurrentStudioIcon(
 				colours: Colours,
@@ -382,6 +446,7 @@ public sealed partial class Core : Node
 		{
 			Display.Type type = PuzzleManager.Current.Type;
 			Nonogram.Tile.Pool tiles = PuzzleManager.Current.UI.Tiles;
+
 			if (type is not Display.Type.Game) return;
 			tiles.TryLock(position);
 		}

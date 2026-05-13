@@ -18,7 +18,7 @@ public interface IColours
 	Color NonogramPuzzleComplete { get; }
 	Color NonogramPuzzleInComplete { get; }
 
-	Color CompletionColour(SaveData save) => save.IsComplete ? NonogramPuzzleComplete : NonogramPuzzleInComplete;
+	Color NonogramCompletionColour(SaveData save) => save.IsComplete ? NonogramPuzzleComplete : NonogramPuzzleInComplete;
 	Color ChequeredNonogramTile(Vector2I position, Mode mode)
 	{
 		bool alternative = position.IsOnChequered(Tile.Pool.ChunkSize);

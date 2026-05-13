@@ -6,8 +6,18 @@ using static Display;
 using Puzzles = PuzzleManager;
 
 public interface IHavePuzzleSettings { Settings Settings { get; } }
+public interface IIconize
+{
+	ImageTexture ToIcon(SaveData save, IColours colours, Type type) => type switch
+	{
+		Type.Studio => save.Expected.AsIcon(colours),
+		Type.Game => save.AsIcon(colours),
+		_ => throw new InvalidOperationException("Invalid puzzle type")
+	};
+	ImageTexture ToIcon(IColours colours);
+}
 
-public sealed record class CurrentPuzzle
+public sealed record class CurrentPuzzle : IIconize, PuzzleSelector.PuzzleDisplay.IPressed
 {
 	private const TileMode defaultValue = TileMode.Clear;
 
@@ -40,6 +50,32 @@ public sealed record class CurrentPuzzle
 	{
 		Puzzle.Clear();
 		UI.Refresh();
+	}
+	public ImageTexture ToIcon(IColours colours) => Type switch
+	{
+		Type.Studio => Puzzle.Expected.AsIcon(colours),
+		Type.Game => Puzzle.AsIcon(colours),
+		_ => throw new InvalidOperationException("Invalid puzzle type")
+	};
+	public T Pressed<T>(T display, SaveData data) where T : PuzzleSelector.PuzzleDisplay
+	{
+		bool leftPressed = MouseButton.Left.IsPressed(), rightPressed = MouseButton.Right.IsPressed();
+		Assert(
+			condition: leftPressed || rightPressed,
+			"Pressed event should only be triggered by mouse button input"
+		);
+
+		Type = display switch
+		{
+			PuzzleSelector.PuzzleDisplay.Game when leftPressed => Type.Game,
+			PuzzleSelector.PuzzleDisplay.Studio when rightPressed => Type.Game,
+			PuzzleSelector.PuzzleDisplay.Studio when leftPressed => Type.Studio,
+			_ => throw new InvalidOperationException("Invalid display type or mouse button input")
+		};
+
+		Puzzle = data;
+		UI.Visible = true;
+		return display;
 	}
 	public void GamePuzzleDisplayPressed(UI.MainMenu menu, SaveData data)
 	{
@@ -149,6 +185,7 @@ public sealed record class CurrentPuzzle
 		if (_timerHandler.ShouldStartTimer(mode: input)) Timer.TryStart();
 		return this;
 	}
+
 	private sealed class PuzzleListener(CurrentPuzzle Current) : ISaveListener
 	{
 		public void PuzzleTilesChanged(Vector2I _) => Current._hints.Hints.Refresh();
@@ -204,8 +241,8 @@ public sealed record class CurrentPuzzle
 		}
 		private static bool TryGetMouseInput(in TileMode ignoredValue, out TileMode mode)
 		{
-			bool isFilledPressed = Input.IsMouseButtonPressed(FillButton);
-			bool isBlockPressed = Input.IsMouseButtonPressed(BlockButton);
+			bool isFilledPressed = Godot.Input.IsMouseButtonPressed(FillButton);
+			bool isBlockPressed = Godot.Input.IsMouseButtonPressed(BlockButton);
 			if (isFilledPressed)
 			{
 				mode = TileMode.Filled;

@@ -4,8 +4,6 @@ namespace RSG;
 
 public sealed partial class ColourPack : Resource, Nonogram.IColours, Minesweeper.IColours
 {
-	public static ColourPack Default { get; } = new ColourPack();
-
 	[Export] public Color MainMenuBackground { get; private set; } = Colors.Black;
 	[Export] public Color MainMenuLevelsBackground { get; private set; } = Colors.DimGray;
 	[Export] public Color MainMenuDialoguesBackground { get; private set; } = Colors.DimGray;
@@ -26,4 +24,7 @@ public sealed partial class ColourPack : Resource, Nonogram.IColours, Minesweepe
 	[Export] public Color MinesweeperEmptyBackground { get; private set; } = Colors.White;
 	[Export] public Color MinesweeperCoveredBackground { get; private set; } = Colors.Beige;
 	[Export] public Color MinesweeperBackground { get; private set; } = Colors.DarkSeaGreen;
+
+	public Color NonogramCompletionColour(Nonogram.SaveData save) => save.IsComplete
+		? NonogramPuzzleComplete : NonogramPuzzleInComplete;
 }
