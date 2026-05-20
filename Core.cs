@@ -108,10 +108,8 @@ public sealed partial class Core : Node
 	private readonly SettingsModifier _settingsModifier;
 	private readonly MenuHandler _menuHandler;
 	private readonly GamesHandler _handler;
-	private readonly List<PuzzleSelector.PackDisplay> _levelSelectorDisplays = [];
-	private LevelSelectorDisplays LevelDisplays => field ??= new(Core: this);
-	private StudioSelectorDisplays StudioDisplays => field ??= new(Core: this);
-	private readonly List<PuzzleSelector.PackDisplay> _studioSelectorDisplays = [];
+	private PuzzleSelector.LevelDisplays LevelDisplays => field ??= new(Core: this);
+	private PuzzleSelector.StudioDisplays StudioDisplays => field ??= new(Core: this);
 	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
 	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
 	private Manager Minesweeper
@@ -191,62 +189,6 @@ public sealed partial class Core : Node
 		{
 			Container.Menu.Show();
 			Container.Menu.Buttons.Show();
-		}
-
-	}
-	private sealed class LevelSelectorDisplays(Core Core)
-	: Displays<PuzzleSelector.PackDisplay.Game, PuzzleSelector.PuzzleDisplay.Game>(
-		colours: Colours,
-		menu: Core.Container.Menu,
-		parent: Core.Container.Menu.Levels.Puzzles.Value
-	)
-	{
-		protected override PuzzleSelector.PuzzleDisplay.Game Configure(
-			PuzzleSelector.PuzzleDisplay.Game display,
-			SaveData puzzle
-		)
-		{
-			display = base.Configure(display, puzzle);
-			display.Background.Color = Colours.NonogramCompletionColour(puzzle);
-			puzzle.Modified += _ => display.Button.Icon = GetIcon(puzzle);
-
-			return display;
-		}
-		protected override void Pressed(PuzzleSelector.PuzzleDisplay.Game display, SaveData puzzle, MouseButton _)
-		{
-			var menu = Core.Container.Menu;
-			menu.Visible = menu.Levels.Visible = false;
-			PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
-		}
-	}
-	private sealed class StudioSelectorDisplays(Core Core)
-	: Displays<PuzzleSelector.PackDisplay.Studio, PuzzleSelector.PuzzleDisplay.Studio>(
-		colours: Colours,
-		menu: Core.Container.Menu,
-		parent: PuzzleManager.Current.UI.Studio.PacksTab.Scroll.Puzzles
-	)
-	{
-		protected override Texture2D GetIcon(SaveData puzzle) => puzzle.Expected.AsIcon(Colours);
-		protected override void Pressed(PuzzleSelector.PuzzleDisplay.Studio display, SaveData puzzle, MouseButton button)
-		{
-			switch (button)
-			{
-				case MouseButton.Left:
-					PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
-					break;
-				case MouseButton.Right:
-					PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
-					break;
-			}
-		}
-		protected override PuzzleSelector.PuzzleDisplay.Studio Configure(
-			PuzzleSelector.PuzzleDisplay.Studio display,
-			SaveData puzzle
-		)
-		{
-			display = base.Configure(display, puzzle);
-			puzzle.Expected.Modified += _ => display.Button.Icon = GetIcon(puzzle);
-			return display;
 		}
 	}
 

@@ -93,6 +93,53 @@ public sealed partial class PuzzleSelector : PanelContainer
 
 	public override void _Ready() => this.Add(Background, Scroll.Add(Puzzles));
 
+	public sealed partial class StudioDisplays(Core Core) : Displays<PackDisplay.Studio, PuzzleDisplay.Studio>(
+		colours: Core.Colours,
+		menu: Core.Container.Menu,
+		parent: PuzzleManager.Current.UI.Studio.PacksTab.Scroll.Puzzles
+	)
+	{
+		protected override Texture2D GetIcon(SaveData puzzle) => puzzle.Expected.AsIcon(Core.Colours);
+		protected override void Pressed(PuzzleDisplay.Studio display, SaveData puzzle, MouseButton button)
+		{
+			switch (button)
+			{
+				case MouseButton.Left:
+					PuzzleManager.Current.StudioPuzzleDisplayPressed(puzzle);
+					break;
+				case MouseButton.Right:
+					PuzzleManager.Current.GamePuzzleDisplayPressed(Core.Container.Menu, puzzle);
+					break;
+			}
+		}
+		protected override PuzzleDisplay.Studio Configure(PuzzleDisplay.Studio display, SaveData puzzle)
+		{
+			display = base.Configure(display, puzzle);
+			puzzle.Expected.Modified += _ => display.Button.Icon = GetIcon(puzzle);
+			return display;
+		}
+	}
+	public sealed class LevelDisplays(Core Core) : Displays<PackDisplay.Game, PuzzleDisplay.Game>(
+		colours: Core.Colours,
+		menu: Core.Container.Menu,
+		parent: Core.Container.Menu.Levels.Puzzles.Value
+	)
+	{
+		protected override PuzzleDisplay.Game Configure(PuzzleDisplay.Game display, SaveData puzzle)
+		{
+			display = base.Configure(display, puzzle);
+			display.Background.Color = Core.Colours.NonogramCompletionColour(puzzle);
+			puzzle.Modified += _ => display.Button.Icon = GetIcon(puzzle);
+
+			return display;
+		}
+		protected override void Pressed(PuzzleDisplay.Game display, SaveData puzzle, MouseButton _)
+		{
+			var menu = Core.Container.Menu;
+			menu.Visible = menu.Levels.Visible = false;
+			PuzzleManager.Current.GamePuzzleDisplayPressed(menu, puzzle);
+		}
+	}
 	public sealed partial class Studio : PanelContainer
 	{
 		public ScrollContainer Scroll { get; } = new ScrollContainer()
