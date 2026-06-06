@@ -62,6 +62,7 @@ Audio.cs
 Console/
  Console.cs
  ConsoleExtensions.cs
+Core.Classes.cs
 Core.cs
 Data/ColourPack.cs
 Dialogue/
