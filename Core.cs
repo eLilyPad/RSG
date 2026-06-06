@@ -112,32 +112,7 @@ public sealed partial class Core : Node
 	private PuzzleSelector.StudioDisplays StudioDisplays => field ??= new(Core: this);
 	private readonly List<PuzzleSelector.PuzzleDisplay> _studioPuzzleSelectorDisplays = [];
 	private readonly List<DialogueSelector.DialogueDisplay> _dialogueSelectorDisplays = [];
-	private Manager Minesweeper
-	{
-		get
-		{
-			if (field is not null) return field;
-			MinesweeperContainer ui = new MinesweeperContainer(Colours)
-			{
-				Name = "Minesweeper",
-				Visible = false,
-			}.Preset(LayoutPreset.FullRect);
-			Manager minesweeper = new() { UI = ui, EventHandler = _handler };
-
-			Container.AddChild(ui);
-			ui.Tiles.Provider = minesweeper;
-
-			ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
-			ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
-			{
-				ui.CompletionScreen.Hide();
-				ui.Hide();
-				Container.Menu.Show();
-			};
-
-			return field = minesweeper;
-		}
-	}
+	private Manager Minesweeper => field ??= Manager.Create(Container, _handler, Colours);
 	public Core()
 	{
 		_menuHandler = new(this);

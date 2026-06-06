@@ -2,6 +2,8 @@ using Godot;
 
 namespace RSG.Minesweeper;
 
+using UI;
+
 public interface IHandleEvents
 {
 	void Failed(Manager.Data data);
@@ -9,6 +11,28 @@ public interface IHandleEvents
 }
 public sealed partial class Manager : Tile.IProvider
 {
+	public static Manager Create(CoreUI UI, IHandleEvents handler, IColours colours)
+	{
+		MinesweeperContainer ui = new MinesweeperContainer(colours)
+		{
+			Name = "Minesweeper",
+			Visible = false,
+		}.Preset(Control.LayoutPreset.FullRect);
+		Manager minesweeper = new() { UI = ui, EventHandler = handler };
+
+		UI.AddChild(ui);
+		ui.Tiles.Provider = minesweeper;
+
+		ui.Resized += () => ui.Background.Border.TextureBorder((Vector2I)ui.Size);
+		ui.CompletionScreen.Value.Options.MainMenu.Pressed += () =>
+		{
+			ui.CompletionScreen.Hide();
+			ui.Hide();
+			UI.Menu.Show();
+		};
+
+		return minesweeper;
+	}
 	public sealed class Data
 	{
 		public static Data CreateRandom(int size = 5)
