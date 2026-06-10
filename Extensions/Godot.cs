@@ -169,7 +169,22 @@ public static class GDX
 	}
 
 
-	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
+	public static T WrappedAdd<T>(this T parent, Func<Node, Node> wrapper, params IEnumerable<Node> children) where T : Node
+	{
+		foreach (Node node in children)
+		{
+			Node container = wrapper(node);
+			if (container.GetParent() == parent) { continue; }
+			parent.AddChild(container);
+			if (Engine.IsEditorHint())
+			{
+				container.Owner = parent;
+			}
+		}
+		return parent;
+	}
+	public static T Add<T>(this T parent, params IEnumerable<Node> children)
+	where T : Node
 	{
 		foreach (Node node in children)
 		{
