@@ -4,111 +4,6 @@ namespace RSG.UI;
 
 public sealed partial class MainMenu : Container
 {
-	public sealed partial class SettingsContainer : TabContainer
-	{
-		public const int Margin = 0;
-		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public Nonogram.SettingsMenuContainer Nonogram { get; } = new Nonogram.SettingsMenuContainer { Name = "Nonogram" }
-			.Preset(LayoutPreset.FullRect, LayoutPresetMode.KeepWidth, Margin);
-		public override void _Ready() => this.Add(Audio, Video, Input, Nonogram);
-	}
-	private sealed partial class MainButton : Button
-	{
-		public TextureRect Background { get; } = new TextureRect { Name = "Background", }
-			.Preset(LayoutPreset.FullRect);
-		public RichTextLabel Label { get; } = new RichTextLabel
-		{
-			Name = "Label",
-			SelectionEnabled = false,
-			FitContent = true,
-			BbcodeEnabled = true,
-			AnchorLeft = .1f,
-			VerticalAlignment = VerticalAlignment.Center,
-			MouseFilter = MouseFilterEnum.Ignore
-		}.Preset(LayoutPreset.FullRect);
-		public MainButton(string name)
-		{
-			const int fontSize = 20;
-			Text = Name = name.AddSpacesToPascalCase();
-			Label.PushFontSize(fontSize);
-			Label.PushColor(Colors.Black);
-			Label.AddText(Text);
-			Resized += () => Background.TextureNoise((Vector2I)Size, colour: Colour);
-		}
-		public override void _Ready()
-		{
-			this.Add(Background, Label)
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Fill)
-				.AddAllFontThemeOverride(Colors.Transparent)
-				.OverrideStyle(modify: (StyleBoxFlat style) =>
-				{
-					style.CornerDetail = 1;
-					style.BgColor = Colors.Transparent;
-					style.SetContentMarginAll(10);
-					return style;
-				});
-			Label.AddThemeFontSizeOverride("normal", 40);
-
-		}
-		static Color Colour(float value)
-		{
-			Color color = Colors.OliveDrab;
-			return value switch
-			{
-				< .1f => color.Darkened(.2f),
-				> .4f => color with { A = .4f },
-				_ => color with { A = .7f }
-			};
-		}
-
-	}
-	public sealed partial class MainButtons : HBoxContainer
-	{
-		public BaseButton Play { get; } = new MainButton(nameof(Play))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Studio { get; } = new MainButton(nameof(Studio))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Settings { get; } = new MainButton(nameof(Settings))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
-			.SizeFlags(both: SizeFlags.ExpandFill);
-		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
-			.SizeFlags(both: SizeFlags.ExpandFill);
-		public override void _Ready() => this.Add(
-				Container.Add(Play, PlayMinesweeper, Studio, Levels, Dialogues, Settings, Quit),
-				Spacer
-			);
-	}
-	public interface IPress
-	{
-		void PlayPressed();
-		void PlayMinesweeperPressed();
-		void OpenStudioPressed();
-		void LevelsPressed();
-		void DialoguesPressed();
-		void SettingsPressed();
-		void QuitPressed();
-	}
-	public interface IReceiveSignals
-	{
-		void MenuVisibilityChanged();
-		void PuzzleSelectorVisibilityChanged();
-		void DialogueSelectorVisibilityChanged();
-	}
-
 	public const int Margin = 100;
 	public ColourPack Colours
 	{
@@ -210,4 +105,120 @@ public sealed partial class MainMenu : Container
 	}
 
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
+	public sealed partial class SettingsContainer : TabContainer
+	{
+		private static MarginContainer Marginalize(Node node)
+		{
+			const int marginValue = 60;
+			return new MarginContainer { Name = node.Name + " Container" }
+				.Preset(LayoutPreset.FullRect)
+				.Add(node)
+				.SetMarginAll(marginValue);
+		}
+		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
+		.Preset(preset: LayoutPreset.FullRect);
+		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
+			.SizeFlags(both: SizeFlags.Fill);
+		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
+			.SizeFlags(both: SizeFlags.Fill);
+		public Nonogram.SettingsMenuContainer Nonogram { get; } = new Nonogram.SettingsMenuContainer { Name = "Nonogram" }
+			.SizeFlags(both: SizeFlags.Fill);
+		public override void _Ready() => this.WrappedAdd(wrapper: Marginalize,
+			Audio,
+			Video,
+			Input,
+			Nonogram
+		);
+	}
+	private sealed partial class MainButton : Button
+	{
+		public TextureRect Background { get; } = new TextureRect { Name = "Background", }
+			.Preset(LayoutPreset.FullRect);
+		public RichTextLabel Label { get; } = new RichTextLabel
+		{
+			Name = "Label",
+			SelectionEnabled = false,
+			FitContent = true,
+			BbcodeEnabled = true,
+			AnchorLeft = .1f,
+			VerticalAlignment = VerticalAlignment.Center,
+			MouseFilter = MouseFilterEnum.Ignore
+		}.Preset(LayoutPreset.FullRect);
+		public MainButton(string name)
+		{
+			const int fontSize = 20;
+			Text = Name = name.AddSpacesToPascalCase();
+			Label.PushFontSize(fontSize);
+			Label.PushColor(Colors.Black);
+			Label.AddText(Text);
+			Resized += () => Background.TextureNoise((Vector2I)Size, colour: Colour);
+		}
+		public override void _Ready()
+		{
+			this.Add(Background, Label)
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Fill)
+				.AddAllFontThemeOverride(Colors.Transparent)
+				.OverrideStyle(modify: (StyleBoxFlat style) =>
+				{
+					style.CornerDetail = 1;
+					style.BgColor = Colors.Transparent;
+					style.SetContentMarginAll(10);
+					return style;
+				});
+			Label.AddThemeFontSizeOverride("normal", 40);
+
+		}
+		static Color Colour(float value)
+		{
+			Color color = Colors.OliveDrab;
+			return value switch
+			{
+				< .1f => color.Darkened(.2f),
+				> .4f => color with { A = .4f },
+				_ => color with { A = .7f }
+			};
+		}
+
+	}
+	public sealed partial class MainButtons : HBoxContainer
+	{
+		public BaseButton Play { get; } = new MainButton(nameof(Play))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Studio { get; } = new MainButton(nameof(Studio))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Settings { get; } = new MainButton(nameof(Settings))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
+			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
+			.SizeFlags(both: SizeFlags.ExpandFill);
+		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
+			.SizeFlags(both: SizeFlags.ExpandFill);
+		public override void _Ready() => this.Add(
+				Container.Add(Play, PlayMinesweeper, Studio, Levels, Dialogues, Settings, Quit),
+				Spacer
+			);
+	}
+	public interface IPress
+	{
+		void PlayPressed();
+		void PlayMinesweeperPressed();
+		void OpenStudioPressed();
+		void LevelsPressed();
+		void DialoguesPressed();
+		void SettingsPressed();
+		void QuitPressed();
+	}
+	public interface IReceiveSignals
+	{
+		void MenuVisibilityChanged();
+		void PuzzleSelectorVisibilityChanged();
+		void DialogueSelectorVisibilityChanged();
+	}
 }
