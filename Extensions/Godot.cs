@@ -183,20 +183,8 @@ public static class GDX
 		}
 		return parent;
 	}
-	public static T Add<T>(this T parent, params IEnumerable<Node> children)
-	where T : Node
-	{
-		foreach (Node node in children)
-		{
-			if (node.GetParent() == parent) { continue; }
-			parent.AddChild(node);
-			if (Engine.IsEditorHint())
-			{
-				node.Owner = parent;
-			}
-		}
-		return parent;
-	}
+	public static T Add<T>(this T parent, params IEnumerable<Node> children) where T : Node
+	=> parent.WrappedAdd(wrapper: static n => n, children);
 	public static T RemoveChildren<T>(this T parent, bool free = false) where T : Node
 	{
 		IEnumerable<Node> children = parent.GetChildren();
