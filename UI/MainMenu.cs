@@ -116,7 +116,7 @@ public sealed partial class MainMenu : Container
 				.SetMarginAll(marginValue);
 		}
 		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
-		.Preset(preset: LayoutPreset.FullRect);
+			.SizeFlags(both: SizeFlags.Fill);
 		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
 			.SizeFlags(both: SizeFlags.Fill);
 		public Input.Container Input { get; } = new Input.Container { Name = "Input" }
