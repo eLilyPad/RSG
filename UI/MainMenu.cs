@@ -107,14 +107,6 @@ public sealed partial class MainMenu : Container
 	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
 	public sealed partial class SettingsContainer : TabContainer
 	{
-		private static MarginContainer Marginalize(Node node)
-		{
-			const int marginValue = 60;
-			return new MarginContainer { Name = node.Name + " Container" }
-				.Preset(LayoutPreset.FullRect)
-				.Add(node)
-				.SetMarginAll(marginValue);
-		}
 		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
 			.SizeFlags(both: SizeFlags.Fill);
 		public Video.Container Video { get; } = new Video.Container { Name = "Video" }
@@ -129,6 +121,20 @@ public sealed partial class MainMenu : Container
 			Input,
 			Nonogram
 		);
+		private static MarginContainer Marginalize(Node node)
+		{
+			const int marginValue = 60;
+			var backgroundColour = Colors.OliveDrab with { A = .8f };
+			var background = new ColorRect { Name = "Background", Color = backgroundColour }
+				.Preset(LayoutPreset.FullRect);
+
+			background.UniformPadding(10);
+
+			return new MarginContainer { Name = node.Name + " Container" }
+				.Preset(LayoutPreset.FullRect)
+				.Add(background, node)
+				.SetMarginAll(marginValue);
+		}
 	}
 	private sealed partial class MainButton : Button
 	{
