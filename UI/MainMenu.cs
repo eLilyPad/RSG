@@ -2,6 +2,7 @@ using Godot;
 
 namespace RSG.UI;
 
+[AddOnNodeReady]
 public sealed partial class MainMenu : Container
 {
 	public const int Margin = 100;
@@ -52,25 +53,33 @@ public sealed partial class MainMenu : Container
 	{
 		set
 		{
-			Buttons.Play.Pressed += value.PlayPressed;
-			Buttons.PlayMinesweeper.Pressed += value.PlayMinesweeperPressed;
-			Buttons.Studio.Pressed += value.OpenStudioPressed;
-			Buttons.Levels.Pressed += value.LevelsPressed;
-			Buttons.Dialogues.Pressed += value.DialoguesPressed;
-			Buttons.Settings.Pressed += value.SettingsPressed;
-			Buttons.Quit.Pressed += value.QuitPressed;
+			BaseButton
+				play = Buttons.Container.Play,
+				playMinesweeper = Buttons.Container.PlayMinesweeper,
+				studio = Buttons.Container.Studio,
+				levels = Buttons.Container.Levels,
+				dialogues = Buttons.Container.Dialogues,
+				settings = Buttons.Container.Settings,
+				quit = Buttons.Container.Quit;
+			play.Pressed += value.PlayPressed;
+			playMinesweeper.Pressed += value.PlayMinesweeperPressed;
+			studio.Pressed += value.OpenStudioPressed;
+			levels.Pressed += value.LevelsPressed;
+			dialogues.Pressed += value.DialoguesPressed;
+			settings.Pressed += value.SettingsPressed;
+			quit.Pressed += value.QuitPressed;
 			if (field is null)
 			{
 				field = value;
 				return;
 			}
-			Buttons.Studio.Pressed -= field.OpenStudioPressed;
-			Buttons.Play.Pressed -= field.PlayPressed;
-			Buttons.PlayMinesweeper.Pressed -= field.PlayMinesweeperPressed;
-			Buttons.Levels.Pressed -= field.LevelsPressed;
-			Buttons.Dialogues.Pressed -= field.DialoguesPressed;
-			Buttons.Settings.Pressed -= field.SettingsPressed;
-			Buttons.Quit.Pressed -= field.QuitPressed;
+			studio.Pressed -= field.OpenStudioPressed;
+			play.Pressed -= field.PlayPressed;
+			playMinesweeper.Pressed -= field.PlayMinesweeperPressed;
+			levels.Pressed -= field.LevelsPressed;
+			dialogues.Pressed -= field.DialoguesPressed;
+			settings.Pressed -= field.SettingsPressed;
+			quit.Pressed -= field.QuitPressed;
 		}
 	}
 
@@ -103,8 +112,7 @@ public sealed partial class MainMenu : Container
 		Dialogues.VisibilityChanged += () => Buttons.Visible = !Dialogues.Visible;
 		Levels.VisibilityChanged += () => Buttons.Visible = !Levels.Visible;
 	}
-
-	public override void _Ready() => this.Add(Background, Buttons, Settings, Levels, Dialogues);
+	[AddOnNodeReady]
 	public sealed partial class SettingsContainer : TabContainer
 	{
 		public Audio.Container Audio { get; } = new Audio.Container { Name = "Audio" }
@@ -115,12 +123,6 @@ public sealed partial class MainMenu : Container
 			.SizeFlags(both: SizeFlags.Fill);
 		public Nonogram.SettingsMenuContainer Nonogram { get; } = new Nonogram.SettingsMenuContainer { Name = "Nonogram" }
 			.SizeFlags(both: SizeFlags.Fill);
-		public override void _Ready() => this.WrappedAdd(wrapper: Marginalize,
-			Audio,
-			Video,
-			Input,
-			Nonogram
-		);
 		private static MarginContainer Marginalize(Node node)
 		{
 			const int marginValue = 60;
@@ -136,6 +138,7 @@ public sealed partial class MainMenu : Container
 				.SetMarginAll(marginValue);
 		}
 	}
+	[AddOnNodeReady]
 	private sealed partial class MainButton : Button
 	{
 		public TextureRect Background { get; } = new TextureRect { Name = "Background", }
@@ -161,8 +164,7 @@ public sealed partial class MainMenu : Container
 		}
 		public override void _Ready()
 		{
-			this.Add(Background, Label)
-				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Fill)
+			this.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Fill)
 				.AddAllFontThemeOverride(Colors.Transparent)
 				.OverrideStyle(modify: (StyleBoxFlat style) =>
 				{
@@ -186,30 +188,33 @@ public sealed partial class MainMenu : Container
 		}
 
 	}
+	[AddOnNodeReady]
 	public sealed partial class MainButtons : HBoxContainer
 	{
-		public BaseButton Play { get; } = new MainButton(nameof(Play))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Studio { get; } = new MainButton(nameof(Studio))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Levels { get; } = new MainButton(nameof(Levels))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Settings { get; } = new MainButton(nameof(Settings))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public BaseButton Quit { get; } = new MainButton(nameof(Quit))
-			.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
-		public VBoxContainer Container { get; } = new VBoxContainer { Name = "Container", Alignment = AlignmentMode.End }
+
+		public ButtonContainer Container { get; } = new ButtonContainer { Name = "Container", Alignment = AlignmentMode.End }
 			.SizeFlags(both: SizeFlags.ExpandFill);
 		public Container Spacer { get; } = new BoxContainer { Name = "Spacer", SizeFlagsStretchRatio = 2f }
 			.SizeFlags(both: SizeFlags.ExpandFill);
-		public override void _Ready() => this.Add(
-				Container.Add(Play, PlayMinesweeper, Studio, Levels, Dialogues, Settings, Quit),
-				Spacer
-			);
+		[AddOnNodeReady]
+		public sealed partial class ButtonContainer : VBoxContainer
+		{
+			public BaseButton Play { get; } = new MainButton(nameof(Play))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public BaseButton PlayMinesweeper { get; } = new MainButton(nameof(PlayMinesweeper))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public BaseButton Studio { get; } = new MainButton(nameof(Studio))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public BaseButton Levels { get; } = new MainButton(nameof(Levels))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public BaseButton Dialogues { get; } = new MainButton(nameof(Dialogues))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public BaseButton Settings { get; } = new MainButton(nameof(Settings))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public BaseButton Quit { get; } = new MainButton(nameof(Quit))
+				.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Expand);
+			public override void _Ready() => this.SizeFlags(SizeFlags.ExpandFill, SizeFlags.Fill);
+		}
 	}
 	public interface IPress
 	{

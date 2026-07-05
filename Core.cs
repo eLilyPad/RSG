@@ -115,10 +115,13 @@ public sealed partial class Core : Node
 	private Manager Minesweeper => field ??= Manager.Create(Container, _handler, Colours);
 	public Core()
 	{
+		AddOnNodeReadyAttribute.ConnectToScene();
+
 		_menuHandler = new(this);
 		_settingsModifier = new(this);
 		_handler = new(this);
 	}
+
 	public override void _Ready()
 	{
 		Name = nameof(Core);
@@ -166,6 +169,4 @@ public sealed partial class Core : Node
 			Container.Menu.Buttons.Show();
 		}
 	}
-
-
 }
