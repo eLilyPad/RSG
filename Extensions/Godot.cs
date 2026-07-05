@@ -1,3 +1,4 @@
+using System.Reflection;
 using Godot;
 
 namespace RSG.Extensions;
@@ -128,6 +129,18 @@ public static class InputExtensions
 }
 public static class GDX
 {
+	public static IEnumerable<Node> GetNodeProperties(this Node node)
+	{
+		var nodeType = node.GetType();
+
+		foreach (PropertyInfo property in nodeType.GetProperties())
+		{
+			if (!property.PropertyType.IsAssignableTo(typeof(Node))) continue;
+			if (property.GetValue(node) is not Node child) continue;
+
+			yield return child;
+		}
+	}
 	public static bool TryGetByName<T>(this IEnumerable<T> nodes, string name, [MaybeNullWhen(false)] out T value)
 		where T : Node
 	{
