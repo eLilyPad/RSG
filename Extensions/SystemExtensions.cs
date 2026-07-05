@@ -14,8 +14,8 @@ public static class SystemExtensions
 {
 	public static int Remaining<T>(this T hints, int index) where T : IReadOnlyList<int>
 	{
-		int remaining = 0;
-		for (int nextIndex = index + 1; nextIndex < hints.Count; nextIndex++)
+		int remaining = 0, start = index + 1, count = hints.Count;
+		for (int nextIndex = start; nextIndex < count; nextIndex++)
 		{
 			remaining += hints[nextIndex] + 1;
 		}
